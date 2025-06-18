@@ -1,4 +1,7 @@
-﻿using System.Text;
+﻿using System.IO;
+using System.Printing.IndexedProperties;
+using System.Security.Cryptography;
+using System.Text;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Data;
@@ -20,5 +23,22 @@ namespace VaultCrypt
         {
             InitializeComponent();
         }
+
+        
+
+
+
+
+        private void CreateVault_Click(object sender, RoutedEventArgs e)
+        {
+            //Choose where to save the vault
+            //Display contents
+            //Use drop to add files or button add/delete
+
+
+            
+        }
+
+       
     }
 }
