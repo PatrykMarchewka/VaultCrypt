@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
+using System.Printing.IndexedProperties;
 using System.Security.Cryptography;
 using System.Text;
 using System.Threading.Tasks;
@@ -18,32 +19,23 @@ namespace VaultCrypt
             }
         }
 
-
-        private static void EncryptFile(string filePath, string outputFile, string password)
+        /// <summary>
+        /// Encrypts file to another file
+        /// </summary>
+        /// <param name="filePath">Path of original file</param>
+        /// <param name="outputFile">Where to save the file after encryption</param>
+        /// <param name="password">Passowrd to encrypt file with</param>
+        private static void EncryptToFile(string filePath, string outputFile, string password)
         {
-            using (AesGcm aesGcm = new AesGcm(DeriveKey(password), 16))
+            byte[] fileData = File.ReadAllBytes(filePath);
+            byte[] encryptedData = EncryptBytes(fileData, password);
+            using (FileStream fs = new FileStream(outputFile, FileMode.Create))
             {
-                byte[] iv = new byte[AesGcm.NonceByteSizes.MaxSize];
-                RandomNumberGenerator.Fill(iv);
-
-                byte[] plaintext = File.ReadAllBytes(filePath);
-                byte[] output = new byte[plaintext.Length];
-                byte[] authentication = new byte[AesGcm.TagByteSizes.MaxSize];
-
-                aesGcm.Encrypt(iv, plaintext, output, authentication);
-
-                using (FileStream fs = new FileStream(outputFile, FileMode.Create))
-                {
-                    fs.Write(iv, 0, iv.Length);
-                    fs.Write(authentication, 0, authentication.Length);
-                    fs.Write(output, 0, output.Length);
-                }
-
-
+                fs.Write(encryptedData, 0, encryptedData.Length);
             }
         }
 
-        private static void DecryptFile(string inputFile, string outputFile, string password)
+        private static void DecryptFromFile(string inputFile, string outputFile, string password)
         {
             using (FileStream fs = new FileStream(inputFile, FileMode.Open))
             {
@@ -66,18 +58,56 @@ namespace VaultCrypt
             }
         }
 
+        /// <summary>
+        /// Should be only called from EncryptBytes
+        /// </summary>
+        /// <param name="data">Byte array of original data</param>
+        /// <param name="password">Password to encrypt with</param>
+        /// <returns>Byte Array of encrypted data</returns>
+        private static byte[] EncryptDataToBytes(byte[] data, string password)
+        {
+            using (AesGcm aesGcm = new AesGcm(DeriveKey(password), AesGcm.TagByteSizes.MaxSize))
+            {
+                byte[] iv = new byte[AesGcm.NonceByteSizes.MaxSize];
+                RandomNumberGenerator.Fill(iv);
+                byte[] output = new byte[data.Length];
+                byte[] authentication = new byte[AesGcm.TagByteSizes.MaxSize];
+
+                aesGcm.Encrypt(iv, data, output, authentication);
+
+                byte[] encrypted = new byte[iv.Length + authentication.Length + output.Length];
+                Buffer.BlockCopy(iv, 0, encrypted, 0, iv.Length);
+                Buffer.BlockCopy(authentication, 0, encrypted, iv.Length, authentication.Length);
+                Buffer.BlockCopy(output, 0, encrypted, iv.Length + authentication.Length, output.Length);
+
+                return encrypted;
+            }
+        }
+
         public static void EncryptFilesUsingThreads(string[] files, string output, string password)
         {
             foreach (var item in files)
             {
                 //TODO: Fix it, placeholder for now
-                Task.Run(() => EncryptFile(item,"ffffff", password));
+                Task.Run(() => EncryptToFile(item,"ffffff", password));
             }
         }
 
+        /// <summary>
+        /// Used to encrypt data to bytes
+        /// </summary>
+        /// <param name="bytes">Byte array of original data</param>
+        /// <param name="password">Password to encrypt with</param>
+        /// <returns>Byte array of encrypted data</returns>
         internal static byte[] EncryptBytes(byte[] bytes, string password)
         {
-            throw new NotImplementedException();
+            return EncryptDataToBytes(bytes, password);
+        }
+
+        internal static byte[] EncryptFileToBytes(string filePath, string password)
+        {
+            byte[] fileData = File.ReadAllBytes(filePath);
+            return EncryptBytes(fileData, password);
         }
 
         internal static byte[] DecryptBytes(byte[] encryptedMetadata, string password)
