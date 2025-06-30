@@ -21,12 +21,14 @@ namespace VaultCrypt
     //Fix when multiple possibly corrupted metadata
     //Possibility of recovery when corrupted metadata at the end but older one exists
     //Add zipping for folders
+    //Reencrypt with new password
 
     internal class VaultHelper
     {
 
 
         //TODO: Edit, dont use this
+        //Make it require atleast one file
         public static void CreateVault(NormalizedPath vaultPath, string password)
         {
             using (FileStream fs = new FileStream(vaultPath,FileMode.Create))
@@ -223,10 +225,32 @@ namespace VaultCrypt
 
         }
 
-        public static void CompactVault(NormalizedPath vaultPath, string password)
+        /// <summary>
+        /// Recreates the vault from scratch and deletes old one. Used to shrink vault size if current vault has leftover data
+        /// </summary>
+        /// <param name="vaultPath">Path to the vault</param>
+        /// <param name="password">Password to the vault</param>
+        public static void RebuildVault(NormalizedPath vaultPath, string password)
         {
-            //Call to compactMetadata
-            throw new NotImplementedException();
+            NormalizedPath newPath = NormalizedPath.From(vaultPath + ".tmp");
+            IndexMetadata metadata = ReadMetadataFromVault(vaultPath, password);
+            using var sourceStream = new FileStream(vaultPath, FileMode.Open, FileAccess.ReadWrite);
+            using var newVault = new FileStream(newPath, FileMode.CreateNew, FileAccess.Write);
+            foreach (var (name, entry) in metadata.meta)
+            {
+                sourceStream.Seek(entry.compactVaultEntryOffset, SeekOrigin.Begin);
+                CompactVaultEntry compactEntry = CompactVaultEntry.ReadFrom(sourceStream);
+
+                long newOffset = newVault.Position;
+                CompactVaultEntry.WriteTo(compactEntry, newVault);
+                byte[] fileBytes = new byte[entry.fileSize];
+                sourceStream.ReadExactly(fileBytes);
+                newVault.Write(fileBytes);
+
+                entry.compactVaultEntryOffset = newOffset;
+            }
+            WriteMetadataToVault(newPath, metadata, password);
+            File.Replace(newPath, vaultPath, vaultPath + ".err");
         }
 
 
