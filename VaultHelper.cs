@@ -23,33 +23,39 @@ namespace VaultCrypt
     //Add zipping for folders
     //Reencrypt with new password
 
+    public class VaultInfo
+    {
+        public static NormalizedPath vaultPath { get; set; }
+        public static string vaultPassword { get; set; }
+    }
+
+
     internal class VaultHelper
     {
 
 
         //TODO: Edit, dont use this
         //Make it require atleast one file
-        public static void CreateVault(NormalizedPath vaultPath, string password)
+        public static void CreateVault()
         {
-            using (FileStream fs = new FileStream(vaultPath,FileMode.Create))
+            using (FileStream fs = new FileStream(VaultInfo.vaultPath,FileMode.Create))
             {
                 byte[] header = Encoding.UTF8.GetBytes("VAULT_FILE");
                 fs.Write(header, 0, header.Length);
             }
 
-            File.WriteAllText(vaultPath + "_metadata.enc", "[]");
+            File.WriteAllText(VaultInfo.vaultPath + "_metadata.enc", "[]");
         }
 
         /// <summary>
         /// Gets metadata from Vault
         /// </summary>
-        /// <param name="vaultPath">Path to the vault</param>
-        /// <param name="password">Password to the vault</param>
         /// <returns>IndexMetadata from vault</returns>
         /// <exception cref="Exception"></exception>
-        public static IndexMetadata ReadMetadataFromVault(NormalizedPath vaultPath, string password)
+        /// 
+        public static IndexMetadata ReadMetadataFromVault()
         {
-            using (FileStream fs = new FileStream(vaultPath,FileMode.Open, FileAccess.Read))
+            using (FileStream fs = new FileStream(VaultInfo.vaultPath, FileMode.Open, FileAccess.Read))
             {
                 fs.Seek(-16, SeekOrigin.End);
                 byte[] signature = new byte[8];
@@ -61,14 +67,14 @@ namespace VaultCrypt
                     //TODO: Instead try rebuilding Index from compacts
                     throw new Exception("Vault signature missing or corrupted!");
                 }
-                long metadataOffset = FindIndexMetadataOffset(vaultPath);
+                long metadataOffset = FindIndexMetadataOffset();
 
                 long metadataSize = fs.Length - 16 - metadataOffset;
                 fs.Seek(metadataOffset, SeekOrigin.Begin);
                 byte[] encryptedMetadata = new byte[metadataSize];
                 fs.Read(encryptedMetadata, 0, encryptedMetadata.Length);
 
-                byte[] decrypted = EncryptionHelper.DecryptBytes(encryptedMetadata, password);
+                byte[] decrypted = EncryptionHelper.DecryptBytes(encryptedMetadata, VaultInfo.vaultPassword);
                 string json = Encoding.UTF8.GetString(decrypted);
                 return JsonSerializer.Deserialize<IndexMetadata>(json);
                 //TODO: Change it for potential different version
@@ -79,15 +85,13 @@ namespace VaultCrypt
         /// <summary>
         /// Replaces metadata with new one, if you are just adding files use instead <see cref="AppendMetadataToVault(NormalizedPath, NormalizedPath, long, long, string)"/>
         /// </summary>
-        /// <param name="vaultPath">Path for the vault file</param>
         /// <param name="metadata">IndexMetadata instance to save</param>
-        /// <param name="password">Password to encrypt with</param>
-        public static void WriteMetadataToVault(NormalizedPath vaultPath, IndexMetadata metadata, string password)
+        public static void WriteMetadataToVault(IndexMetadata metadata)
         {
             string json = JsonSerializer.Serialize(metadata);
-            byte[] encryptedMetadata = EncryptionHelper.EncryptBytes(Encoding.UTF8.GetBytes(json), password);
+            byte[] encryptedMetadata = EncryptionHelper.EncryptBytes(Encoding.UTF8.GetBytes(json), VaultInfo.vaultPassword);
 
-            using (FileStream fs = new FileStream(vaultPath,FileMode.Open))
+            using (FileStream fs = new FileStream(VaultInfo.vaultPath,FileMode.Open))
             {
                 fs.Seek(0, SeekOrigin.End);
                 long offset = fs.Position;
@@ -106,20 +110,18 @@ namespace VaultCrypt
         /// <summary>
         /// Appends metadata to already existing one
         /// </summary>
-        /// <param name="vaultPath">Path to the vault</param>
         /// <param name="filePath">Path to the file</param>
         /// <param name="offset">Offset of CompactVaultEntry</param>
         /// <param name="encLength">Length of the encrypted file</param>
-        /// <param name="password">Password to the vault</param>
-        public static void AppendMetadataToVault(NormalizedPath vaultPath, NormalizedPath filePath, long offset, long encLength, string password)
+        public static void AppendMetadataToVault(NormalizedPath filePath, long offset, long encLength)
         {
             FileInfo fileInfo = new FileInfo(filePath);
-            IndexMetadata metadata = ReadMetadataFromVault(vaultPath, password);
+            IndexMetadata metadata = ReadMetadataFromVault();
             metadata.meta.Add(fileInfo.Name, new VaultEntry() { fileSize = encLength, contentType = VaultEntry.GetContentTypeFromExtension(filePath), creationDateUTC = fileInfo.CreationTimeUtc, compactVaultEntryOffset = offset, originalPath = filePath });
             string json = JsonSerializer.Serialize(metadata);
-            byte[] encryptedMetadata = EncryptionHelper.EncryptBytes(Encoding.UTF8.GetBytes(json), password);
+            byte[] encryptedMetadata = EncryptionHelper.EncryptBytes(Encoding.UTF8.GetBytes(json), VaultInfo.vaultPassword);
 
-            using (FileStream fs = new FileStream(vaultPath, FileMode.Open))
+            using (FileStream fs = new FileStream(VaultInfo.vaultPath, FileMode.Open))
             {
                 fs.Seek(0, SeekOrigin.End);
                 long MetaOffset = fs.Position;
@@ -137,12 +139,11 @@ namespace VaultCrypt
         /// <summary>
         /// Finds the position of IndexMetadata in the vault file
         /// </summary>
-        /// <param name="vaultPath">Path to the vault</param>
-        /// <returns></returns>
-        public static long FindIndexMetadataOffset(NormalizedPath vaultPath)
+        /// <returns>offset of the IndexMetadata</returns>
+        public static long FindIndexMetadataOffset()
         {
             long offset;
-            using (FileStream fs = new FileStream(vaultPath, FileMode.Open))
+            using (FileStream fs = new FileStream(VaultInfo.vaultPath, FileMode.Open))
             {
                 fs.Seek(-8, SeekOrigin.End);
                 byte[] offsetBuffer = new byte[8];
@@ -155,12 +156,10 @@ namespace VaultCrypt
         /// <summary>
         /// Adds file to vault
         /// </summary>
-        /// <param name="vaultPath">Path to the vault</param>
         /// <param name="filePath">Path to the file</param>
-        /// <param name="password">Password to the vault</param>
-        public static void AddFileToVault(NormalizedPath vaultPath, NormalizedPath filePath, string password)
+        public static void AddFileToVault(NormalizedPath filePath)
         {
-            byte[] encyptedData = EncryptionHelper.EncryptFileToBytes(filePath, password);
+            byte[] encyptedData = EncryptionHelper.EncryptFileToBytes(filePath, VaultInfo.vaultPassword);
 
             CompactVaultEntry entry = new CompactVaultEntry()
             {
@@ -169,7 +168,7 @@ namespace VaultCrypt
                 fileSize = encyptedData.LongLength
             };
             long offset;
-            using (FileStream fs = new FileStream(vaultPath, FileMode.Append))
+            using (FileStream fs = new FileStream(VaultInfo.vaultPath, FileMode.Append))
             {
                 fs.Seek(0, SeekOrigin.End);
                 offset = fs.Position;
@@ -177,33 +176,29 @@ namespace VaultCrypt
                 fs.Write(encyptedData, 0, encyptedData.Length);
             }
 
-            AppendMetadataToVault(vaultPath, filePath, offset, encyptedData.LongLength, password);
+            AppendMetadataToVault(filePath, offset, encyptedData.LongLength);
         }
 
         /// <summary>
         /// Zips the folder and adds as the file to vault
         /// </summary>
-        /// <param name="vaultPath">Path to the vault</param>
         /// <param name="folderPath">Path to the folder</param>
-        /// <param name="password">Password to the vault</param>
         /// <exception cref="NotImplementedException"></exception>
-        public static void AddFolderToVault(NormalizedPath vaultPath, NormalizedPath folderPath, string password)
+        public static void AddFolderToVault(NormalizedPath folderPath)
         {
             //Zip it and send as zip
             throw new NotImplementedException();
         }
 
         /// <summary>
-        /// Safely deletes file from vault, overwriting it with random bytes TODO: fix the parameters, group them
+        /// Safely deletes file from vault, overwriting it with random bytes
         /// </summary>
-        /// <param name="vaultPath">Path to the vault</param>
         /// <param name="fileName">Name of the file to delete</param>
-        /// <param name="password">Password to the vault</param>
         /// <param name="overwrites">Optional: Number of overwrites to the file</param>
         /// <exception cref="Exception">Exception thrown when file can't be found in the IndexMetadata</exception>
-        public static void DeleteFileFromVault(NormalizedPath vaultPath, string fileName, string password, int overwrites = 3)
+        public static void DeleteFileFromVault(string fileName, int overwrites = 3)
         {
-            var metadata = ReadMetadataFromVault(vaultPath, password);
+            var metadata = ReadMetadataFromVault();
             if (!metadata.meta.ContainsKey(fileName))
             {
                 //No file???
@@ -212,29 +207,27 @@ namespace VaultCrypt
 
             long offset = metadata.meta[fileName].compactVaultEntryOffset;
             CompactVaultEntry com;
-            using (FileStream fs = new FileStream(vaultPath, FileMode.Open, FileAccess.ReadWrite))
+            using (FileStream fs = new FileStream(VaultInfo.vaultPath, FileMode.Open, FileAccess.ReadWrite))
             {
                 fs.Seek(offset, SeekOrigin.Begin);
                 com = CompactVaultEntry.ReadFrom(fs);
             }
             long fullsize = 2 + com.nameLength + 8 + metadata.meta[fileName].fileSize; //2 bytes for ushort + name + 8 bytes for filesize number + actual fileSize
-            FileHelper.DeleteBytesSecurely(vaultPath, offset, fullsize,overwrites);
+            FileHelper.DeleteBytesSecurely(offset, fullsize,overwrites);
 
             metadata.meta.Remove(fileName);
-            WriteMetadataToVault(vaultPath, metadata, password);
+            WriteMetadataToVault(metadata);
 
         }
 
         /// <summary>
         /// Recreates the vault from scratch and deletes old one. Used to shrink vault size if current vault has leftover data
         /// </summary>
-        /// <param name="vaultPath">Path to the vault</param>
-        /// <param name="password">Password to the vault</param>
-        public static void RebuildVault(NormalizedPath vaultPath, string password)
+        public static void RebuildVault()
         {
-            NormalizedPath newPath = NormalizedPath.From(vaultPath + ".tmp");
-            IndexMetadata metadata = ReadMetadataFromVault(vaultPath, password);
-            using var sourceStream = new FileStream(vaultPath, FileMode.Open, FileAccess.ReadWrite);
+            NormalizedPath newPath = NormalizedPath.From(VaultInfo.vaultPath + ".tmp");
+            IndexMetadata metadata = ReadMetadataFromVault();
+            using var sourceStream = new FileStream(VaultInfo.vaultPath, FileMode.Open, FileAccess.ReadWrite);
             using var newVault = new FileStream(newPath, FileMode.CreateNew, FileAccess.Write);
             foreach (var (name, entry) in metadata.meta)
             {
@@ -249,8 +242,8 @@ namespace VaultCrypt
 
                 entry.compactVaultEntryOffset = newOffset;
             }
-            WriteMetadataToVault(newPath, metadata, password);
-            File.Replace(newPath, vaultPath, vaultPath + ".err");
+            WriteMetadataToVault(metadata);
+            File.Replace(newPath, VaultInfo.vaultPath, VaultInfo.vaultPath + ".err");
         }
 
 

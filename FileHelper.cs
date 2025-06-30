@@ -31,9 +31,9 @@ namespace VaultCrypt
             File.Delete(filepath);
         }
 
-        public static void DeleteBytesSecurely(NormalizedPath vaultPath, long offset, long bytes, int overwrites = 3)
+        public static void DeleteBytesSecurely(long offset, long bytes, int overwrites = 3)
         {
-            using (FileStream fs = new FileStream(vaultPath,FileMode.Open, FileAccess.Write))
+            using (FileStream fs = new FileStream(VaultInfo.vaultPath,FileMode.Open, FileAccess.Write))
             {
                 byte[] data = new byte[bytes];
 
