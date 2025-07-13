@@ -1,4 +1,7 @@
 ﻿using System;
+﻿using Microsoft.VisualBasic;
+using System;
+using System.Buffers.Binary;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
@@ -12,49 +15,164 @@ namespace VaultCrypt
 
     public class CompactVaultEntry
     {
-        public ushort nameLength { get; set; } //Fixed 2 bytes
-        public string fileName { get; set; } //Varying length, read from nameLength
-        public long fileSize { get; set; } //Fixed 8 bytes, size of encrypted file
-        public static CompactVaultEntry ReadFrom(Stream stream)
+        //byte = 1 byte | 0 to 255
+        //ushort = 2 bytes | 0 to 65 535
+        //uint = 4 bytes | 0 to 4 294 967 295
+        //ulong = 8 bytes | 0 to 1.8 * 10^19
+
+
+        public ushort nameLength { get; init; } //Fixed 2 bytes, length of fileName text
+        public string fileName { get; init; } //Varying length, read from nameLength
+        public ulong fileSize { get; init; } //Size of encrypted file
+        public bool chunked { get; init; } //Whether file is chunked or not
+        public byte version { get; init; } //Version of the CompactVaultEntry
+        public ChunkInformation? chunkInformation { get; init; }
+
+
+        public CompactVaultEntry(ushort nameLength, string fileName, ulong fileSize, bool chunked, ChunkInformation? chunkInformation)
         {
-            Span<byte> buffer = stackalloc byte[2];
-            stream.ReadExactly(buffer);
-            ushort nameLength = BitConverter.ToUInt16(buffer);
-
-            byte[] nameBytes = new byte[nameLength];
-            stream.ReadExactly(nameBytes);
-            string fileName = Encoding.UTF8.GetString(nameBytes);
-
-            buffer = stackalloc byte[8];
-            stream.ReadExactly(buffer);
-            long encLength = BitConverter.ToInt64(buffer);
-
-            return new CompactVaultEntry
-            {
-                nameLength = nameLength,
-                fileName = fileName,
-                fileSize = encLength
-            };
+            this.nameLength = nameLength;
+            this.fileName = fileName;
+            this.fileSize = fileSize;
+            this.chunked = chunked;
+            this.version = 0;
+            this.chunkInformation = chunkInformation;
         }
 
 
-        public static void WriteTo(CompactVaultEntry entry, Stream stream)
+
+
+        public struct ChunkInformation
+        {
+            //public char versionFirst { get; init; } = 'A';
+            //public char versionSecond { get; init; } = 'A';
+
+            public ushort chunkSize { get; init; } //chunk sizes in MB
+            public uint totalChunks { get; init; } //number of chunks
+            public ulong finalChunkSize { get; init; } //size in bytes of last chunk
+
+            public ChunkInformation(ushort chunkSize, uint totalChunks, ulong finalChunkSize)
+            {
+                this.chunkSize = chunkSize;
+                this.totalChunks = totalChunks;
+                this.finalChunkSize = finalChunkSize;
+            }
+        }
+
+        
+
+        static ChunkInformation ReadChunkInformation(Stream stream)
+        {
+            //2 bytes chunk size + 4 bytes total chunks count + 8 bytes final chunk size = 14 bytes
+            Span<byte> buffer = stackalloc byte[14];
+            stream.ReadExactly(buffer);
+
+            ushort chunkSize = BinaryPrimitives.ReadUInt16LittleEndian(buffer.Slice(0, 2));
+            uint totalChunks = BinaryPrimitives.ReadUInt32LittleEndian(buffer.Slice(2, 4));
+            ulong finalChunkSize = BinaryPrimitives.ReadUInt64LittleEndian(buffer.Slice(6,8));
+            if (finalChunkSize >= (ulong)(chunkSize * 1024 * 1024))
+            {
+                throw new Exception("Final chunk size bigger than normal chunk size");
+            }
+
+            return new ChunkInformation
+            {
+                chunkSize = chunkSize,
+                totalChunks = totalChunks,
+                finalChunkSize = finalChunkSize
+            };
+        }
+
+        public static void WriteChunkInformation(ChunkInformation chunk, Stream stream)
+        {
+            //2 bytes chunk size + 4 bytes total chunks count + 8 bytes final chunk size = 14 bytes
+            Span<byte> buffer = stackalloc byte[14];
+
+            BinaryPrimitives.WriteUInt16LittleEndian(buffer.Slice(0, 2), chunk.chunkSize);
+            BinaryPrimitives.WriteUInt32LittleEndian(buffer.Slice(2, 4), chunk.totalChunks);
+            BinaryPrimitives.WriteUInt64LittleEndian(buffer.Slice(6, 8), chunk.finalChunkSize);
+            stream.Write(buffer);
+        }
+
+
+
+        public static CompactVaultEntry ReadFrom(Stream stream)
+        {
+            Span<byte> buffer = stackalloc byte[1];
+            stream.ReadExactly(buffer);
+            byte version = buffer[0];
+
+
+            if (version == 0)
+            {
+                buffer = stackalloc byte[2];
+                stream.ReadExactly(buffer);
+                ushort nameLength = BinaryPrimitives.ReadUInt16LittleEndian(buffer);
+
+                byte[] nameBytes = new byte[nameLength];
+                stream.ReadExactly(nameBytes);
+                string fileName = Encoding.UTF8.GetString(nameBytes);
+
+                buffer = stackalloc byte[8];
+                stream.ReadExactly(buffer);
+                ulong encLength = BinaryPrimitives.ReadUInt64LittleEndian(buffer);
+
+                buffer = stackalloc byte[1];
+                stream.ReadExactly(buffer);
+                bool chunk = buffer[0] != 0;
+
+
+                ChunkInformation? info = chunk ? ReadChunkInformation(stream) : null;
+
+
+                return new CompactVaultEntry(nameLength: nameLength, fileName: fileName, fileSize: encLength, chunked: chunk, chunkInformation: info);
+            }
+            else if(version == 1)
+            {
+                throw new NotImplementedException();
+            }
+            else
+            {
+                throw new NotImplementedException();
+            }
+        }
+
+
+        public static void WriteTo(CompactVaultEntry entry, Stream stream, ChunkInformation? chunkInformation = null)
         {
             byte[] nameBytes = Encoding.UTF8.GetBytes(entry.fileName);
             if (nameBytes.Length > ushort.MaxValue)
             {
                 throw new Exception("File name is too long!");
             }
+            stream.WriteByte(entry.version);
+
 
             Span<byte> buffer = stackalloc byte[2];
-            BitConverter.TryWriteBytes(buffer, (ushort)nameBytes.Length);
+            BinaryPrimitives.WriteUInt16LittleEndian(buffer, (ushort)nameBytes.Length);
             stream.Write(buffer);
 
-            stream.Write(nameBytes, 0, nameBytes.Length);
+            stream.Write(nameBytes);
 
             buffer = stackalloc byte[8];
-            BitConverter.TryWriteBytes(buffer, entry.fileSize);
+            BinaryPrimitives.WriteUInt64LittleEndian(buffer, entry.fileSize);
             stream.Write(buffer);
+
+            stream.WriteByte(entry.chunked ? (byte)1 : (byte)0);
+
+            //Writing extra information about chunks
+            if (entry.chunked)
+            {
+                if (chunkInformation == null)
+                {
+                    throw new Exception("Entry is chunked yet there is no chunk information");
+                }
+                WriteChunkInformation(chunkInformation.Value, stream);
+                
+            }
+
+
+
 
             //Example:
             //WriteTo(meta,fs)

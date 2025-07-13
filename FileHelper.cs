@@ -47,8 +47,41 @@ namespace VaultCrypt
             }
         }
 
+        /// <summary>
+        /// Checks whether there is enough free space to perform operation
+        /// </summary>
+        /// <param name="path">Path of the folder/file to check</param>
+        /// <returns>True if there is enough space, otherwise false</returns>
+        /// <exception cref="Exception">File/folder can't be located</exception>
+        public static bool CheckFreeSpace(NormalizedPath path)
+        {            
+            long availableBytes = new DriveInfo(Path.GetPathRoot(path)).AvailableFreeSpace;
 
+            return availableBytes > (GetTotalBytes(path) * 1.05);
+        }
 
+        public static long GetTotalBytes(NormalizedPath path)
+        {
+            if (File.Exists(path))
+            {
+                return new FileInfo(path).Length;
+
+            }
+            else if (Directory.Exists(path))
+            {
+                return Directory.GetFiles(path, "*", SearchOption.AllDirectories).Select(f => new FileInfo(f).Length).Sum();
+            }
+            else
+            {
+                throw new Exception("Cant find the file/folder");
+            }
+        }
+
+        public static uint GetChunkNumber(NormalizedPath path, int chunkSizeMB = 256)
+        {
+            chunkSizeMB *= (1024 * 1024);
+            return (uint)Math.Ceiling((double)GetTotalBytes(path) / chunkSizeMB);
+        }
 
 
 
