@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Buffers.Binary;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
@@ -11,21 +12,57 @@ namespace VaultCrypt
 {
     internal class EncryptionHelper
     {
-        private static byte[] DeriveKey(string password)
+        public readonly struct EncryptionOptions
         {
-            using (Rfc2898DeriveBytes pbkdf2 = new Rfc2898DeriveBytes(password, 16, 10000, HashAlgorithmName.SHA256))
+            public readonly string Password;
+            public readonly int Iterations;
+            public readonly HashAlgorithmName HashAlgorithm;
+            public readonly byte[] Salt;
+            public readonly byte[] Key;
+
+            public EncryptionOptions(string password, HashAlgorithmName hashAlgorithm, byte[] salt, byte[] key, int iterations = 10000)
+                Password = password;
+                Iterations = iterations;
+                HashAlgorithm = hashAlgorithm;
+                Salt = GenerateUniqueSalt(HashCodeMap[HashAlgorithm]);
+                Key = DeriveKey(Password, Salt, HashAlgorithm, Iterations);
+            }
+
+            private static byte[] GenerateUniqueSalt(int saltSize)
             {
-                return pbkdf2.GetBytes(32);
+                byte[] salt = new byte[saltSize];
+                RandomNumberGenerator.Fill(salt);
+                return salt;
+            }
+            private static byte[] DeriveKey(string password, byte[] salt, HashAlgorithmName hashAlgorithm, int iterations = 10000)
+            {
+                using (Rfc2898DeriveBytes pbkdf2 = new Rfc2898DeriveBytes(password, salt, iterations, hashAlgorithm))
+                {
+                    return pbkdf2.GetBytes(HashCodeMap[hashAlgorithm]);
+                }
             }
         }
+
+
+
+
+        static readonly Dictionary<HashAlgorithmName, int> HashCodeMap = new()
+        {
+            [HashAlgorithmName.SHA256] = 32,
+            [HashAlgorithmName.SHA384] = 48,
+            [HashAlgorithmName.SHA512] = 64
+        };
+
+
+
 
         /// <summary>
         /// Encrypts file to another file
         /// </summary>
         /// <param name="filePath">Path of original file</param>
         /// <param name="outputFile">Where to save the file after encryption</param>
-        /// <param name="password">Passowrd to encrypt file with</param>
-        private static void EncryptToFile(string filePath, string outputFile, string password)
+        /// <param name="options">Encryption options struct</param>
+        private static void EncryptToFile(string filePath, string outputFile, EncryptionOptions options)
         {
             byte[] fileData = File.ReadAllBytes(filePath);
             byte[] encryptedData = EncryptBytes(fileData, password);
@@ -35,7 +72,7 @@ namespace VaultCrypt
             }
         }
 
-        private static void DecryptFromFile(string inputFile, string outputFile, string password)
+        private static void DecryptFromFile(string inputFile, string outputFile, EncryptionOptions options)
         {
             using (FileStream fs = new FileStream(inputFile, FileMode.Open))
             {
@@ -49,7 +86,7 @@ namespace VaultCrypt
 
                 byte[] plaintext = new byte[encrypted.Length];
 
-                using (AesGcm aesGcm = new AesGcm(DeriveKey(password), 16))
+                using (AesGcm aesGcm = new AesGcm(options.Key, AesGcm.TagByteSizes.MaxSize))
                 {
                     aesGcm.Decrypt(iv, encrypted, authentication, plaintext);
                 }
@@ -59,14 +96,14 @@ namespace VaultCrypt
         }
 
         /// <summary>
-        /// Should be only called from EncryptBytes
+        /// Should be only called from <see cref="EncryptBytes(byte[], EncryptionOptions)"/>
         /// </summary>
         /// <param name="data">Byte array of original data</param>
-        /// <param name="password">Password to encrypt with</param>
-        /// <returns>Byte Array of encrypted data</returns>
-        private static byte[] EncryptDataToBytes(byte[] data, string password)
+        /// <param name="options">Encryption options struct</param>
+        /// <returns>Byte array of encrypted data</returns>
+        private static byte[] EncryptDataToBytes(byte[] data, EncryptionOptions options)
         {
-            using (AesGcm aesGcm = new AesGcm(DeriveKey(password), AesGcm.TagByteSizes.MaxSize))
+            using (AesGcm aesGcm = new AesGcm(options.Key, AesGcm.TagByteSizes.MaxSize))
             {
                 byte[] iv = new byte[AesGcm.NonceByteSizes.MaxSize];
                 RandomNumberGenerator.Fill(iv);
@@ -84,30 +121,40 @@ namespace VaultCrypt
             }
         }
 
-        public static void EncryptFilesUsingThreads(string[] files, string output, string password)
-        {
-            foreach (var item in files)
-            {
-                //TODO: Fix it, placeholder for now
-                Task.Run(() => EncryptToFile(item,"ffffff", password));
-            }
-        }
+
+
+        //UNUSED FOR NOW!
+        //public static void EncryptFilesUsingThreads(string[] files, string output, string password)
+        //{
+        //    foreach (var item in files)
+        //    {
+        //        //TODO: Fix it, placeholder for now
+        //        Task.Run(() => EncryptToFile(item,"ffffff", password));
+        //    }
+        //}
+
 
         /// <summary>
         /// Used to encrypt data to bytes
         /// </summary>
         /// <param name="bytes">Byte array of original data</param>
-        /// <param name="password">Password to encrypt with</param>
+        /// <param name="options">Encryption options struct</param>
         /// <returns>Byte array of encrypted data</returns>
-        internal static byte[] EncryptBytes(byte[] bytes, string password)
+        internal static byte[] EncryptBytes(byte[] bytes, EncryptionOptions options)
         {
-            return EncryptDataToBytes(bytes, password);
+            return EncryptDataToBytes(bytes, options);
         }
 
-        internal static byte[] EncryptFileToBytes(string filePath, string password)
+        /// <summary>
+        /// 
+        /// </summary>
+        /// <param name="filePath">File to encrypt</param>
+        /// <param name="options">Encryption options struct</param>
+        /// <returns>Byte array of encrypted data</returns>
+        internal static byte[] EncryptFileToBytes(string filePath, EncryptionOptions options)
         {
             byte[] fileData = File.ReadAllBytes(filePath);
-            return EncryptBytes(fileData, password);
+            return EncryptBytes(fileData, options);
         }
 
         internal static byte[] DecryptBytes(byte[] encryptedMetadata, string password)

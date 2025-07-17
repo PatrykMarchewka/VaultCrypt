@@ -1,28 +1,10 @@
-﻿using System;
-using System.Collections.Generic;
+﻿using System.Buffers.Binary;
 using System.IO;
-using System.IO.Enumeration;
-using System.Linq;
-using System.Printing.IndexedProperties;
 using System.Text;
 using System.Text.Json;
-using System.Threading.Tasks;
 
 namespace VaultCrypt
 {
-    //File structure
-    //Basic Metadata per file then Massive Dictionary with extra stuff, signature to verify it file isn't corrupted and offset to point to the dictionary:
-    //[metadata][file][metadata][file][Dictionary][SIG][DictionaryOffset]
-    //SIG = 8 bytes
-    //DictionaryOffset = 8 bytes
-
-
-    //TODO
-    //Fix when multiple possibly corrupted metadata
-    //Possibility of recovery when corrupted metadata at the end but older one exists
-    //Add zipping for folders
-    //Reencrypt with new password
-
     public class VaultInfo
     {
         private static NormalizedPath _vaultPath;

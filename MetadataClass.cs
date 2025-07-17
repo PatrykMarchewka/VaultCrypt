@@ -19,34 +19,68 @@ namespace VaultCrypt
         //ushort = 2 bytes | 0 to 65 535
         //uint = 4 bytes | 0 to 4 294 967 295
         //ulong = 8 bytes | 0 to 1.8 * 10^19
-
+        public static byte nameLengthSize = 2;
+        public static byte fileSizeSize = 8;
+        public static byte chunkedSize = 1;
+        public static byte versionSize = 1;
+        public static byte chunkInformationSize = 14; //2 bytes chunk size + 4 bytes total chunks count + 8 bytes final chunk size = 14 bytes
+        
 
         public ushort nameLength { get; init; } //Fixed 2 bytes, length of fileName text
         public string fileName { get; init; } //Varying length, read from nameLength
         public ulong fileSize { get; init; } //Size of encrypted file
         public bool chunked { get; init; } //Whether file is chunked or not
         public byte version { get; init; } //Version of the CompactVaultEntry
+        public EncryptionHelper.EncryptionOptions encryptionOptions { get; init; }
         public ChunkInformation? chunkInformation { get; init; }
+        
 
 
-        public CompactVaultEntry(ushort nameLength, string fileName, ulong fileSize, bool chunked, ChunkInformation? chunkInformation)
+        public CompactVaultEntry(ushort nameLength, string fileName, ulong fileSize, bool chunked, EncryptionHelper.EncryptionOptions encryptionOptions, ChunkInformation? chunkInformation)
         {
             this.nameLength = nameLength;
             this.fileName = fileName;
             this.fileSize = fileSize;
             this.chunked = chunked;
             this.version = 0;
+            this.encryptionOptions = encryptionOptions;
             this.chunkInformation = chunkInformation;
         }
 
+        
 
+        static void WriteEncryptionOptions(EncryptionHelper.EncryptionOptions encryptionOptions, Stream stream)
+        {
+            Span<byte> buffer = stackalloc byte[2];
+            byte[] passwordBytes = Encoding.UTF8.GetBytes(encryptionOptions.Password);
+            BinaryPrimitives.WriteUInt16LittleEndian(buffer, (ushort)passwordBytes.Length);
+            stream.Write(buffer);
+            stream.Write(passwordBytes);
+
+            buffer = stackalloc byte[2];
+            byte[] hashNameBytes = Encoding.UTF8.GetBytes(encryptionOptions.HashAlgorithm.Name);
+            BinaryPrimitives.WriteUInt16LittleEndian(buffer, (ushort)hashNameBytes.Length);
+            stream.Write(buffer);
+            stream.Write(hashNameBytes);
+
+            buffer = stackalloc byte[2];
+            BinaryPrimitives.WriteUInt16LittleEndian(buffer, (ushort)encryptionOptions.Salt.Length);
+            stream.Write(buffer);
+            stream.Write(encryptionOptions.Salt);
+
+            buffer = stackalloc byte[2];
+            BinaryPrimitives.WriteUInt16LittleEndian(buffer, (ushort)encryptionOptions.Key.Length);
+            stream.Write(buffer);
+            stream.Write(encryptionOptions.Key);
+
+            buffer = stackalloc byte[4];
+            BinaryPrimitives.WriteInt32LittleEndian(buffer, encryptionOptions.Iterations);
+            stream.Write(buffer);
+        }
 
 
         public struct ChunkInformation
         {
-            //public char versionFirst { get; init; } = 'A';
-            //public char versionSecond { get; init; } = 'A';
-
             public ushort chunkSize { get; init; } //chunk sizes in MB
             public uint totalChunks { get; init; } //number of chunks
             public ulong finalChunkSize { get; init; } //size in bytes of last chunk
@@ -59,34 +93,10 @@ namespace VaultCrypt
             }
         }
 
-        
-
-        static ChunkInformation ReadChunkInformation(Stream stream)
-        {
-            //2 bytes chunk size + 4 bytes total chunks count + 8 bytes final chunk size = 14 bytes
-            Span<byte> buffer = stackalloc byte[14];
-            stream.ReadExactly(buffer);
-
-            ushort chunkSize = BinaryPrimitives.ReadUInt16LittleEndian(buffer.Slice(0, 2));
-            uint totalChunks = BinaryPrimitives.ReadUInt32LittleEndian(buffer.Slice(2, 4));
-            ulong finalChunkSize = BinaryPrimitives.ReadUInt64LittleEndian(buffer.Slice(6,8));
-            if (finalChunkSize >= (ulong)(chunkSize * 1024 * 1024))
-            {
-                throw new Exception("Final chunk size bigger than normal chunk size");
-            }
-
-            return new ChunkInformation
-            {
-                chunkSize = chunkSize,
-                totalChunks = totalChunks,
-                finalChunkSize = finalChunkSize
-            };
-        }
 
         public static void WriteChunkInformation(ChunkInformation chunk, Stream stream)
         {
-            //2 bytes chunk size + 4 bytes total chunks count + 8 bytes final chunk size = 14 bytes
-            Span<byte> buffer = stackalloc byte[14];
+            Span<byte> buffer = stackalloc byte[chunkInformationSize];
 
             BinaryPrimitives.WriteUInt16LittleEndian(buffer.Slice(0, 2), chunk.chunkSize);
             BinaryPrimitives.WriteUInt32LittleEndian(buffer.Slice(2, 4), chunk.totalChunks);
@@ -102,43 +112,11 @@ namespace VaultCrypt
             stream.ReadExactly(buffer);
             byte version = buffer[0];
 
-
-            if (version == 0)
-            {
-                buffer = stackalloc byte[2];
-                stream.ReadExactly(buffer);
-                ushort nameLength = BinaryPrimitives.ReadUInt16LittleEndian(buffer);
-
-                byte[] nameBytes = new byte[nameLength];
-                stream.ReadExactly(nameBytes);
-                string fileName = Encoding.UTF8.GetString(nameBytes);
-
-                buffer = stackalloc byte[8];
-                stream.ReadExactly(buffer);
-                ulong encLength = BinaryPrimitives.ReadUInt64LittleEndian(buffer);
-
-                buffer = stackalloc byte[1];
-                stream.ReadExactly(buffer);
-                bool chunk = buffer[0] != 0;
-
-
-                ChunkInformation? info = chunk ? ReadChunkInformation(stream) : null;
-
-
-                return new CompactVaultEntry(nameLength: nameLength, fileName: fileName, fileSize: encLength, chunked: chunk, chunkInformation: info);
-            }
-            else if(version == 1)
-            {
-                throw new NotImplementedException();
-            }
-            else
-            {
-                throw new NotImplementedException();
-            }
+            return ReaderFactory.getReader(version).Read(stream);
         }
 
 
-        public static void WriteTo(CompactVaultEntry entry, Stream stream, ChunkInformation? chunkInformation = null)
+        public static void WriteTo(CompactVaultEntry entry, Stream stream, EncryptionHelper.EncryptionOptions encryptionOptions, ChunkInformation? chunkInformation = null)
         {
             byte[] nameBytes = Encoding.UTF8.GetBytes(entry.fileName);
             if (nameBytes.Length > ushort.MaxValue)
@@ -158,6 +136,9 @@ namespace VaultCrypt
             BinaryPrimitives.WriteUInt64LittleEndian(buffer, entry.fileSize);
             stream.Write(buffer);
 
+            WriteEncryptionOptions(encryptionOptions, stream);
+
+
             stream.WriteByte(entry.chunked ? (byte)1 : (byte)0);
 
             //Writing extra information about chunks
@@ -170,13 +151,6 @@ namespace VaultCrypt
                 WriteChunkInformation(chunkInformation.Value, stream);
                 
             }
-
-
-
-
-            //Example:
-            //WriteTo(meta,fs)
-            //fs.write(encryptedbytes,0,encryptedbytes.length
             
         }
 
@@ -184,7 +158,9 @@ namespace VaultCrypt
     }
 
 
-    public class VaultEntry
+
+
+    internal class VaultEntry
     {
         public long compactVaultEntryOffset { get; set; } //Has to point to beginning of the CompactVaultEntry, not File itself!
         public long fileSize { get; set; } //Size of encrypted file
@@ -222,7 +198,7 @@ namespace VaultCrypt
         }
     }
 
-    public class IndexMetadata
+    internal class IndexMetadata
     {
         public Dictionary<string, VaultEntry> meta { get; set; } = new Dictionary<string, VaultEntry>();
         string formatVersion { get; set; } = "v1.0";
