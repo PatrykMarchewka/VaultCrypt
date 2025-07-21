@@ -1,4 +1,3 @@
-﻿using System;
 ﻿using Microsoft.VisualBasic;
 using System;
 using System.Buffers.Binary;
@@ -6,14 +5,13 @@ using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Printing.IndexedProperties;
+using System.Security.Cryptography;
 using System.Text;
 using System.Threading.Tasks;
 
 namespace VaultCrypt
 {
-
-
-    public class CompactVaultEntry
+    internal class CompactVaultEntry
     {
         //byte = 1 byte | 0 to 255
         //ushort = 2 bytes | 0 to 65 535
@@ -52,12 +50,6 @@ namespace VaultCrypt
         static void WriteEncryptionOptions(EncryptionHelper.EncryptionOptions encryptionOptions, Stream stream)
         {
             Span<byte> buffer = stackalloc byte[2];
-            byte[] passwordBytes = Encoding.UTF8.GetBytes(encryptionOptions.Password);
-            BinaryPrimitives.WriteUInt16LittleEndian(buffer, (ushort)passwordBytes.Length);
-            stream.Write(buffer);
-            stream.Write(passwordBytes);
-
-            buffer = stackalloc byte[2];
             byte[] hashNameBytes = Encoding.UTF8.GetBytes(encryptionOptions.HashAlgorithm.Name);
             BinaryPrimitives.WriteUInt16LittleEndian(buffer, (ushort)hashNameBytes.Length);
             stream.Write(buffer);
@@ -67,11 +59,6 @@ namespace VaultCrypt
             BinaryPrimitives.WriteUInt16LittleEndian(buffer, (ushort)encryptionOptions.Salt.Length);
             stream.Write(buffer);
             stream.Write(encryptionOptions.Salt);
-
-            buffer = stackalloc byte[2];
-            BinaryPrimitives.WriteUInt16LittleEndian(buffer, (ushort)encryptionOptions.Key.Length);
-            stream.Write(buffer);
-            stream.Write(encryptionOptions.Key);
 
             buffer = stackalloc byte[4];
             BinaryPrimitives.WriteInt32LittleEndian(buffer, encryptionOptions.Iterations);
@@ -116,7 +103,7 @@ namespace VaultCrypt
         }
 
 
-        public static void WriteTo(CompactVaultEntry entry, Stream stream, EncryptionHelper.EncryptionOptions encryptionOptions, ChunkInformation? chunkInformation = null)
+        public static void WriteTo(CompactVaultEntry entry, Stream stream)
         {
             byte[] nameBytes = Encoding.UTF8.GetBytes(entry.fileName);
             if (nameBytes.Length > ushort.MaxValue)
@@ -136,19 +123,19 @@ namespace VaultCrypt
             BinaryPrimitives.WriteUInt64LittleEndian(buffer, entry.fileSize);
             stream.Write(buffer);
 
-            WriteEncryptionOptions(encryptionOptions, stream);
+            WriteEncryptionOptions(entry.encryptionOptions, stream);
 
 
             stream.WriteByte(entry.chunked ? (byte)1 : (byte)0);
 
-            //Writing extra information about chunks
+
             if (entry.chunked)
             {
-                if (chunkInformation == null)
+                if (entry.chunkInformation == null)
                 {
                     throw new Exception("Entry is chunked yet there is no chunk information");
                 }
-                WriteChunkInformation(chunkInformation.Value, stream);
+                WriteChunkInformation(entry.chunkInformation.Value, stream);
                 
             }
             

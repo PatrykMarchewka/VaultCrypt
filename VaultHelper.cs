@@ -1,26 +1,36 @@
 ﻿using System.Buffers.Binary;
 using System.IO;
+using System.Printing.IndexedProperties;
+using System.Security.Cryptography;
 using System.Text;
 using System.Text.Json;
 
 namespace VaultCrypt
 {
-    public class VaultInfo
+    internal class VaultInfo : IDisposable
     {
         private static NormalizedPath _vaultPath;
-        private static string _vaultPassword;
+        private static byte[] _vaultKey;
 
         public static NormalizedPath vaultPath
         {
             get => _vaultPath ?? throw new InvalidOperationException("Vault path cannot not initialized");
             set => _vaultPath = value ?? throw new ArgumentNullException(nameof(value), "Vault path cannot be set to null"); //Nulls not allowed, if there is no vault then it should be empty instead
         }
-        public static string vaultPassword
+        public static byte[] vaultKey
         {
-            get => _vaultPassword ?? throw new InvalidOperationException("Password cannot be null");
-            set => _vaultPassword = value ?? throw new ArgumentNullException(nameof(value), "Password cannot be set to null");
+            get => _vaultKey ?? throw new InvalidOperationException("Key cannot be null");
+            set => _vaultKey = value ?? throw new ArgumentNullException(nameof(value), "Key cannot be set to null");
         }
         public static string? tempLocation { get; set; }
+        public void Dispose()
+        {
+            if (_vaultKey != null)
+            {
+                Array.Clear(_vaultKey);
+            }
+            _vaultPath = NormalizedPath.From(String.Empty);
+        }
     }
 
 
@@ -39,6 +49,25 @@ namespace VaultCrypt
             }
 
             File.WriteAllText(VaultInfo.vaultPath + "_metadata.enc", "[]");
+        }
+
+        //TODO: Finish
+        /// <summary>
+        /// Basic operations after opening the vault
+        /// </summary>
+        /// <param name="path"></param>
+        /// <param name="password"></param>
+        public static void OpenVault(NormalizedPath path, string password)
+        {
+            VaultInfo.vaultPath = path;
+            using (FileStream fs = new FileStream(path,FileMode.Open,FileAccess.Read))
+            {
+                Span<byte> buffer = stackalloc byte[1];
+                fs.ReadExactly(buffer);
+                byte version = buffer[0];
+                EncryptionHelper.EncryptionOptions options = ReaderFactory.getReader(version).ReadEncryptionOptions(fs);
+                VaultInfo.vaultKey = EncryptionHelper.DeriveKey(password, options);
+            }
         }
 
         /// <summary>
@@ -68,27 +97,25 @@ namespace VaultCrypt
                 byte[] encryptedMetadata = new byte[metadataSize];
                 fs.Read(encryptedMetadata, 0, encryptedMetadata.Length);
 
-                byte[] decrypted = EncryptionHelper.DecryptBytes(encryptedMetadata, VaultInfo.vaultPassword);
+                byte[] decrypted = EncryptionHelper.DecryptBytes(encryptedMetadata, key: null);
                 string json = Encoding.UTF8.GetString(decrypted);
                 return JsonSerializer.Deserialize<IndexMetadata>(json);
-                //TODO: Change it for potential different version
+                //TODO: Change it in future for potential different version
             }
         }
 
 
         /// <summary>
-        /// Replaces metadata with new one, if you are just adding files use instead <see cref="AppendMetadataToVault(NormalizedPath, NormalizedPath, long, long, string)"/>
+        /// Replaces metadata with new one, if you are just adding files use instead <see cref="AppendMetadataToVault(NormalizedPath, long, long)"/>
         /// </summary>
         /// <param name="metadata">IndexMetadata instance to save</param>
         public static void WriteMetadataToVault(IndexMetadata metadata)
         {
             string json = JsonSerializer.Serialize(metadata);
-            byte[] encryptedMetadata = EncryptionHelper.EncryptBytes(Encoding.UTF8.GetBytes(json), VaultInfo.vaultPassword);
-
-            using (FileStream fs = new FileStream(VaultInfo.vaultPath,FileMode.Open))
+            byte[] encryptedMetadata = EncryptionHelper.EncryptBytes(Encoding.UTF8.GetBytes(json), key: null);
+            
             using (FileStream fs = new FileStream(VaultInfo.vaultPath,FileMode.Append))
             {
-                fs.Seek(0, SeekOrigin.End);
                 long offset = fs.Position;
                 //first write metadata
                 fs.Write(encryptedMetadata, 0, encryptedMetadata.Length);
@@ -114,12 +141,10 @@ namespace VaultCrypt
             IndexMetadata metadata = ReadMetadataFromVault();
             metadata.meta.Add(fileInfo.Name, new VaultEntry() { fileSize = encLength, contentType = VaultEntry.GetContentTypeFromExtension(filePath), creationDateUTC = fileInfo.CreationTimeUtc, compactVaultEntryOffset = offset, originalPath = filePath });
             string json = JsonSerializer.Serialize(metadata);
-            byte[] encryptedMetadata = EncryptionHelper.EncryptBytes(Encoding.UTF8.GetBytes(json), VaultInfo.vaultPassword);
+            byte[] encryptedMetadata = EncryptionHelper.EncryptBytes(Encoding.UTF8.GetBytes(json), key: null);
 
-            using (FileStream fs = new FileStream(VaultInfo.vaultPath, FileMode.Open))
             using (FileStream fs = new FileStream(VaultInfo.vaultPath, FileMode.Append))
             {
-                fs.Seek(0, SeekOrigin.End);
                 long MetaOffset = fs.Position;
                 //first write metadata
                 fs.Write(encryptedMetadata, 0, encryptedMetadata.Length);
@@ -150,33 +175,29 @@ namespace VaultCrypt
         }
 
         /// <summary>
-        /// Adds file to vault
+        /// Adds file to vault, performing encryption after loading entire file into RAM
         /// </summary>
         /// <param name="filePath">Path to the file</param>
         public static void AddFileToVault(NormalizedPath filePath)
         {
-            byte[] encyptedData = EncryptionHelper.EncryptFileToBytes(filePath, VaultInfo.vaultPassword);
+            byte[] key = password == null ? VaultInfo.vaultKey : EncryptionHelper.DeriveKey(password, options);
+            byte[] encryptedData = EncryptionHelper.EncryptFileToBytes(filePath, key);
 
-            CompactVaultEntry entry = new CompactVaultEntry()
-            {
-                nameLength = (ushort)Path.GetFileName(filePath).Length,
-                fileName = Path.GetFileName(filePath),
-                fileSize = encyptedData.LongLength
-            };
+            CompactVaultEntry entry = new CompactVaultEntry(nameLength: (ushort)Path.GetFileName(filePath).Length, fileName: Path.GetFileName(filePath), fileSize: (ulong)encryptedData.LongLength, chunked: false, chunkInformation: null, encryptionOptions: options);
+
             long offset;
             using (FileStream fs = new FileStream(VaultInfo.vaultPath, FileMode.Append))
             {
-                fs.Seek(0, SeekOrigin.End);
                 offset = fs.Position;
                 CompactVaultEntry.WriteTo(entry, fs);
-                fs.Write(encyptedData, 0, encyptedData.Length);
+                fs.Write(encryptedData, 0, encryptedData.Length);
             }
 
-            AppendMetadataToVault(filePath, offset, encyptedData.LongLength);
+            AppendMetadataToVault(filePath, offset, encryptedData.LongLength);
         }
 
         /// <summary>
-        /// Zips the folder and adds as the file to vault
+        /// Zips the folder and adds as the file to vault, performing encryption after loading entire file into RAM
         /// </summary>
         /// <param name="folderPath">Path to the folder</param>
         /// <exception cref="NotImplementedException"></exception>
@@ -192,25 +213,16 @@ namespace VaultCrypt
         /// </summary>
         /// <param name="filePath">Path to the file</param>
         /// <param name="chunkSizeInMB">Size of one chunk in MegaBytes, defaults to 256MB</param>
-        public static void AddFileToVaultInChunks(NormalizedPath filePath, ushort chunkSizeInMB = 256)
+        public static void AddFileToVaultInChunks(NormalizedPath filePath, string? password, EncryptionHelper.EncryptionOptions options, ushort chunkSizeInMB = 256)
         {
-
-            //fileSize and chunk information set to zero for initialization, it gets populated below with correct information
-            CompactVaultEntry entry = new CompactVaultEntry(nameLength: (ushort)Path.GetFileName(filePath).Length, fileName: Path.GetFileName(filePath), fileSize: 0, chunked: true, chunkInformation: new CompactVaultEntry.ChunkInformation(chunkSize: 0, totalChunks: 0, finalChunkSize: 0));
-
-
-
-
             using FileStream fs = new FileStream(VaultInfo.vaultPath, FileMode.Append);
             using FileStream file = new FileStream(filePath, FileMode.Open, FileAccess.Read);
             long offset = fs.Length;
             uint chunks = FileHelper.GetChunkNumber(filePath);
 
-            CompactVaultEntry.WriteTo(entry, fs);
+            byte[] key = password == null ? VaultInfo.vaultKey : EncryptionHelper.DeriveKey(password, options);
+
             
-            
-            
-            //TODO: Finish
             int bytesRead = 0;
             long totalSize = 0; //Total encrypted size
             long lastChunkSize = 0; //Last Chunk Size
@@ -220,7 +232,7 @@ namespace VaultCrypt
             {
                 byte[] chunk = (bytesRead == originalBuffer.Length) ? originalBuffer : originalBuffer[..bytesRead];
                 //Encrypt here
-                byte[] encrypted = EncryptionHelper.EncryptBytesInChunks(chunk, VaultInfo.vaultPassword, chunkSizeInMB);
+                byte[] encrypted = EncryptionHelper.EncryptBytes(chunk, key);
                 fs.Write(encrypted, 0, encrypted.Length);
                 totalSize += encrypted.LongLength;
                 lastChunkSize = encrypted.LongLength;
@@ -230,23 +242,22 @@ namespace VaultCrypt
             file.Close();
             file.DisposeAsync();
 
-
-            //Modify the original entry with correct total size and  chunk information | Only for version 0
-            //offset to fileSize in CompactVaultEntry = offset (to beginning of CompactVaultEntry) + 1 byte (version) + 2 bytes (ushort for name length) + name length read from ushort)
-            long offsetToSize = offset + 1 + 2 + entry.nameLength;
-            fs.Seek(offsetToSize, SeekOrigin.Begin);
-            Span<byte> buffer = stackalloc byte[8];
-            BinaryPrimitives.WriteUInt64LittleEndian(buffer, (ulong)totalSize);
-            fs.Write(buffer);
-            //Going 1 byte to skip the chunked bool
-            fs.Seek(1, SeekOrigin.Current);
-
-            CompactVaultEntry.ChunkInformation updatedChunkInformation = new CompactVaultEntry.ChunkInformation(chunkSize: chunkSizeInMB, totalChunks: chunks, finalChunkSize: (ulong)lastChunkSize);
-            CompactVaultEntry.WriteChunkInformation(chunk: updatedChunkInformation, stream: fs);
+            //Writing metadata entry
+            CompactVaultEntry entry = new CompactVaultEntry(nameLength: (ushort)Path.GetFileName(filePath).Length, fileName: Path.GetFileName(filePath), fileSize: 0, chunked: true, chunkInformation: new CompactVaultEntry.ChunkInformation(chunkSize: chunkSizeInMB, totalChunks: chunks, finalChunkSize: (ulong)lastChunkSize), encryptionOptions: options);
+            CompactVaultEntry.WriteTo(entry, fs);
 
 
             AppendMetadataToVault(filePath, offset, totalSize);
         }
+
+        public static void AddFolderToVaultInChunks(NormalizedPath folderPath)
+        {
+            throw new NotImplementedException();
+        }
+
+
+
+        //TODO: Check long fullsize, might be not working due to difference in CompactVaultEntry size
         /// <summary>
         /// Safely deletes file from vault, overwriting it with random bytes
         /// </summary>
@@ -280,10 +291,16 @@ namespace VaultCrypt
         /// <summary>
         /// Recreates the vault from scratch and deletes old one. Used to shrink vault size if current vault has leftover data
         /// </summary>
-        public static void RebuildVault()
+        public static void RebuildVault(EncryptionHelper.EncryptionOptions? newOptions)
         {
+            if (!FileHelper.CheckFreeSpace(VaultInfo.vaultPath))
+            {
+                //Not enough free space
+                throw new Exception("Not enough free space on disk");
+            }
             NormalizedPath newPath = NormalizedPath.From(VaultInfo.vaultPath + ".tmp");
             IndexMetadata metadata = ReadMetadataFromVault();
+
             using var sourceStream = new FileStream(VaultInfo.vaultPath, FileMode.Open, FileAccess.ReadWrite);
             using var newVault = new FileStream(newPath, FileMode.CreateNew, FileAccess.Write);
             foreach (var (name, entry) in metadata.meta)

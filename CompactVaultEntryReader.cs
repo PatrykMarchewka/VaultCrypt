@@ -14,11 +14,12 @@ namespace VaultCrypt
     internal interface CompactVaultEntryReader
     {
         public CompactVaultEntry Read(Stream stream);
+        public EncryptionHelper.EncryptionOptions ReadEncryptionOptions(Stream stream);
     }
 
     internal class ReaderFactory
     {
-        public static CompactVaultEntryReader getReader(int version)
+        public static CompactVaultEntryReader getReader(byte version)
         {
             return version switch
             {
@@ -60,19 +61,9 @@ namespace VaultCrypt
         }
 
 
-        static EncryptionHelper.EncryptionOptions ReadEncryptionOptions(Stream stream)
+        public EncryptionHelper.EncryptionOptions ReadEncryptionOptions(Stream stream)
         {
             Span<byte> buffer = stackalloc byte[2];
-            stream.ReadExactly(buffer);
-            ushort passwordLength = BinaryPrimitives.ReadUInt16LittleEndian(buffer);
-
-            buffer = stackalloc byte[passwordLength];
-            stream.ReadExactly(buffer);
-            string password = Encoding.UTF8.GetString(buffer);
-
-
-
-            buffer = stackalloc byte[2];
             stream.ReadExactly(buffer);
             ushort hashNameLength = BinaryPrimitives.ReadUInt16LittleEndian(buffer);
 
@@ -91,24 +82,13 @@ namespace VaultCrypt
             byte[] salt = buffer.ToArray();
 
 
-
-            buffer = stackalloc byte[2];
-            stream.ReadExactly(buffer);
-            ushort keyLength = BinaryPrimitives.ReadUInt16LittleEndian(buffer);
-
-            buffer = stackalloc byte[keyLength];
-            stream.ReadExactly(buffer);
-            byte[] key = buffer.ToArray();
-
-
-
             buffer = stackalloc byte[4];
             stream.ReadExactly(buffer);
             int iterations = BinaryPrimitives.ReadInt32LittleEndian(buffer);
 
 
 
-            return new EncryptionHelper.EncryptionOptions(password, hash, salt, key, iterations);
+            return new EncryptionHelper.EncryptionOptions(salt, hash, iterations);
         }
 
         static ChunkInformation ReadChunkInformation(Stream stream)
