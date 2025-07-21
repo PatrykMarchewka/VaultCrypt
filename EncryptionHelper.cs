@@ -4,6 +4,7 @@ using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Printing.IndexedProperties;
+using System.Runtime.CompilerServices;
 using System.Security.Cryptography;
 using System.Text;
 using System.Threading.Tasks;
@@ -12,6 +13,37 @@ namespace VaultCrypt
 {
     internal class EncryptionHelper
     {
+        /// <summary>
+        /// Generates unique salt
+        /// </summary>
+        /// <param name="saltSize">Size of the salt array</param>
+        /// <returns>Array with unique salt</returns>
+        private static byte[] GenerateUniqueSalt(int saltSize)
+        {
+            byte[] salt = new byte[saltSize];
+            RandomNumberGenerator.Fill(salt);
+            return salt;
+        }
+
+        /// <summary>
+        /// Derives key to use
+        /// </summary>
+        /// <param name="password">Password to use</param>
+        /// <param name="options">Encryption options to use</param>
+        /// <returns>Derived key</returns>
+        public static byte[] DeriveKey(string password, EncryptionOptions options)
+        {
+            using (Rfc2898DeriveBytes pbkdf2 = new Rfc2898DeriveBytes(password, options.Salt, options.Iterations, options.HashAlgorithm))
+            {
+                return pbkdf2.GetBytes(HashCodeMap[options.HashAlgorithm]);
+            }
+        }
+
+
+
+        /// <summary>
+        /// Used to store basic EncryptionOptions in the vault file.
+        /// </summary>
         public readonly struct EncryptionOptions
         {
             public readonly int Iterations;
