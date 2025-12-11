@@ -28,19 +28,4 @@ namespace VaultCrypt
     }
 
 
-    internal class VaultKeySession : IDisposable
-    {
-        internal readonly byte[] KEY;
-
-        internal VaultKeySession(string password, Encryption.VaultEncryptionOptions encryptionOptions)
-        {
-            this.KEY = PasswordHelper.DeriveKey(password, encryptionOptions);
-        }
-
-
-        public void Dispose()
-        {
-            Array.Clear(KEY, 0, KEY.Length);
-        }
-    }
 }
