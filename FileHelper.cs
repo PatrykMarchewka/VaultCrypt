@@ -44,6 +44,55 @@ namespace VaultCrypt
 
             return BinaryPrimitives.ReadInt64LittleEndian(buffer.Slice(8,8));
         }
+        internal static bool WriteSmallFile()
+        {
+            try
+            {
+                string path = VaultSession.VAULTPATH + "vault.tmp";
+                byte[] data = new byte[1024];
+                RandomNumberGenerator.Fill(data);
+
+                File.WriteAllBytes(path, data);
+
+                byte[] returned = File.ReadAllBytes(path);
+
+                if (data.Length != returned.Length)
+                {
+                    return false;
+                }
+
+                for (int i = 0; i < data.Length; i++)
+                {
+                    if (data[i] != returned[i])
+                    {
+                        return false;
+                    }
+                }
+
+                return true;
+            }
+            catch
+            {
+                throw new Exception("Cant save file to disk");
+            }
+            finally
+            {
+                DeleteSmallFile();
+            }
+        }
+
+        private static void DeleteSmallFile()
+        {
+            string path = VaultSession.VAULTPATH + "vault.tmp";
+            try
+            {
+                File.Delete(path);
+            }
+            catch
+            {
+                throw new Exception("Cannot delete vault.tmp");
+            }
+        }
     }
     internal class NormalizedPath
     {
