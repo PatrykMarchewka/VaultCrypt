@@ -20,11 +20,11 @@ namespace VaultCrypt
     {
         internal static byte[] EncryptBytes(byte[] data, byte[] key)
         {
-            using (AesGcm aesGcm = new AesGcm(key, AesGcm.TagByteSizes.MaxSize))
+                using (AesGcm aesGcm = new AesGcm(key, 16))
             {
-                byte[] iv = new byte[AesGcm.NonceByteSizes.MaxSize];
+                    byte[] iv = new byte[12];
                 RandomNumberGenerator.Fill(iv);
-                byte[] authentication = new byte[AesGcm.TagByteSizes.MaxSize];
+                    byte[] authentication = new byte[16];
                 byte[] output = new byte[data.Length];
 
                 aesGcm.Encrypt(iv, data, output, authentication);
@@ -48,4 +48,5 @@ namespace VaultCrypt
 
 
     }
+}
 }
