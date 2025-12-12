@@ -10,19 +10,23 @@ namespace VaultCrypt
 {
     internal class PasswordHelper
     {
-        internal static byte[] GenerateRandomSalt(byte size = 32)
+        /// <summary>
+        /// Generates 32 byte array with cryptographically strong random data 
+        /// </summary>
+        /// <returns></returns>
+        internal static byte[] GenerateRandomSalt()
         {
-            byte[] salt = new byte[size];
+            byte[] salt = new byte[32];
             RandomNumberGenerator.Fill(salt);
             return salt;
         }
 
 
-        internal static byte[] DeriveKey(string password, Encryption.VaultEncryptionOptions encryptionOptions)
+        internal static byte[] DeriveKey(string password)
         {
-            using (Rfc2898DeriveBytes pbkdf2 = new Rfc2898DeriveBytes(password, encryptionOptions.salt, (int)encryptionOptions.iterations, HashAlgorithmName.SHA256))
+            using (Rfc2898DeriveBytes pbkdf2 = new Rfc2898DeriveBytes(password, VaultSession.SALT, VaultSession.ITERATIONS, HashAlgorithmName.SHA512))
             {
-                return pbkdf2.GetBytes(32);
+                return pbkdf2.GetBytes(128);
             }
         }
     }
