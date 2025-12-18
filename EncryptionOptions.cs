@@ -59,10 +59,33 @@ namespace VaultCrypt
             {EncryptionProtocol.AES256GCM, (keySize:32, encryptionDataSize: 28, encryptMethod: (data, key) => Encryption.AesGcmEncryption.EncryptBytes(data, key), decryptMethod: (data, key) => Decryption.AesGcmDecryption.DecryptBytes(data, key)) }
         };
 
+        internal static FileEncryptionOptions PrepareEncryptionOptions(FileInfo fileInfo, EncryptionProtocol protocol, ushort chunkSizeInMB)
         {
+            ushort nameLength = (ushort)(fileInfo.Name.Length);
+            string fileName = fileInfo.Name;
+            bool chunked = false;
+            ChunkInformation? chunkInformation = null;
 
-
+            if (fileInfo.Length > chunkSizeInMB)
             {
+                chunked = true;
+                long chunkSize = chunkSizeInMB * 1024 * 1024;
+                long chunkNumber = (fileInfo.Length / chunkSize) + 1;
+                long lastChunk = fileInfo.Length - ((chunkNumber - 1) * chunkSize);
+                chunkInformation = new ChunkInformation(chunkSizeInMB, checked((ushort)chunkNumber), checked((uint)lastChunk));
+            }
+            short extraBytes = GetEncryptionProtocolInfo[protocol].encryptionDataSize;
+
+            ulong fileSize = chunkInformation == null ? (ulong)(fileInfo.Length + extraBytes) : (ulong)(fileInfo.Length + extraBytes + (extraBytes * chunkInformation.Value.totalChunks));
+            return new FileEncryptionOptions
+            {
+                version = 0,
+                nameLength = nameLength,
+                fileName = fileName,
+                fileSize = fileSize,
+                encryptionProtocol = protocol,
+                chunked = chunked,
+                chunkInformation = chunkInformation
             };
         }
 
@@ -162,34 +185,11 @@ namespace VaultCrypt
         }
 
 
-        internal static FileEncryptionOptions PrepareEncryptionOptions(FileInfo fileInfo, EncryptionProtocol protocol, int chunkSizeInMB)
-        {
-            ushort nameLength = (ushort)(fileInfo.Name.Length);
-            string fileName = fileInfo.Name;
-            bool chunked = false;
-            ChunkInformation? chunkInformation = null;
+       
+    }
 
-            if (fileInfo.Length > chunkSizeInMB)
-            {
-                chunked = true;
-                long chunkSize = chunkSizeInMB * 1024 * 1024;
-                long chunkNumber = (fileInfo.Length / chunkSize) + 1;
-                long lastChunk = fileInfo.Length - ((chunkNumber - 1) * chunkSize);
-                chunkInformation = new ChunkInformation((ushort)chunkSizeInMB, (uint)chunkNumber, (ulong)lastChunk);
-            }
-            short extraBytes = GetEncryptionDataSizeByEncryptionProtocol(protocol);
-
-            ulong fileSize = chunkInformation == null ? (ulong)(fileInfo.Length + extraBytes) : (ulong)(fileInfo.Length + extraBytes + (extraBytes * chunkInformation.Value.totalChunks));
-            return new FileEncryptionOptions
-            {
-                version = 0,
-                nameLength = nameLength,
-                fileName = fileName,
-                fileSize = fileSize,
-                encryptionProtocol = protocol,
-                chunked = chunked,
-                chunkInformation = chunkInformation
-            };
-        }
+    internal class EncryptionOptionsV0Reader : EncryptionOptionsReader
+    {
+        internal override byte Version => 0;
     }
 }
