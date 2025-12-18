@@ -25,7 +25,7 @@ namespace VaultCrypt
             internal ulong fileSize { get; init; } //Fixed 8 bytes, Size in bytes of encrypted file
             internal EncryptionProtocol encryptionProtocol { get; init; } //Fixed 1 byte, Encryption protocol enum
             internal bool chunked { get; init; } //Fixed 1 byte, Whether file is chunked or not
-            internal ChunkInformation? chunkInformation { get; init; } //Fixed 14 bytes (2 bytes chunk size + 4 bytes total chunks count + 8 bytes final chunk size = 14 bytes)
+            internal ChunkInformation? chunkInformation { get; init; } //Fixed 8 bytes (2 bytes chunk size + 2 bytes total chunks count + 4 bytes final chunk size = 8 bytes)
 
             //V0 = [version][nameLength][fileName][fileSize][encryptionProtocol][chunked][chunkInformation]
         }
@@ -33,10 +33,10 @@ namespace VaultCrypt
         internal struct ChunkInformation
         {
             internal ushort chunkSize { get; init; } //Fixed 2 bytes, Chunk sizes in MB
-            internal uint totalChunks { get; init; } //Fixed 4 bytes, Number of chunks
-            internal ulong finalChunkSize { get; init; } //Fixed 8 bytes, Size in bytes of last chunk
+            internal ushort totalChunks { get; init; } //Fixed 2 bytes, Number of chunks
+            internal uint finalChunkSize { get; init; } //Fixed 4 bytes, Size in bytes of last chunk
 
-            internal ChunkInformation(ushort chunkSize, uint totalChunks, ulong finalChunkSize)
+            internal ChunkInformation(ushort chunkSize, ushort totalChunks, uint finalChunkSize)
             {
                 this.chunkSize = chunkSize;
                 this.totalChunks = totalChunks;
@@ -105,10 +105,10 @@ namespace VaultCrypt
 
         internal static byte[] SerializeChunkInformation(ChunkInformation chunkInformation)
         {
-            byte[] chunkBytes = new byte[14];
+            byte[] chunkBytes = new byte[8];
             BinaryPrimitives.WriteUInt16LittleEndian(chunkBytes.AsSpan(0, 2), chunkInformation.chunkSize);
-            BinaryPrimitives.WriteUInt32LittleEndian(chunkBytes.AsSpan(2, 4), chunkInformation.totalChunks);
-            BinaryPrimitives.WriteUInt64LittleEndian(chunkBytes.AsSpan(4, 8), chunkInformation.finalChunkSize);
+            BinaryPrimitives.WriteUInt32LittleEndian(chunkBytes.AsSpan(2, 2), chunkInformation.totalChunks);
+            BinaryPrimitives.WriteUInt64LittleEndian(chunkBytes.AsSpan(4, 4), chunkInformation.finalChunkSize);
             return chunkBytes;
         }
 
@@ -153,8 +153,8 @@ namespace VaultCrypt
         private static ChunkInformation deserializeChunkInformation(byte[] chunkData)
         {
             ushort chunkSize = BinaryPrimitives.ReadUInt16LittleEndian(chunkData.AsSpan(0, sizeof(ushort)));
-            uint totalChunks = BinaryPrimitives.ReadUInt32LittleEndian(chunkData.AsSpan(sizeof(ushort), sizeof(uint)));
-            ulong finalChunkSize = BinaryPrimitives.ReadUInt64LittleEndian(chunkData.AsSpan(sizeof(ushort) + sizeof(uint), sizeof(ulong)));
+            ushort totalChunks = BinaryPrimitives.ReadUInt16LittleEndian(chunkData.AsSpan(sizeof(ushort), sizeof(ushort)));
+            uint finalChunkSize = BinaryPrimitives.ReadUInt32LittleEndian(chunkData.AsSpan(sizeof(ushort) + sizeof(ushort), sizeof(uint)));
 
             return new ChunkInformation
             {
