@@ -27,15 +27,7 @@ namespace VaultCrypt
                 fs.ReadExactly(buffer);
                 VERSION = buffer[0];
 
-
-                switch (VERSION)
-                {
-                    case 0:
-                        VaultV0Reader.ReadVaultSession(fs);
-                        break;
-                    default:
-                        throw new Exception("Unknown vault version");
-                }
+                VaultRegistry.GetVaultReader(VERSION).ReadVaultSession(fs);
             }
         }
 
@@ -48,11 +40,36 @@ namespace VaultCrypt
             VAULTPATH = NormalizedPath.From(String.Empty);
             ITERATIONS = 0;
         }
+
+
+
+        
+
     }
 
-    internal class VaultV0Reader
+
+    internal static class VaultRegistry
     {
-        public static void ReadVaultSession(Stream stream)
+        private static readonly Dictionary<byte, VaultReader> registry = new()
+        {
+            {0, new VaultV0Reader() }
+        };
+
+        internal static VaultReader GetVaultReader(byte version)
+        {
+            if (!registry.TryGetValue(version, out VaultReader reader))
+            {
+                throw new Exception("Unknown vault version");
+            }
+            return reader;
+        }
+    }
+
+
+    internal abstract class VaultReader
+    {
+        internal abstract byte Version { get; }
+        internal virtual void ReadVaultSession(Stream stream)
         {
             Span<byte> buffer = stackalloc byte[32 + sizeof(uint)]; //Default salt size + 4 for uint ITERATIONS
             stream.ReadExactly(buffer);
@@ -65,13 +82,14 @@ namespace VaultCrypt
                 stream.Seek(item, SeekOrigin.Begin);
                 buffer = stackalloc byte[1024];
                 stream.ReadExactly(buffer);
-                byte[] decrypted = Decryption.AesGcmDecryption.DecryptBytes(buffer);
-                EncryptionOptions.FileEncryptionOptions fileEncryptionOptions = EncryptionOptions.DeserializeEncryptionOptions(decrypted);
+                byte[] decrypted = VaultDecryption(buffer);
+                byte version = decrypted[0];
+                EncryptionOptions.FileEncryptionOptions fileEncryptionOptions = EncryptionOptionsRegistry.GetReader(version).DeserializeEncryptionOptions(decrypted);
                 VaultSession.ENCRYPTED_FILES.Add(item, fileEncryptionOptions);
             }
         }
 
-        public static long[] ReadMetadataOffsets(Stream stream)
+        internal virtual long[] ReadMetadataOffsets(Stream stream)
         {
             byte[] decrypted = ReadMetadataOffsetsBytes(stream);
             ushort fileCount = BinaryPrimitives.ReadUInt16LittleEndian(decrypted);
@@ -80,20 +98,20 @@ namespace VaultCrypt
             for (int i = 0; i < fileCount; i++)
             {
                 int readOffset = 2 + (i * sizeof(long));
-                offsets[i] = BinaryPrimitives.ReadInt64LittleEndian(decrypted.AsSpan(readOffset,sizeof(long)));
+                offsets[i] = BinaryPrimitives.ReadInt64LittleEndian(decrypted.AsSpan(readOffset, sizeof(long)));
             }
             return offsets;
         }
 
-        public static byte[] ReadMetadataOffsetsBytes(Stream stream)
+        internal virtual byte[] ReadMetadataOffsetsBytes(Stream stream)
         {
             stream.Seek(sizeof(byte) + 32 + sizeof(uint), SeekOrigin.Begin); //1 byte for version + 32 bytes for salt + 4 bytes for iterations
             Span<byte> buffer = stackalloc byte[28 + sizeof(ushort) + 4096]; //28 bytes for AES decryption + 2 bytes ushort number + 4KB (4096) for maximum of 512 files per vault
             stream.ReadExactly(buffer);
-            return Decryption.AesGcmDecryption.DecryptBytes(buffer);
+            return VaultDecryption(buffer);
         }
 
-        public static void WriteMetadataOffsets(Stream stream, long newOffset)
+        internal virtual void WriteMetadataOffsets(Stream stream, long newOffset)
         {
             long[] oldOffsets = ReadMetadataOffsets(stream);
             long[] newOffsets = new long[oldOffsets.Length + 1];
@@ -113,6 +131,32 @@ namespace VaultCrypt
             stream.Seek(sizeof(byte) + 32 + sizeof(uint), SeekOrigin.Begin); //1 byte for version + 32 bytes for salt + 4 bytes for iterations
             stream.Write(paddedMetadataOffsets);
         }
+
+        internal virtual byte[] VaultEncryption(byte[] data)
+        {
+            byte[] slicedKey = new byte[32];
+            Array.Copy(VaultSession.KEY, slicedKey, slicedKey.Length);
+
+            return Encryption.AesGcmEncryption.EncryptBytes(data, slicedKey);
+        }
+
+        internal virtual byte[] VaultDecryption(Span<byte> data)
+        {
+            byte[] slicedKey = new byte[32];
+            Array.Copy(VaultSession.KEY, slicedKey, slicedKey.Length);
+
+            return Decryption.AesGcmDecryption.DecryptBytes(data, slicedKey);
+        }
+    }
+
+
+
+
+
+
+    internal class VaultV0Reader : VaultReader
+    {
+        internal override byte Version => 0;
     }
 
 
