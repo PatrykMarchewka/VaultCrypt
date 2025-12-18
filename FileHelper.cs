@@ -119,6 +119,27 @@ namespace VaultCrypt
                 throw new Exception("Cannot delete vault.tmp");
             }
         }
+
+        public static void WriteFile(NormalizedPath filePath, byte[] data)
+        {
+            try
+            {
+                using (FileStream fs = new FileStream(filePath, FileMode.Create))
+                {
+                    fs.Write(data, 0, data.Length);
+                }
+            }
+            catch
+            {
+                throw new Exception("Cant save file to disk");
+            }
+        }
+
+        public static void WriteFile(string filePath, byte[] data)
+        {
+            WriteFile(NormalizedPath.From(filePath), data);
+        }
+
     }
     internal class NormalizedPath
     {
