@@ -52,27 +52,14 @@ namespace VaultCrypt
             AES256GCM
         }
 
-        internal static byte GetKeySizeByEncryptionProtocol(EncryptionProtocol protocol)
+        internal static readonly Dictionary<EncryptionProtocol, (byte keySize, short encryptionDataSize, Func<byte[], byte[], byte[]> encryptMethod, Func<byte[], byte[], byte[]> decryptMethod)> GetEncryptionProtocolInfo = new()
         {
-            return protocol switch
-            {
-                EncryptionProtocol.AES128GCM => 16,
-                EncryptionProtocol.AES192GCM => 24,
-                EncryptionProtocol.AES256GCM => 32,
-                _ => throw new Exception("Unknown encryption protocol")
-            };
-        }
+            {EncryptionProtocol.AES128GCM, (keySize: 16, encryptionDataSize: 28, encryptMethod: (data, key) => Encryption.AesGcmEncryption.EncryptBytes(data, key), decryptMethod: (data, key) => Decryption.AesGcmDecryption.DecryptBytes(data, key)) },
+            {EncryptionProtocol.AES192GCM, (keySize: 24, encryptionDataSize: 28, encryptMethod: (data, key) => Encryption.AesGcmEncryption.EncryptBytes(data, key), decryptMethod: (data, key) => Decryption.AesGcmDecryption.DecryptBytes(data, key)) },
+            {EncryptionProtocol.AES256GCM, (keySize:32, encryptionDataSize: 28, encryptMethod: (data, key) => Encryption.AesGcmEncryption.EncryptBytes(data, key), decryptMethod: (data, key) => Decryption.AesGcmDecryption.DecryptBytes(data, key)) }
+        };
 
-        internal static short GetEncryptionDataSizeByEncryptionProtocol(EncryptionProtocol protocol)
         {
-            return protocol switch
-            {
-                EncryptionProtocol.AES128GCM => 28,
-                EncryptionProtocol.AES192GCM => 28,
-                EncryptionProtocol.AES256GCM => 28,
-                _ => throw new Exception("Unknown encryption protocol")
-            };
-        }
 
 
         internal static byte[] SerializeEncryptionOptions(FileEncryptionOptions encryptionOptions)
