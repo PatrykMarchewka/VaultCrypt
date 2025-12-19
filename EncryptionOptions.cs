@@ -122,18 +122,18 @@ namespace VaultCrypt
 
     internal static class EncryptionOptionsRegistry
     {
-        private readonly static Dictionary<byte, EncryptionOptionsReader> registry = new()
+        private readonly static Dictionary<byte, Lazy<EncryptionOptionsReader>> registry = new()
         {
-            {0, new EncryptionOptionsV0Reader() }
+            {0, new Lazy<EncryptionOptionsReader>(() => new EncryptionOptionsV0Reader()) }
         };
 
         internal static EncryptionOptionsReader GetReader(byte version)
         {
-            if (!registry.TryGetValue(version, out EncryptionOptionsReader reader))
+            if (!registry.TryGetValue(version, out Lazy<EncryptionOptionsReader> reader))
             {
                 throw new Exception("Unknown encryption options version");
             }
-            return reader;
+            return reader.Value;
         }
     }
 
