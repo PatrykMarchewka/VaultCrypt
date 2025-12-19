@@ -148,6 +148,18 @@ namespace VaultCrypt
             WriteFile(NormalizedPath.From(filePath), data);
         }
 
+        internal static void WriteReadyChunk(ConcurrentDictionary<int, byte[]> results, ref int nextToWrite, Stream fileFS, object lockObject)
+        {
+            lock (lockObject)
+            {
+                while (results.TryRemove(nextToWrite, out var ready))
+                {
+                    fileFS.Write(ready, 0, ready.Length);
+                    nextToWrite++;
+                }
+            }
+        }
+
     }
     internal class NormalizedPath
     {
