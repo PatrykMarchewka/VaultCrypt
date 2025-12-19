@@ -50,18 +50,18 @@ namespace VaultCrypt
 
     internal static class VaultRegistry
     {
-        private static readonly Dictionary<byte, VaultReader> registry = new()
+        private static readonly Dictionary<byte, Lazy<VaultReader>> registry = new()
         {
-            {0, new VaultV0Reader() }
+            {0, new Lazy<VaultReader>(() => new VaultV0Reader()) }
         };
 
         internal static VaultReader GetVaultReader(byte version)
         {
-            if (!registry.TryGetValue(version, out VaultReader reader))
+            if (!registry.TryGetValue(version, out Lazy<VaultReader> reader))
             {
                 throw new Exception("Unknown vault version");
             }
-            return reader;
+            return reader.Value;
         }
     }
 
