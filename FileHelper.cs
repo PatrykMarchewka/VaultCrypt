@@ -70,6 +70,14 @@ namespace VaultCrypt
             }
         }
 
+        internal static int CalculateConcurrency(bool chunked, ushort chunkSizeInMB)
+        {
+            if (!chunked) return 1;
+            int threadCount = Math.Max(1, Environment.ProcessorCount);
+            int ramSpace = (int)(CheckFreeRamSpace() / (chunkSizeInMB * 1024 * 1024));
+            return Math.Min(threadCount, ramSpace);
+        }
+
         internal static bool WriteSmallFile()
         {
             try
