@@ -125,6 +125,11 @@ namespace VaultCrypt
                 BinaryPrimitives.WriteInt64LittleEndian(data.AsSpan(writeOffset, sizeof(long)), newOffsets[i]);
             }
             byte[] encryptedMetadataOffsets = Encryption.AesGcmEncryption.EncryptBytes(data, VaultSession.KEY);
+            if (encryptedMetadataOffsets.Length > (28 + sizeof(ushort) + 4096))
+            {
+                throw new Exception("Too many files in the vault");
+            }
+
             byte[] paddedMetadataOffsets = new byte[28 + sizeof(ushort) + 4096]; //28 bytes for AES encryption + 2 bytes ushort number + 4KB (4096) for maximum of 512 files per vault
             Buffer.BlockCopy(encryptedMetadataOffsets, 0, paddedMetadataOffsets, 0, encryptedMetadataOffsets.Length);
 
