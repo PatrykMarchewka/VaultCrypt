@@ -77,10 +77,10 @@ namespace VaultCrypt
             VaultSession.ITERATIONS = BinaryPrimitives.ReadInt32LittleEndian(buffer.Slice(32, sizeof(uint)));
             long[] offsets = ReadMetadataOffsets(stream);
 
+            buffer = stackalloc byte[1024];
             foreach (var item in offsets)
             {
                 stream.Seek(item, SeekOrigin.Begin);
-                buffer = stackalloc byte[1024];
                 stream.ReadExactly(buffer);
                 byte[] decrypted = VaultDecryption(buffer);
                 byte version = decrypted[0];
