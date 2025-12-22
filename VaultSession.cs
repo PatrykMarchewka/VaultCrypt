@@ -39,6 +39,10 @@ namespace VaultCrypt
             Array.Clear(SALT, 0, SALT.Length);
             CryptographicOperations.ZeroMemory(KEY);
             CryptographicOperations.ZeroMemory(SALT);
+            foreach (var item in ENCRYPTED_FILES)
+            {
+                ENCRYPTED_FILES[item.Key] = default;
+            }
             ENCRYPTED_FILES.Clear();
             VAULTPATH = NormalizedPath.From(String.Empty);
             ITERATIONS = 0;
