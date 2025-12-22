@@ -3,6 +3,7 @@ using System.Buffers.Binary;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
+using System.Security.Cryptography;
 using System.Text;
 using System.Threading.Tasks;
 
@@ -36,6 +37,8 @@ namespace VaultCrypt
         {
             Array.Clear(KEY, 0, KEY.Length);
             Array.Clear(SALT, 0, SALT.Length);
+            CryptographicOperations.ZeroMemory(KEY);
+            CryptographicOperations.ZeroMemory(SALT);
             ENCRYPTED_FILES.Clear();
             VAULTPATH = NormalizedPath.From(String.Empty);
             ITERATIONS = 0;
