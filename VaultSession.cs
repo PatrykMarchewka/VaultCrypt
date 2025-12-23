@@ -16,7 +16,7 @@ namespace VaultCrypt
         internal static NormalizedPath VAULTPATH;
         internal static int ITERATIONS;
         internal static byte[] SALT;
-        internal static Dictionary<long, EncryptionOptions.FileEncryptionOptions> ENCRYPTED_FILES;
+        internal static Dictionary<long, string> ENCRYPTED_FILES;
 
         internal VaultSession(string password, NormalizedPath path)
         {
@@ -35,17 +35,12 @@ namespace VaultCrypt
 
         public void Dispose()
         {
-            Array.Clear(KEY, 0, KEY.Length);
-            Array.Clear(SALT, 0, SALT.Length);
             CryptographicOperations.ZeroMemory(KEY);
             CryptographicOperations.ZeroMemory(SALT);
-            foreach (var item in ENCRYPTED_FILES)
-            {
-                ENCRYPTED_FILES[item.Key] = default;
-            }
             ENCRYPTED_FILES.Clear();
             VAULTPATH = NormalizedPath.From(String.Empty);
             ITERATIONS = 0;
+            VERSION = 0;
         }
 
 
@@ -92,7 +87,7 @@ namespace VaultCrypt
                 byte[] decrypted = VaultDecryption(buffer);
                 byte version = decrypted[0];
                 EncryptionOptions.FileEncryptionOptions fileEncryptionOptions = EncryptionOptionsRegistry.GetReader(version).DeserializeEncryptionOptions(decrypted);
-                VaultSession.ENCRYPTED_FILES.Add(item, fileEncryptionOptions);
+                VaultSession.ENCRYPTED_FILES.Add(item, Encoding.UTF8.GetString(fileEncryptionOptions.fileName));
             }
         }
 
