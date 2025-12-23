@@ -3,6 +3,7 @@ using System.Buffers.Binary;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
+using System.Security.Cryptography;
 using System.Text;
 using System.Threading.Tasks;
 
@@ -21,7 +22,7 @@ namespace VaultCrypt
             //ulong = 8 bytes | 0 to 1.8 * 10^19
             internal byte version { get; init; } //Fixed 1 byte, version of the FileEncryptionOptions
             internal ushort nameLength { get; init; } //Fixed 2 bytes, length of fileName text
-            internal string fileName { get; init; } //Varying length (read from nameLength), file name with extension, 255 characters max! so 1020bytes max
+            internal byte[] fileName { get; init; } //Varying length (read from nameLength), file name with extension!
             internal ulong fileSize { get; init; } //Fixed 8 bytes, Size in bytes of encrypted file
             internal EncryptionProtocol encryptionProtocol { get; init; } //Fixed 1 byte, Encryption protocol enum
             internal bool chunked { get; init; } //Fixed 1 byte, Whether file is chunked or not
@@ -62,7 +63,7 @@ namespace VaultCrypt
         internal static FileEncryptionOptions PrepareEncryptionOptions(FileInfo fileInfo, EncryptionProtocol protocol, ushort chunkSizeInMB)
         {
             ushort nameLength = (ushort)(fileInfo.Name.Length);
-            string fileName = fileInfo.Name;
+            byte[] fileName = Encoding.UTF8.GetBytes(fileInfo.Name);
             bool chunked = false;
             ChunkInformation? chunkInformation = null;
 
@@ -91,18 +92,19 @@ namespace VaultCrypt
 
 
 
-        internal static byte[] SerializeEncryptionOptions(EncryptionOptions.FileEncryptionOptions encryptionOptions)
+        internal static byte[] SerializeEncryptionOptions(ref EncryptionOptions.FileEncryptionOptions encryptionOptions)
         {
             List<byte> bytes = new();
             byte[] buffer = new byte[sizeof(byte) + sizeof(ushort) + encryptionOptions.nameLength + sizeof(long) + sizeof(byte) + sizeof(byte)]; //1 byte version, 2 byte name length, x bytes name, 8 bytes size, 1 byte encryptionprotocol, 1 byte chunkinformation
             buffer[0] = 0;
             BinaryPrimitives.WriteUInt16LittleEndian(buffer.AsSpan(sizeof(byte), sizeof(ushort)), encryptionOptions.nameLength);
-            Encoding.UTF8.GetBytes(encryptionOptions.fileName).CopyTo(buffer.AsSpan(sizeof(byte) + sizeof(ushort)));
+            encryptionOptions.fileName.CopyTo(buffer.AsSpan(sizeof(byte) + sizeof(ushort)));
             BinaryPrimitives.WriteUInt64LittleEndian(buffer.AsSpan(sizeof(byte) + sizeof(ushort) + encryptionOptions.nameLength, sizeof(long)), encryptionOptions.fileSize);
             buffer[sizeof(byte) + sizeof(ushort) + encryptionOptions.nameLength + sizeof(long)] = ((byte)encryptionOptions.encryptionProtocol);
             buffer[sizeof(byte) + sizeof(ushort) + encryptionOptions.nameLength + sizeof(long) + sizeof(byte)] = encryptionOptions.chunked ? (byte)1 : (byte)0;
 
             bytes.AddRange(buffer);
+            CryptographicOperations.ZeroMemory(buffer);
             if (encryptionOptions.chunked)
             {
                 bytes.AddRange(SerializeChunkInformation((EncryptionOptions.ChunkInformation)encryptionOptions.chunkInformation!));
@@ -117,6 +119,11 @@ namespace VaultCrypt
             BinaryPrimitives.WriteUInt32LittleEndian(chunkBytes.AsSpan(2, 2), chunkInformation.totalChunks);
             BinaryPrimitives.WriteUInt64LittleEndian(chunkBytes.AsSpan(4, 4), chunkInformation.finalChunkSize);
             return chunkBytes;
+        }
+
+        internal static void WipeFileEncryptionOptions(ref EncryptionOptions.FileEncryptionOptions options)
+        {
+            EncryptionOptionsRegistry.GetReader(options.version).ClearEncryptionOptions(ref options);
         }
     }
 
@@ -147,14 +154,14 @@ namespace VaultCrypt
         {
             byte version = data[0];
             ushort nameLength = BinaryPrimitives.ReadUInt16LittleEndian(data.AsSpan(1, sizeof(ushort)));
-            string fileName = Encoding.UTF8.GetString(data.AsSpan(1 + sizeof(ushort), nameLength));
+            byte[] fileName = data.AsSpan(1 + sizeof(ushort), nameLength).ToArray();
             ulong fileSize = BinaryPrimitives.ReadUInt64LittleEndian(data.AsSpan(1 + sizeof(ushort) + nameLength, sizeof(ulong)));
             EncryptionOptions.EncryptionProtocol protocol = (EncryptionOptions.EncryptionProtocol)data[1 + sizeof(ushort) + nameLength + sizeof(ulong)];
             bool chunked = data[1 + sizeof(ushort) + nameLength + sizeof(ulong) + 1] == 1 ? true : false;
             EncryptionOptions.ChunkInformation? chunkInformation = null;
             if (chunked)
             {
-                chunkInformation = DeserializeChunkInformation(data.AsSpan(1 + sizeof(ushort) + nameLength + sizeof(ulong) + 1 + 1).ToArray());
+                chunkInformation = DeserializeChunkInformation(data[(1 + sizeof(ushort) + nameLength + sizeof(ulong) + 1 + 1)..]);
             }
 
 
@@ -182,6 +189,12 @@ namespace VaultCrypt
                 totalChunks = totalChunks,
                 finalChunkSize = finalChunkSize
             };
+        }
+
+        internal virtual void ClearEncryptionOptions(ref EncryptionOptions.FileEncryptionOptions options)
+        {
+            CryptographicOperations.ZeroMemory(options.fileName);
+            options = default;
         }
 
 
