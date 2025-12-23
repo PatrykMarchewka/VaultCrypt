@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Buffers.Binary;
+using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
@@ -128,7 +129,7 @@ namespace VaultCrypt
             }
         }
 
-        public static void WriteFile(NormalizedPath filePath, byte[] data)
+        internal static void WriteFile(NormalizedPath filePath, byte[] data)
         {
             try
             {
@@ -143,7 +144,7 @@ namespace VaultCrypt
             }
         }
 
-        public static void WriteFile(string filePath, byte[] data)
+        internal static void WriteFile(string filePath, byte[] data)
         {
             WriteFile(NormalizedPath.From(filePath), data);
         }
@@ -155,6 +156,7 @@ namespace VaultCrypt
                 while (results.TryRemove(nextToWrite, out var ready))
                 {
                     fileFS.Write(ready, 0, ready.Length);
+                    CryptographicOperations.ZeroMemory(ready);
                     nextToWrite++;
                 }
             }
