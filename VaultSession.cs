@@ -3,6 +3,7 @@ using System.Buffers.Binary;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
+using System.Runtime.InteropServices;
 using System.Security.Cryptography;
 using System.Text;
 using System.Threading.Tasks;
@@ -85,9 +86,13 @@ namespace VaultCrypt
                 stream.Seek(item, SeekOrigin.Begin);
                 stream.ReadExactly(buffer);
                 byte[] decrypted = VaultDecryption(buffer);
+                CryptographicOperations.ZeroMemory(buffer);
                 byte version = decrypted[0];
-                EncryptionOptions.FileEncryptionOptions fileEncryptionOptions = EncryptionOptionsRegistry.GetReader(version).DeserializeEncryptionOptions(decrypted);
+                EncryptionOptionsReader reader = EncryptionOptionsRegistry.GetReader(version);
+                EncryptionOptions.FileEncryptionOptions fileEncryptionOptions = reader.DeserializeEncryptionOptions(decrypted);
+                CryptographicOperations.ZeroMemory(decrypted);
                 VaultSession.ENCRYPTED_FILES.Add(item, Encoding.UTF8.GetString(fileEncryptionOptions.fileName));
+                EncryptionOptions.WipeFileEncryptionOptions(ref fileEncryptionOptions);
             }
         }
 
@@ -102,6 +107,7 @@ namespace VaultCrypt
                 int readOffset = 2 + (i * sizeof(long));
                 offsets[i] = BinaryPrimitives.ReadInt64LittleEndian(decrypted.AsSpan(readOffset, sizeof(long)));
             }
+            CryptographicOperations.ZeroMemory(decrypted);
             return offsets;
         }
 
@@ -118,6 +124,7 @@ namespace VaultCrypt
             long[] oldOffsets = ReadMetadataOffsets(stream);
             long[] newOffsets = new long[oldOffsets.Length + 1];
             Array.Copy(oldOffsets, newOffsets, oldOffsets.Length);
+            CryptographicOperations.ZeroMemory(MemoryMarshal.AsBytes(oldOffsets.AsSpan()));
             newOffsets[oldOffsets.Length + 1] = newOffset;
             byte[] data = new byte[sizeof(ushort) + newOffsets.Length * sizeof(long)];
             BinaryPrimitives.WriteUInt16LittleEndian(data.AsSpan(0, sizeof(ushort)), (ushort)(newOffsets.Length));
@@ -126,7 +133,9 @@ namespace VaultCrypt
                 int writeOffset = sizeof(ushort) + i * sizeof(long);
                 BinaryPrimitives.WriteInt64LittleEndian(data.AsSpan(writeOffset, sizeof(long)), newOffsets[i]);
             }
-            byte[] encryptedMetadataOffsets = Encryption.AesGcmEncryption.EncryptBytes(data, VaultSession.KEY);
+            CryptographicOperations.ZeroMemory(MemoryMarshal.AsBytes(newOffsets.AsSpan()));
+            byte[] encryptedMetadataOffsets = VaultEncryption(data);
+            CryptographicOperations.ZeroMemory(data);
             if (encryptedMetadataOffsets.Length > (28 + sizeof(ushort) + 4096))
             {
                 throw new Exception("Too many files in the vault");
