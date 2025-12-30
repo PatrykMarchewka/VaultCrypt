@@ -21,12 +21,18 @@ namespace VaultCrypt.ViewModels
             }
         }
 
+        private readonly MainViewViewModel _mainViewViewModel;
         internal MainWindowViewModel()
         {
+            _mainViewViewModel = new MainViewViewModel(this);
 
             CurrentView = _mainViewViewModel;
         }
 
+        public void NavigateToMain()
+        {
+            CurrentView = _mainViewViewModel;
+        }
         private void OnPropertyChanged(string name) { PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(name)); }
         public event PropertyChangedEventHandler? PropertyChanged;
     }
