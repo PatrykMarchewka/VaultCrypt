@@ -9,5 +9,6 @@ namespace VaultCrypt
     interface INavigationService
     {
         void NavigateToMain();
+        void NavigateToCreateVault();
     }
 }

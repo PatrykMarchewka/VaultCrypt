@@ -1,0 +1,59 @@
+﻿<UserControl x:Class="VaultCrypt.Views.CreateVault"
+      xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+      xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+      xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006" 
+      xmlns:d="http://schemas.microsoft.com/expression/blend/2008" 
+      xmlns:local="clr-namespace:VaultCrypt.Views"
+      mc:Ignorable="d" 
+      MinHeight="150" MinWidth="800">
+
+    <Grid>
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="Auto"/>
+        </Grid.RowDefinitions>
+
+        <Grid.ColumnDefinitions>
+            <ColumnDefinition/>
+            <ColumnDefinition/>
+            <ColumnDefinition/>
+        </Grid.ColumnDefinitions>
+
+
+        <Button Grid.Row="0" Grid.Column="0" Content=" Go back " HorizontalAlignment="Left" Command="{Binding GoBackCommand}"/>
+        <TextBlock Grid.Row="0" Grid.Column="1" Text="Vault options" HorizontalAlignment="Center"/>
+
+
+        <TextBlock Grid.Row="1" Grid.Column="0" Text="Select vault location" TextAlignment="Right"/>
+        <TextBox Grid.Row="1" Grid.Column="1" Text="{Binding VaultFolder, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"/>
+        <Button Grid.Row="1" Grid.Column="2" Height="20" Content=" Select folder " HorizontalAlignment="Left" Command="{Binding SelectFolderCommand}"/>
+
+
+        <TextBlock Grid.Row="2" Grid.Column="0" Text="Select vault name" TextAlignment="Right"/>
+        <TextBox Grid.Row="2" Grid.Column="1" Text="{Binding VaultName, Mode=OneWayToSource, UpdateSourceTrigger=PropertyChanged}"/>
+
+
+        <TextBlock Grid.Row="3" Grid.Column="1" Text="Vault encryption options" HorizontalAlignment="Center"/>
+
+
+        <TextBlock Grid.Row="4" Grid.Column="0" Text="Password" TextAlignment="Right"/>
+        <PasswordBox Grid.Row="4" Grid.Column="1" PasswordChar="#" PasswordChanged="PasswordBox_PasswordChanged"/>
+        <StackPanel Grid.Row="4" Grid.Column="2" Orientation="Horizontal" HorizontalAlignment="Left">
+            <TextBlock Text="Iterations"/>
+            <ComboBox ItemsSource="{Binding IterationPresets}" SelectedItem="{Binding SelectedPreset}">
+                <ComboBox.ItemTemplate>
+                    <DataTemplate>
+                        <TextBlock Text="{Binding Name}" Foreground="Black"/>
+                    </DataTemplate>
+                </ComboBox.ItemTemplate>
+            </ComboBox>
+        </StackPanel>
+
+
+        <Button Grid.Row="5" Grid.Column="1" Content=" Create vault " HorizontalAlignment="Center" Command="{Binding CreateVaultCommand}"/>
+    </Grid>
+</UserControl>

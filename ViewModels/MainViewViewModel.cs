@@ -23,7 +23,7 @@ namespace VaultCrypt.ViewModels
 
         internal void SelectVaultFilePickerOpen(INavigationService nav)
         {
-            string? path = FileHelper.OpenFile("Select vault file");
+            string? path = FileDialogService.OpenFile("Select vault file");
             if (path != null)
             {
                 nav.NavigateToPasswordInput(path);

@@ -12,7 +12,7 @@ namespace VaultCrypt
 {
     internal class FileHelper
     {
-        internal static void CreateVault(NormalizedPath folderPath, string vaultName, string password, int iterations)
+        internal static void CreateVault(NormalizedPath folderPath, string vaultName, byte[] password, int iterations)
         {
             Span<byte> buffer = stackalloc byte[1 + 32 + sizeof(uint)]; //1 byte for version + 32 byte salt + 4 bytes for iterations number
             buffer[0] = 0;
@@ -31,7 +31,7 @@ namespace VaultCrypt
             byte[] metadataBuffer = new byte[sizeof(ushort) + 4096];
             byte[] encryptedMetadata = VaultRegistry.GetVaultReader(VaultSession.VERSION).VaultEncryption(metadataBuffer);
 
-            using (var fs = File.Create(folderPath + vaultName + ".vlt"))
+            using (var fs = File.Create(folderPath + "\\" + vaultName + ".vlt"))
             {
                 fs.Write(buffer);
                 fs.Write(encryptedMetadata);
@@ -81,9 +81,15 @@ namespace VaultCrypt
 
         internal static bool WriteSmallFile()
         {
+            return WriteSmallFile(VaultSession.VAULTPATH);
+        }
+
+        internal static bool WriteSmallFile(NormalizedPath folderPath)
+        {
+            string path = folderPath + "vault.tmp";
             try
             {
-                string path = VaultSession.VAULTPATH + "vault.tmp";
+                
                 byte[] data = new byte[1024];
                 RandomNumberGenerator.Fill(data);
 
@@ -112,20 +118,19 @@ namespace VaultCrypt
             }
             finally
             {
-                DeleteSmallFile();
+                DeleteSmallFile(path);
             }
         }
 
-        private static void DeleteSmallFile()
+        private static void DeleteSmallFile(string filePath)
         {
-            string path = VaultSession.VAULTPATH + "vault.tmp";
             try
             {
-                File.Delete(path);
+                File.Delete(filePath);
             }
             catch
             {
-                throw new Exception("Cannot delete vault.tmp");
+                throw new Exception($"Cannot delete: {filePath}");
             }
         }
 

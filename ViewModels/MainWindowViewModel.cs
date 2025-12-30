@@ -22,9 +22,11 @@ namespace VaultCrypt.ViewModels
         }
 
         private readonly MainViewViewModel _mainViewViewModel;
+        private readonly CreateVaultViewModel _createVaultViewModel;
         internal MainWindowViewModel()
         {
             _mainViewViewModel = new MainViewViewModel(this);
+            _createVaultViewModel = new CreateVaultViewModel(this);
 
             CurrentView = _mainViewViewModel;
         }
@@ -33,6 +35,12 @@ namespace VaultCrypt.ViewModels
         {
             CurrentView = _mainViewViewModel;
         }
+
+        public void NavigateToCreateVault()
+        {
+            CurrentView = _createVaultViewModel;
+        }
+
         private void OnPropertyChanged(string name) { PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(name)); }
         public event PropertyChangedEventHandler? PropertyChanged;
     }
