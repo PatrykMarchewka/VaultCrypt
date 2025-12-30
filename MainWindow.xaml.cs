@@ -8,6 +8,7 @@ using System.Windows.Media;
 using System.Windows.Media.Imaging;
 using System.Windows.Navigation;
 using System.Windows.Shapes;
+using VaultCrypt.ViewModels;
 
 namespace VaultCrypt
 {
@@ -19,6 +20,8 @@ namespace VaultCrypt
         public MainWindow()
         {
             InitializeComponent();
+            var viewmodel = new MainWindowViewModel();
+            this.DataContext = viewmodel;
         }
     }
 }
