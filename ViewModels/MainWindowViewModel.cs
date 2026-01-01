@@ -10,8 +10,8 @@ namespace VaultCrypt.ViewModels
 {
     internal class MainWindowViewModel : INotifyPropertyChanged, INavigationService, IViewModel
     {
-        private object _currentView;
-        public object CurrentView
+        private IViewModel _currentView;
+        public IViewModel CurrentView
         {
             get => _currentView;
             set
