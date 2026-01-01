@@ -8,7 +8,7 @@ using System.Windows.Input;
 
 namespace VaultCrypt.ViewModels
 {
-    internal class MainWindowViewModel : INotifyPropertyChanged, INavigationService
+    internal class MainWindowViewModel : INotifyPropertyChanged, INavigationService, IViewModel
     {
         private object _currentView;
         public object CurrentView

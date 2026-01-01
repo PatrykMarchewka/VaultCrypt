@@ -11,7 +11,7 @@ using System.Windows.Input;
 
 namespace VaultCrypt.ViewModels
 {
-    internal class CreateVaultViewModel : INotifyPropertyChanged
+    internal class CreateVaultViewModel : INotifyPropertyChanged, IViewModel
     {
         private string _vaultFolder;
         public string VaultFolder
