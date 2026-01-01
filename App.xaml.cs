@@ -9,6 +9,12 @@ namespace VaultCrypt
     /// </summary>
     public partial class App : Application
     {
+
+        protected override void OnExit(ExitEventArgs args)
+        {
+            VaultSession.Dispose();
+            base.OnExit(args);
+        }
     }
 
 }
