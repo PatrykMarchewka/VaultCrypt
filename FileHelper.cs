@@ -149,11 +149,6 @@ namespace VaultCrypt
             }
         }
 
-        internal static void WriteFile(string filePath, byte[] data)
-        {
-            WriteFile(NormalizedPath.From(filePath), data);
-        }
-
         internal static void WriteReadyChunk(ConcurrentDictionary<int, byte[]> results, ref int nextToWrite, Stream fileFS, object lockObject)
         {
             lock (lockObject)
