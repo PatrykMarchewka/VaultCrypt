@@ -10,31 +10,35 @@ using System.Threading.Tasks;
 
 namespace VaultCrypt
 {
-    internal class VaultSession : IDisposable
+    internal static class VaultSession
     {
         internal static byte VERSION;
         internal static byte[] KEY;
         internal static NormalizedPath VAULTPATH;
         internal static int ITERATIONS;
         internal static byte[] SALT;
-        internal static Dictionary<long, string> ENCRYPTED_FILES;
+        internal static Dictionary<long, string> ENCRYPTED_FILES = new();
 
-        internal VaultSession(string password, NormalizedPath path)
+        //v0 = [version (1byte)][salt (32 bytes)][iterations (4 bytes)][metadata offsets (28 bytes for AES decryption + 2 bytes ushort number + 4KB (4096 bytes)][File #1 encryption options][File #1]...
+        public static void CreateSession(byte[] password, NormalizedPath path)
         {
             VAULTPATH = path;
-            KEY = PasswordHelper.DeriveKey(password);
+
             using (FileStream fs = new FileStream(path, FileMode.Open, FileAccess.Read))
             {
                 Span<byte> buffer = stackalloc byte[1];
                 fs.ReadExactly(buffer);
                 VERSION = buffer[0];
 
-                VaultRegistry.GetVaultReader(VERSION).ReadVaultSession(fs);
+                VaultReader reader = VaultRegistry.GetVaultReader(VERSION);
+                reader.ReadVaultHeader(fs);
+                KEY = PasswordHelper.DeriveKey(password);
+                reader.ReadVaultSession(fs);
             }
         }
 
 
-        public void Dispose()
+        public static void Dispose()
         {
             CryptographicOperations.ZeroMemory(KEY);
             CryptographicOperations.ZeroMemory(SALT);
@@ -43,10 +47,6 @@ namespace VaultCrypt
             ITERATIONS = 0;
             VERSION = 0;
         }
-
-
-
-        
 
     }
 
@@ -74,13 +74,9 @@ namespace VaultCrypt
         internal abstract byte Version { get; }
         internal virtual void ReadVaultSession(Stream stream)
         {
-            Span<byte> buffer = stackalloc byte[32 + sizeof(uint)]; //Default salt size + 4 for uint ITERATIONS
-            stream.ReadExactly(buffer);
-            VaultSession.SALT = buffer[..32].ToArray();
-            VaultSession.ITERATIONS = BinaryPrimitives.ReadInt32LittleEndian(buffer.Slice(32, sizeof(uint)));
             long[] offsets = ReadMetadataOffsets(stream);
 
-            buffer = stackalloc byte[1024];
+            Span<byte> buffer = stackalloc byte[1024];
             foreach (var item in offsets)
             {
                 stream.Seek(item, SeekOrigin.Begin);
@@ -94,6 +90,15 @@ namespace VaultCrypt
                 VaultSession.ENCRYPTED_FILES.Add(item, Encoding.UTF8.GetString(fileEncryptionOptions.fileName));
                 EncryptionOptions.WipeFileEncryptionOptions(ref fileEncryptionOptions);
             }
+        }
+
+        internal virtual void ReadVaultHeader(Stream stream)
+        {
+            Span<byte> buffer = stackalloc byte[32 + sizeof(uint)]; //Default salt size + 4 for uint ITERATIONS
+            stream.ReadExactly(buffer);
+            VaultSession.SALT = buffer[..32].ToArray();
+            VaultSession.ITERATIONS = BinaryPrimitives.ReadInt32LittleEndian(buffer.Slice(32, sizeof(uint)));
+            CryptographicOperations.ZeroMemory(buffer);
         }
 
         internal virtual long[] ReadMetadataOffsets(Stream stream)
