@@ -23,10 +23,12 @@ namespace VaultCrypt.ViewModels
 
         private readonly MainViewViewModel _mainViewViewModel;
         private readonly CreateVaultViewModel _createVaultViewModel;
+        private readonly PasswordInputViewModel _passwordInputViewModel;
         internal MainWindowViewModel()
         {
             _mainViewViewModel = new MainViewViewModel(this);
             _createVaultViewModel = new CreateVaultViewModel(this);
+            _passwordInputViewModel = new PasswordInputViewModel(this);
 
             CurrentView = _mainViewViewModel;
         }
@@ -49,6 +51,10 @@ namespace VaultCrypt.ViewModels
             Navigate(_createVaultViewModel);
         }
 
+        public void NavigateToPasswordInput(string vaultPath)
+        {
+            Navigate(_passwordInputViewModel, vaultPath);
+        }
         private void OnPropertyChanged(string name) { PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(name)); }
         public event PropertyChangedEventHandler? PropertyChanged;
     }

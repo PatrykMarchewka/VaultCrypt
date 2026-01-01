@@ -11,6 +11,7 @@ namespace VaultCrypt
     {
         void NavigateToMain();
         void NavigateToCreateVault();
+        void NavigateToPasswordInput(string vaultPath);
     }
 
     interface INavigated
