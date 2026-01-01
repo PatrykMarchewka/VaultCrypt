@@ -175,7 +175,7 @@ namespace VaultCrypt
         {
             Value = Normalize(path);
         }
-        internal static string Normalize(string path)
+        private static string Normalize(string path)
         {
             return path.Length > 260 && !path.StartsWith(@"\\?\") ? @"\\?\" + path : path;
         }
