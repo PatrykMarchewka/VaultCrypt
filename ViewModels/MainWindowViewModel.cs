@@ -31,14 +31,22 @@ namespace VaultCrypt.ViewModels
             CurrentView = _mainViewViewModel;
         }
 
+        private void Navigate(IViewModel viewModel, object? parameters = null)
+        {
+            if (viewModel is INavigated nav && parameters != null)
+            {
+                nav.OnNavigatedTo(parameters);
+            }
+            CurrentView = viewModel;
+        }
         public void NavigateToMain()
         {
-            CurrentView = _mainViewViewModel;
+            Navigate(_mainViewViewModel);
         }
 
         public void NavigateToCreateVault()
         {
-            CurrentView = _createVaultViewModel;
+            Navigate(_createVaultViewModel);
         }
 
         private void OnPropertyChanged(string name) { PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(name)); }
