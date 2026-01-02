@@ -131,15 +131,33 @@ namespace VaultCrypt
         }
 
         internal static void WriteReadyChunk(ConcurrentDictionary<int, byte[]> results, ref int nextToWrite, Stream fileFS, object lockObject)
+        internal static void WriteReadyChunk(ConcurrentDictionary<int, byte[]> results, ref int nextToWrite, ref int currentIndex, Stream fileFS, object lockObject)
         {
             lock (lockObject)
             {
-                while (results.TryRemove(nextToWrite, out var ready))
+                byte[] ready;
+                while (nextToWrite != currentIndex)
+                {
+                    Monitor.Wait(lockObject);
+                }
+
+                if (!results.TryRemove(nextToWrite, out ready!)) throw new Exception("Missing chunk");
+
+                try
                 {
                     fileFS.Write(ready, 0, ready.Length);
-                    CryptographicOperations.ZeroMemory(ready);
-                    nextToWrite++;
                 }
+                catch
+                {
+                    throw new Exception("Couldnt write to file");
+                }
+                finally
+                {
+                    CryptographicOperations.ZeroMemory(ready);
+                } 
+                nextToWrite++;
+
+                Monitor.PulseAll(lockObject);
             }
         }
 
