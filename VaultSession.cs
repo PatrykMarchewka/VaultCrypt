@@ -94,6 +94,7 @@ namespace VaultCrypt
 
         internal virtual void ReadVaultHeader(Stream stream)
         {
+            //v0 = [version (1byte)] + [salt (32 bytes)][iterations (4 bytes)]...
             Span<byte> buffer = stackalloc byte[32 + sizeof(uint)]; //Default salt size + 4 for uint ITERATIONS
             stream.ReadExactly(buffer);
             VaultSession.SALT = buffer[..32].ToArray();
@@ -118,7 +119,8 @@ namespace VaultCrypt
 
         internal virtual byte[] ReadMetadataOffsetsBytes(Stream stream)
         {
-            stream.Seek(sizeof(byte) + 32 + sizeof(uint), SeekOrigin.Begin); //1 byte for version + 32 bytes for salt + 4 bytes for iterations
+            //v0 = [version (1byte)][salt (32 bytes)][iterations (4 bytes)] + [metadata offsets (28 bytes for AES decryption + 2 bytes ushort number + 4KB (4096 bytes)]...
+            stream.Seek(sizeof(byte) + 32 + sizeof(uint), SeekOrigin.Begin);
             Span<byte> buffer = stackalloc byte[28 + sizeof(ushort) + 4096]; //28 bytes for AES decryption + 2 bytes ushort number + 4KB (4096) for maximum of 512 files per vault
             stream.ReadExactly(buffer);
             return VaultDecryption(buffer);
@@ -149,6 +151,7 @@ namespace VaultCrypt
             byte[] paddedMetadataOffsets = new byte[28 + sizeof(ushort) + 4096]; //28 bytes for AES encryption + 2 bytes ushort number + 4KB (4096) for maximum of 512 files per vault
             Buffer.BlockCopy(encryptedMetadataOffsets, 0, paddedMetadataOffsets, 0, encryptedMetadataOffsets.Length);
 
+            //v0 = [version (1byte)][salt (32 bytes)][iterations (4 bytes)] + [metadata offsets (28 bytes for AES decryption + 2 bytes ushort number + 4KB (4096 bytes)]...
             stream.Seek(sizeof(byte) + 32 + sizeof(uint), SeekOrigin.Begin); //1 byte for version + 32 bytes for salt + 4 bytes for iterations
             stream.Write(paddedMetadataOffsets);
         }
@@ -156,7 +159,7 @@ namespace VaultCrypt
         internal virtual byte[] VaultEncryption(byte[] data)
         {
             byte[] slicedKey = new byte[32];
-            Array.Copy(VaultSession.KEY, slicedKey, slicedKey.Length);
+            Buffer.BlockCopy(VaultSession.KEY, 0, slicedKey, 0, slicedKey.Length);
 
             return Encryption.AesGcmEncryption.EncryptBytes(data, slicedKey);
         }
@@ -164,7 +167,7 @@ namespace VaultCrypt
         internal virtual byte[] VaultDecryption(Span<byte> data)
         {
             byte[] slicedKey = new byte[32];
-            Array.Copy(VaultSession.KEY, slicedKey, slicedKey.Length);
+            Buffer.BlockCopy(VaultSession.KEY, 0, slicedKey, 0, slicedKey.Length);
 
             return Decryption.AesGcmDecryption.DecryptBytes(data, slicedKey);
         }
