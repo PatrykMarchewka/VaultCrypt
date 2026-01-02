@@ -87,30 +87,16 @@ namespace VaultCrypt
         internal static bool WriteSmallFile(NormalizedPath folderPath)
         {
             string path = folderPath + "vault.tmp";
+
+
+            byte[] data = new byte[1024];
+            RandomNumberGenerator.Fill(data);
+            byte[] returned;
             try
             {
-                
-                byte[] data = new byte[1024];
-                RandomNumberGenerator.Fill(data);
-
                 File.WriteAllBytes(path, data);
-
-                byte[] returned = File.ReadAllBytes(path);
-
-                if (data.Length != returned.Length)
-                {
-                    return false;
-                }
-
-                for (int i = 0; i < data.Length; i++)
-                {
-                    if (data[i] != returned[i])
-                    {
-                        return false;
-                    }
-                }
-
-                return true;
+                returned = File.ReadAllBytes(path);
+                
             }
             catch
             {
@@ -118,35 +104,30 @@ namespace VaultCrypt
             }
             finally
             {
-                DeleteSmallFile(path);
-            }
-        }
-
-        private static void DeleteSmallFile(string filePath)
-        {
-            try
-            {
-                File.Delete(filePath);
-            }
-            catch
-            {
-                throw new Exception($"Cannot delete: {filePath}");
-            }
-        }
-
-        internal static void WriteFile(NormalizedPath filePath, byte[] data)
-        {
-            try
-            {
-                using (FileStream fs = new FileStream(filePath, FileMode.Create))
+                try
                 {
-                    fs.Write(data, 0, data.Length);
+                    File.Delete(path);
+                }
+                catch (Exception)
+                {
+                    throw new Exception($"Cannot delete: {path}");
                 }
             }
-            catch
+
+            if (data.Length != returned.Length)
             {
-                throw new Exception("Cant save file to disk");
+                return false;
             }
+
+            for (int i = 0; i < data.Length; i++)
+            {
+                if (data[i] != returned[i])
+                {
+                    return false;
+                }
+            }
+
+            return true;
         }
 
         internal static void WriteReadyChunk(ConcurrentDictionary<int, byte[]> results, ref int nextToWrite, Stream fileFS, object lockObject)
