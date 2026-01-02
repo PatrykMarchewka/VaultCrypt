@@ -77,7 +77,7 @@ namespace VaultCrypt
             }
             short extraBytes = GetEncryptionProtocolInfo[protocol].encryptionDataSize;
 
-            ulong fileSize = chunkInformation == null ? (ulong)(fileInfo.Length + extraBytes) : (ulong)(fileInfo.Length + extraBytes + (extraBytes * chunkInformation.Value.totalChunks));
+            ulong fileSize = chunkInformation == null ? (ulong)(fileInfo.Length + extraBytes) : (ulong)(fileInfo.Length + (extraBytes * chunkInformation.Value.totalChunks));
             return new FileEncryptionOptions
             {
                 version = 0,
