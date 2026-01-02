@@ -79,7 +79,7 @@ namespace VaultCrypt.ViewModels
 
             GoBackCommand = new RelayCommand(_ => nav.NavigateToMain());
             SelectFolderCommand = new RelayCommand(_ => SelectFolder());
-            CreateVaultCommand = new RelayCommand(_ => CreateVault());
+            CreateVaultCommand = new RelayCommand(_ => CreateVault(nav));
         }
 
         internal void SelectFolder()
@@ -92,7 +92,7 @@ namespace VaultCrypt.ViewModels
             }
         }
 
-        internal void CreateVault()
+        internal void CreateVault(INavigationService nav)
         {
             if (String.IsNullOrEmpty(VaultFolder))
             {
@@ -108,15 +108,15 @@ namespace VaultCrypt.ViewModels
             }
 
             NormalizedPath folderPath = NormalizedPath.From(VaultFolder);
+            FileHelper.WriteSmallFile(folderPath);
+
+
             byte[] passwordBytes;
-            if (FileHelper.WriteSmallFile(folderPath))
-            {
-                passwordBytes = PasswordHelper.SecureStringToUTF8ToBytes(Password);
-                FileHelper.CreateVault(folderPath, VaultName, passwordBytes, SelectedPreset.Iterations);
-                CryptographicOperations.ZeroMemory(passwordBytes);
-            }
-            
-            MessageBox.Show("Vault created!");
+            passwordBytes = PasswordHelper.SecureStringToUTF8ToBytes(Password);
+            FileHelper.CreateVault(folderPath, VaultName, passwordBytes, SelectedPreset.Iterations);
+            CryptographicOperations.ZeroMemory(passwordBytes);
+
+            nav.NavigateToPasswordInput(folderPath + "\\" + VaultName + ".vlt");
         }
 
 
