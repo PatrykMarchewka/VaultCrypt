@@ -79,12 +79,14 @@ namespace VaultCrypt
             return Math.Min(threadCount, ramSpace);
         }
 
-        internal static bool WriteSmallFile()
+        
+
+        internal static void WriteSmallFile()
         {
-            return WriteSmallFile(VaultSession.VAULTPATH);
+            WriteSmallFile(VaultSession.VAULTPATH);
         }
 
-        internal static bool WriteSmallFile(NormalizedPath folderPath)
+        internal static void WriteSmallFile(NormalizedPath folderPath)
         {
             string path = folderPath + "vault.tmp";
 
@@ -116,21 +118,18 @@ namespace VaultCrypt
 
             if (data.Length != returned.Length)
             {
-                return false;
+                throw new Exception("Couldnt write 1kb file to disk, file size differs");
             }
 
             for (int i = 0; i < data.Length; i++)
             {
                 if (data[i] != returned[i])
                 {
-                    return false;
+                    throw new Exception("Couldnt write file to disk, data corrupted");
                 }
             }
-
-            return true;
         }
 
-        internal static void WriteReadyChunk(ConcurrentDictionary<int, byte[]> results, ref int nextToWrite, Stream fileFS, object lockObject)
         internal static void WriteReadyChunk(ConcurrentDictionary<int, byte[]> results, ref int nextToWrite, ref int currentIndex, Stream fileFS, object lockObject)
         {
             lock (lockObject)
