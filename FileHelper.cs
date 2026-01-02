@@ -22,7 +22,7 @@ namespace VaultCrypt
 
             //Set vault session parameters
             VaultSession.VERSION = 0;
-            VaultSession.VAULTPATH = NormalizedPath.From(NormalizedPath.Normalize(folderPath + vaultName + ".vlt"));
+            VaultSession.VAULTPATH = NormalizedPath.From(folderPath + "\\" + vaultName + ".vlt");
             VaultSession.SALT = salt;
             VaultSession.ITERATIONS = iterations;
             VaultSession.KEY = PasswordHelper.DeriveKey(password);
@@ -31,7 +31,7 @@ namespace VaultCrypt
             byte[] metadataBuffer = new byte[sizeof(ushort) + 4096];
             byte[] encryptedMetadata = VaultRegistry.GetVaultReader(VaultSession.VERSION).VaultEncryption(metadataBuffer);
 
-            using (var fs = File.Create(folderPath + "\\" + vaultName + ".vlt"))
+            using (var fs = File.Create(VaultSession.VAULTPATH))
             {
                 fs.Write(buffer);
                 fs.Write(encryptedMetadata);
