@@ -22,15 +22,6 @@ namespace VaultCrypt
             return salt;
         }
 
-
-        internal static byte[] DeriveKey(string password)
-        {
-            using (Rfc2898DeriveBytes pbkdf2 = new Rfc2898DeriveBytes(password, VaultSession.SALT, VaultSession.ITERATIONS, HashAlgorithmName.SHA512))
-            {
-                return pbkdf2.GetBytes(128);
-            }
-        }
-
         internal static byte[] DeriveKey(byte[] password)
         {
             using (Rfc2898DeriveBytes pbkdf2 = new Rfc2898DeriveBytes(password, VaultSession.SALT, VaultSession.ITERATIONS, HashAlgorithmName.SHA512))
