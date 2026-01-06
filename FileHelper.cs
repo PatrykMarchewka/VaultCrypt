@@ -33,7 +33,7 @@ namespace VaultCrypt
 
         internal static long CheckFreeRamSpace()
         {
-            return GC.GetGCMemoryInfo().TotalAvailableMemoryBytes;
+            return (GC.GetGCMemoryInfo().HighMemoryLoadThresholdBytes - GC.GetGCMemoryInfo().MemoryLoadBytes);
         }
 
         internal static long GetTotalBytes(NormalizedPath path)
