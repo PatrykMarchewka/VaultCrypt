@@ -67,7 +67,7 @@ namespace VaultCrypt
             bool chunked = false;
             ChunkInformation? chunkInformation = null;
 
-            if (fileInfo.Length > chunkSizeInMB)
+            if (fileInfo.Length > (chunkSizeInMB * 1024 * 1024))
             {
                 chunked = true;
                 long chunkSize = chunkSizeInMB * 1024 * 1024;
