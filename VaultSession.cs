@@ -72,11 +72,20 @@ namespace VaultCrypt
     internal abstract class VaultReader
     {
         internal abstract byte Version { get; }
+        internal abstract EncryptionOptions.EncryptionProtocol EncryptionProtocol { get; }
+        internal virtual short ExtraEncryptionDataSize => EncryptionOptions.GetEncryptionProtocolInfo[EncryptionProtocol].encryptionDataSize; //Size in bytes of extra data added by encrypting
+        internal virtual short SaltSize => 32; //Size in bytes of the salt
+        internal virtual short KeySize => EncryptionOptions.GetEncryptionProtocolInfo[EncryptionProtocol].keySize; //Size in bytes of the key used to encrypt/decrypt vault data
+        internal virtual short EncryptionOptionsSize => 1024; //Size of already encrypted EncryptionOptions
+        internal virtual short MetadataOffsetsSize => 4096; //Size of metadata offsets before encryption
+
+
+
         internal virtual void ReadVaultSession(Stream stream)
         {
             long[] offsets = ReadMetadataOffsets(stream);
 
-            Span<byte> buffer = stackalloc byte[1024];
+            Span<byte> buffer = stackalloc byte[EncryptionOptionsSize];
             foreach (var item in offsets)
             {
                 stream.Seek(item, SeekOrigin.Begin);
@@ -95,10 +104,10 @@ namespace VaultCrypt
         internal virtual void ReadVaultHeader(Stream stream)
         {
             //v0 = [version (1byte)] + [salt (32 bytes)][iterations (4 bytes)]...
-            Span<byte> buffer = stackalloc byte[32 + sizeof(uint)]; //Default salt size + 4 for uint ITERATIONS
+            Span<byte> buffer = stackalloc byte[SaltSize + sizeof(uint)]; //Default salt size + 4 for uint ITERATIONS
             stream.ReadExactly(buffer);
-            VaultSession.SALT = buffer[..32].ToArray();
-            VaultSession.ITERATIONS = BinaryPrimitives.ReadInt32LittleEndian(buffer.Slice(32, sizeof(uint)));
+            VaultSession.SALT = buffer[..SaltSize].ToArray();
+            VaultSession.ITERATIONS = BinaryPrimitives.ReadInt32LittleEndian(buffer.Slice(SaltSize, sizeof(uint)));
             CryptographicOperations.ZeroMemory(buffer);
         }
 
@@ -110,7 +119,7 @@ namespace VaultCrypt
             long[] offsets = new long[fileCount];
             for (int i = 0; i < fileCount; i++)
             {
-                int readOffset = 2 + (i * sizeof(long));
+                int readOffset = sizeof(ushort) + (i * sizeof(long));
                 offsets[i] = BinaryPrimitives.ReadInt64LittleEndian(decrypted.AsSpan(readOffset, sizeof(long)));
             }
             CryptographicOperations.ZeroMemory(decrypted);
@@ -120,45 +129,51 @@ namespace VaultCrypt
         internal virtual byte[] ReadMetadataOffsetsBytes(Stream stream)
         {
             //v0 = [version (1byte)][salt (32 bytes)][iterations (4 bytes)] + [metadata offsets (28 bytes for AES decryption + 2 bytes ushort number + 4KB (4096 bytes)]...
-            stream.Seek(sizeof(byte) + 32 + sizeof(uint), SeekOrigin.Begin);
-            Span<byte> buffer = stackalloc byte[28 + sizeof(ushort) + 4096]; //28 bytes for AES decryption + 2 bytes ushort number + 4KB (4096) for maximum of 512 files per vault
+            stream.Seek(sizeof(byte) + SaltSize + sizeof(uint), SeekOrigin.Begin);
+            Span<byte> buffer = stackalloc byte[ExtraEncryptionDataSize + sizeof(ushort) + MetadataOffsetsSize]; //28 bytes for AES decryption + 2 bytes ushort number + 4KB (4096) for maximum of 512 files per vault
             stream.ReadExactly(buffer);
             return VaultDecryption(buffer);
         }
 
+        /// <summary>
+        /// Adds new offset and writes encrypted offsets to vault
+        /// </summary>
+        /// <param name="stream"></param>
+        /// <param name="newOffset"></param>
+        /// <exception cref="Exception"></exception>
         internal virtual void WriteMetadataOffsets(Stream stream, long newOffset)
         {
             long[] oldOffsets = ReadMetadataOffsets(stream);
             long[] newOffsets = new long[oldOffsets.Length + 1];
-            Array.Copy(oldOffsets, newOffsets, oldOffsets.Length);
+            Buffer.BlockCopy(oldOffsets, 0, newOffsets, 0, oldOffsets.Length * sizeof(long));
             CryptographicOperations.ZeroMemory(MemoryMarshal.AsBytes(oldOffsets.AsSpan()));
-            newOffsets[oldOffsets.Length + 1] = newOffset;
-            byte[] data = new byte[sizeof(ushort) + newOffsets.Length * sizeof(long)];
+            newOffsets[oldOffsets.Length] = newOffset;
+            byte[] data = new byte[sizeof(ushort) + (newOffsets.Length * sizeof(long))];
             BinaryPrimitives.WriteUInt16LittleEndian(data.AsSpan(0, sizeof(ushort)), (ushort)(newOffsets.Length));
             for (int i = 0; i < newOffsets.Length; i++)
             {
-                int writeOffset = sizeof(ushort) + i * sizeof(long);
+                int writeOffset = sizeof(ushort) + (i * sizeof(long));
                 BinaryPrimitives.WriteInt64LittleEndian(data.AsSpan(writeOffset, sizeof(long)), newOffsets[i]);
             }
             CryptographicOperations.ZeroMemory(MemoryMarshal.AsBytes(newOffsets.AsSpan()));
-            byte[] encryptedMetadataOffsets = VaultEncryption(data);
-            CryptographicOperations.ZeroMemory(data);
-            if (encryptedMetadataOffsets.Length > (28 + sizeof(ushort) + 4096))
+            if (data.Length > (sizeof(ushort) + MetadataOffsetsSize))
             {
                 throw new Exception("Too many files in the vault");
             }
-
-            byte[] paddedMetadataOffsets = new byte[28 + sizeof(ushort) + 4096]; //28 bytes for AES encryption + 2 bytes ushort number + 4KB (4096) for maximum of 512 files per vault
-            Buffer.BlockCopy(encryptedMetadataOffsets, 0, paddedMetadataOffsets, 0, encryptedMetadataOffsets.Length);
+            byte[] paddedMetadataOffsets = new byte[sizeof(ushort) + MetadataOffsetsSize]; //2 bytes ushort number + 4KB (4096) for maximum of 512 files per vault
+            Buffer.BlockCopy(data, 0, paddedMetadataOffsets, 0, data.Length);
+            CryptographicOperations.ZeroMemory(data);
+            byte[] encryptedMetadataOffsets = VaultEncryption(paddedMetadataOffsets);
+            CryptographicOperations.ZeroMemory(paddedMetadataOffsets);
 
             //v0 = [version (1byte)][salt (32 bytes)][iterations (4 bytes)] + [metadata offsets (28 bytes for AES decryption + 2 bytes ushort number + 4KB (4096 bytes)]...
-            stream.Seek(sizeof(byte) + 32 + sizeof(uint), SeekOrigin.Begin); //1 byte for version + 32 bytes for salt + 4 bytes for iterations
-            stream.Write(paddedMetadataOffsets);
+            stream.Seek(sizeof(byte) + SaltSize + sizeof(uint), SeekOrigin.Begin); //1 byte for version + 32 bytes for salt + 4 bytes for iterations
+            stream.Write(encryptedMetadataOffsets);
         }
 
         internal virtual byte[] VaultEncryption(byte[] data)
         {
-            byte[] slicedKey = new byte[32];
+            byte[] slicedKey = new byte[KeySize];
             Buffer.BlockCopy(VaultSession.KEY, 0, slicedKey, 0, slicedKey.Length);
 
             return Encryption.AesGcmEncryption.EncryptBytes(data, slicedKey);
@@ -166,7 +181,7 @@ namespace VaultCrypt
 
         internal virtual byte[] VaultDecryption(Span<byte> data)
         {
-            byte[] slicedKey = new byte[32];
+            byte[] slicedKey = new byte[KeySize];
             Buffer.BlockCopy(VaultSession.KEY, 0, slicedKey, 0, slicedKey.Length);
 
             return Decryption.AesGcmDecryption.DecryptBytes(data, slicedKey);
@@ -181,6 +196,7 @@ namespace VaultCrypt
     internal class VaultV0Reader : VaultReader
     {
         internal override byte Version => 0;
+        internal override EncryptionOptions.EncryptionProtocol EncryptionProtocol => EncryptionOptions.EncryptionProtocol.AES256GCM;
     }
 
 
