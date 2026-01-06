@@ -22,8 +22,10 @@ namespace VaultCrypt
         //v0 = [version (1byte)][salt (32 bytes)][iterations (4 bytes)][metadata offsets (28 bytes for AES decryption + 2 bytes ushort number + 4KB (4096 bytes)][File #1 encryption options][File #1]...
         public static void CreateSession(byte[] password, NormalizedPath path)
         {
-            VAULTPATH = path;
+            ArgumentNullException.ThrowIfNull(password);
+            ArgumentNullException.ThrowIfNullOrWhiteSpace(path);
 
+            VAULTPATH = path;
             using (FileStream fs = new FileStream(path, FileMode.Open, FileAccess.Read))
             {
                 Span<byte> buffer = stackalloc byte[1];
@@ -48,6 +50,61 @@ namespace VaultCrypt
             VERSION = 0;
         }
 
+    }
+
+    internal static class VaultHelper
+    {
+        /// <summary>
+        /// Creates vault file (.vlt)
+        /// </summary>
+        /// <param name="folderPath">Path to the folder in which vault file should be placed</param>
+        /// <param name="vaultName">Name for the vault file</param>
+        /// <param name="password">Password to encrypt the vault with</param>
+        /// <param name="iterations">Number of PBKDF2 iterations</param>
+        /// <exception cref="ArgumentNullException"><paramref name="folderPath"/>, <paramref name="vaultName"/> or <paramref name="password"/> is <see cref="null"/></exception>
+        /// <exception cref="ArgumentOutOfRangeException"><paramref name="iterations"/> is negative or set to zero</exception>
+        internal static void CreateVault(NormalizedPath folderPath, string vaultName, byte[] password, int iterations)
+        {
+            ArgumentNullException.ThrowIfNullOrWhiteSpace(folderPath);
+            ArgumentNullException.ThrowIfNullOrWhiteSpace(vaultName);
+            ArgumentNullException.ThrowIfNull(password);
+            ArgumentOutOfRangeException.ThrowIfNegativeOrZero(iterations);
+
+            NormalizedPath vaultPath = NormalizedPath.From(folderPath + "\\" + vaultName + ".vlt");
+            SetVaultSessionInfo(vaultPath, iterations, password);
+            VaultReader reader = VaultRegistry.GetVaultReader(VaultSession.VERSION);
+            byte[] buffer = PrepareVaultHeader(reader, iterations);
+            byte[] encryptedMetadata = reader.VaultEncryption(new byte[sizeof(ushort) + reader.MetadataOffsetsSize]);
+            byte[] data = new byte[buffer.Length + encryptedMetadata.Length];
+            Buffer.BlockCopy(buffer, 0, data, 0, buffer.Length);
+            Buffer.BlockCopy(encryptedMetadata, 0, data, buffer.Length, encryptedMetadata.Length);
+            File.WriteAllBytes(VaultSession.VAULTPATH, data);
+        }
+
+        /// <summary>
+        /// Prepares vault header
+        /// </summary>
+        /// <param name="reader">VaultReader instance to get information about vault from</param>
+        /// <param name="iterations">Number of PBKDF2 iterations</param>
+        /// <returns>Byte array with vault header</returns>
+        private static byte[] PrepareVaultHeader(VaultReader reader, int iterations)
+        {
+            byte[] buffer = new byte[1 + reader.SaltSize + sizeof(uint)]; //1 byte for version + 32 byte salt + 4 bytes for iterations number
+            buffer[0] = VaultSession.VERSION;
+            byte[] salt = VaultSession.SALT;
+            Buffer.BlockCopy(salt, 0, buffer, 1, reader.SaltSize);
+            BinaryPrimitives.WriteInt32LittleEndian(buffer.AsSpan().Slice(1 + reader.SaltSize, sizeof(uint)), iterations);
+            return buffer;
+        }
+
+        private static void SetVaultSessionInfo(NormalizedPath vaultPath, int iterations, byte[] password)
+        {
+            VaultSession.VERSION = 0;
+            VaultSession.VAULTPATH = vaultPath;
+            VaultSession.SALT = PasswordHelper.GenerateRandomSalt();
+            VaultSession.ITERATIONS = iterations;
+            VaultSession.KEY = PasswordHelper.DeriveKey(password);
+        }
     }
 
 

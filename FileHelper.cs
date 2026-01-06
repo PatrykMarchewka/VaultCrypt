@@ -12,31 +12,9 @@ namespace VaultCrypt
 {
     internal class FileHelper
     {
-        internal static void CreateVault(NormalizedPath folderPath, string vaultName, byte[] password, int iterations)
-        {
-            Span<byte> buffer = stackalloc byte[1 + 32 + sizeof(uint)]; //1 byte for version + 32 byte salt + 4 bytes for iterations number
-            buffer[0] = 0;
-            byte[] salt = PasswordHelper.GenerateRandomSalt();
-            salt.AsSpan().CopyTo(buffer.Slice(1, 32));
-            BinaryPrimitives.WriteInt32LittleEndian(buffer.Slice(1 + 32, 4), iterations);
-
-            //Set vault session parameters
-            VaultSession.VERSION = 0;
-            VaultSession.VAULTPATH = NormalizedPath.From(folderPath + "\\" + vaultName + ".vlt");
-            VaultSession.SALT = salt;
-            VaultSession.ITERATIONS = iterations;
-            VaultSession.KEY = PasswordHelper.DeriveKey(password);
 
 
-            byte[] metadataBuffer = new byte[sizeof(ushort) + 4096];
-            byte[] encryptedMetadata = VaultRegistry.GetVaultReader(VaultSession.VERSION).VaultEncryption(metadataBuffer);
 
-            using (var fs = File.Create(VaultSession.VAULTPATH))
-            {
-                fs.Write(buffer);
-                fs.Write(encryptedMetadata);
-            }
-        }
 
         /// <summary>
         /// Checks whether there is enough free space to perform operation
