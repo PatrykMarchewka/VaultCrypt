@@ -116,8 +116,8 @@ namespace VaultCrypt
         {
             byte[] chunkBytes = new byte[8];
             BinaryPrimitives.WriteUInt16LittleEndian(chunkBytes.AsSpan(0, 2), chunkInformation.chunkSize);
-            BinaryPrimitives.WriteUInt32LittleEndian(chunkBytes.AsSpan(2, 2), chunkInformation.totalChunks);
-            BinaryPrimitives.WriteUInt64LittleEndian(chunkBytes.AsSpan(4, 4), chunkInformation.finalChunkSize);
+            BinaryPrimitives.WriteUInt16LittleEndian(chunkBytes.AsSpan(2, 2), chunkInformation.totalChunks);
+            BinaryPrimitives.WriteUInt32LittleEndian(chunkBytes.AsSpan(4, 4), chunkInformation.finalChunkSize);
             return chunkBytes;
         }
 
