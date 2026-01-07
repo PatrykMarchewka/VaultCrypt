@@ -198,33 +198,63 @@ namespace VaultCrypt
         /// <param name="stream"></param>
         /// <param name="newOffset"></param>
         /// <exception cref="Exception"></exception>
-        internal virtual void WriteMetadataOffsets(Stream stream, long newOffset)
+        internal virtual void AddAndSaveMetadataOffsets(Stream stream, long newOffset)
         {
             long[] oldOffsets = ReadMetadataOffsets(stream);
-            long[] newOffsets = new long[oldOffsets.Length + 1];
-            Buffer.BlockCopy(oldOffsets, 0, newOffsets, 0, oldOffsets.Length * sizeof(long));
-            CryptographicOperations.ZeroMemory(MemoryMarshal.AsBytes(oldOffsets.AsSpan()));
-            newOffsets[oldOffsets.Length] = newOffset;
-            byte[] data = new byte[sizeof(ushort) + (newOffsets.Length * sizeof(long))];
-            BinaryPrimitives.WriteUInt16LittleEndian(data.AsSpan(0, sizeof(ushort)), (ushort)(newOffsets.Length));
-            for (int i = 0; i < newOffsets.Length; i++)
-            {
-                int writeOffset = sizeof(ushort) + (i * sizeof(long));
-                BinaryPrimitives.WriteInt64LittleEndian(data.AsSpan(writeOffset, sizeof(long)), newOffsets[i]);
-            }
+            byte[] newOffsets = new byte[sizeof(ushort) + ((oldOffsets.Length + 1) * sizeof(long))];
+            Buffer.BlockCopy(oldOffsets, 0, newOffsets, sizeof(ushort), oldOffsets.Length * sizeof(long));
             CryptographicOperations.ZeroMemory(MemoryMarshal.AsBytes(newOffsets.AsSpan()));
-            if (data.Length > (sizeof(ushort) + MetadataOffsetsSize))
+
+            BinaryPrimitives.WriteUInt16LittleEndian(newOffsets.AsSpan(0, sizeof(ushort)), (ushort)(oldOffsets.Length + 1));
+            BinaryPrimitives.WriteInt64LittleEndian(newOffsets.AsSpan(newOffsets.Length - 8), newOffset);
+            if (newOffsets.Length > (sizeof(ushort) + MetadataOffsetsSize))
             {
                 throw new Exception("Too many files in the vault");
             }
-            byte[] paddedMetadataOffsets = new byte[sizeof(ushort) + MetadataOffsetsSize]; //2 bytes ushort number + 4KB (4096) for maximum of 512 files per vault
-            Buffer.BlockCopy(data, 0, paddedMetadataOffsets, 0, data.Length);
-            CryptographicOperations.ZeroMemory(data);
+            byte[] encryptedMetadataOffsets = PadMetadataOffsetsAndEncrypt(newOffsets);
+
+            WriteMetadataOffsets(stream, encryptedMetadataOffsets);
+            CryptographicOperations.ZeroMemory(encryptedMetadataOffsets);
+        }
+
+        /// <summary>
+        /// Removes offset at specified index and writes encrypted offsest to vault
+        /// </summary>
+        /// <param name="stream"></param>
+        /// <param name="itemIndex"></param>
+        internal virtual void RemoveAndSaveMetadataOffsets(Stream stream, ushort itemIndex)
+        {
+            long[] oldOffsets = ReadMetadataOffsets(stream);
+            long[] newOffsets = oldOffsets.Where((offset, index) => index != itemIndex).ToArray();
+            CryptographicOperations.ZeroMemory(MemoryMarshal.AsBytes(oldOffsets.AsSpan()));
+            byte[] newOffsetsBytes = new byte[newOffsets.Length * sizeof(long)];
+            Buffer.BlockCopy(newOffsets, 0, newOffsetsBytes, 0, newOffsets.Length * sizeof(long));
+            CryptographicOperations.ZeroMemory(MemoryMarshal.AsBytes(newOffsets.AsSpan()));
+            BinaryPrimitives.WriteUInt16LittleEndian(newOffsetsBytes.AsSpan(0, sizeof(ushort)), checked((ushort)(newOffsets.Length * sizeof(long))));
+
+            byte[] encryptedMetadataOffsets = PadMetadataOffsetsAndEncrypt(newOffsetsBytes);
+            WriteMetadataOffsets(stream, encryptedMetadataOffsets);
+            CryptographicOperations.ZeroMemory(encryptedMetadataOffsets);
+        }
+
+        /// <summary>
+        /// Pads supplied <paramref name="metadataOffsets"/> to <see cref="MetadataOffsetsSize"/> and encrypts the entire collection
+        /// </summary>
+        /// <param name="metadataOffsets"></param>
+        /// <returns></returns>
+        private byte[] PadMetadataOffsetsAndEncrypt(byte[] metadataOffsets)
+        {
+            byte[] paddedMetadataOffsets = new byte[sizeof(ushort) + MetadataOffsetsSize]; //2 bytes ushort for number of currently attached offsets
+            Buffer.BlockCopy(metadataOffsets, 0, paddedMetadataOffsets, 0, metadataOffsets.Length);
+            CryptographicOperations.ZeroMemory(metadataOffsets);
             byte[] encryptedMetadataOffsets = VaultEncryption(paddedMetadataOffsets);
             CryptographicOperations.ZeroMemory(paddedMetadataOffsets);
+            return encryptedMetadataOffsets;
+        }
 
-            //v0 = [version (1byte)][salt (32 bytes)][iterations (4 bytes)] + [metadata offsets (28 bytes for AES decryption + 2 bytes ushort number + 4KB (4096 bytes)]...
-            stream.Seek(sizeof(byte) + SaltSize + sizeof(uint), SeekOrigin.Begin); //1 byte for version + 32 bytes for salt + 4 bytes for iterations
+        internal virtual void WriteMetadataOffsets(Stream stream, byte[] encryptedMetadataOffsets)
+        {
+            stream.Seek(sizeof(byte) + SaltSize + sizeof(uint), SeekOrigin.Begin); //1 byte for version + bytes for salt + 4 bytes for iterations
             stream.Write(encryptedMetadataOffsets);
         }
 
