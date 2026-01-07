@@ -168,7 +168,7 @@ namespace VaultCrypt
             CryptographicOperations.ZeroMemory(buffer);
         }
 
-        internal virtual long[] ReadMetadataOffsets(Stream stream)
+        private long[] ReadMetadataOffsets(Stream stream)
         {
             byte[] decrypted = ReadMetadataOffsetsBytes(stream);
             ushort fileCount = BinaryPrimitives.ReadUInt16LittleEndian(decrypted);
