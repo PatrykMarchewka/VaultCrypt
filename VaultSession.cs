@@ -143,9 +143,9 @@ namespace VaultCrypt
             long[] offsets = ReadMetadataOffsets(stream);
 
             Span<byte> buffer = stackalloc byte[EncryptionOptionsSize];
-            foreach (var item in offsets)
+            foreach (long offset in offsets)
             {
-                stream.Seek(item, SeekOrigin.Begin);
+                stream.Seek(offset, SeekOrigin.Begin);
                 stream.ReadExactly(buffer);
                 byte[] decrypted = VaultDecryption(buffer);
                 CryptographicOperations.ZeroMemory(buffer);
@@ -153,7 +153,7 @@ namespace VaultCrypt
                 EncryptionOptionsReader reader = EncryptionOptionsRegistry.GetReader(version);
                 EncryptionOptions.FileEncryptionOptions fileEncryptionOptions = reader.DeserializeEncryptionOptions(decrypted);
                 CryptographicOperations.ZeroMemory(decrypted);
-                VaultSession.ENCRYPTED_FILES.Add(item, Encoding.UTF8.GetString(fileEncryptionOptions.fileName));
+                VaultSession.ENCRYPTED_FILES.Add(offset, Encoding.UTF8.GetString(fileEncryptionOptions.fileName));
                 EncryptionOptions.WipeFileEncryptionOptions(ref fileEncryptionOptions);
             }
         }
