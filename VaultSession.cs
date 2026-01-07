@@ -73,7 +73,7 @@ namespace VaultCrypt
             NormalizedPath vaultPath = NormalizedPath.From(folderPath + "\\" + vaultName + ".vlt");
             SetVaultSessionInfo(vaultPath, iterations, password);
             VaultReader reader = VaultRegistry.GetVaultReader(VaultSession.VERSION);
-            byte[] buffer = PrepareVaultHeader(reader, iterations);
+            byte[] buffer = PrepareVaultHeader(reader.SaltSize, iterations);
             byte[] encryptedMetadata = reader.VaultEncryption(new byte[sizeof(ushort) + reader.MetadataOffsetsSize]);
             byte[] data = new byte[buffer.Length + encryptedMetadata.Length];
             Buffer.BlockCopy(buffer, 0, data, 0, buffer.Length);
@@ -84,16 +84,16 @@ namespace VaultCrypt
         /// <summary>
         /// Prepares vault header
         /// </summary>
-        /// <param name="reader">VaultReader instance to get information about vault from</param>
+        /// <param name="saltSize">Size of the salt</param>
         /// <param name="iterations">Number of PBKDF2 iterations</param>
         /// <returns>Byte array with vault header</returns>
-        private static byte[] PrepareVaultHeader(VaultReader reader, int iterations)
+        private static byte[] PrepareVaultHeader(short saltSize, int iterations)
         {
-            byte[] buffer = new byte[1 + reader.SaltSize + sizeof(uint)]; //1 byte for version + 32 byte salt + 4 bytes for iterations number
+            byte[] buffer = new byte[1 + saltSize + sizeof(uint)]; //1 byte for version + 32 byte salt + 4 bytes for iterations number
             buffer[0] = VaultSession.VERSION;
             byte[] salt = VaultSession.SALT;
-            Buffer.BlockCopy(salt, 0, buffer, 1, reader.SaltSize);
-            BinaryPrimitives.WriteInt32LittleEndian(buffer.AsSpan().Slice(1 + reader.SaltSize, sizeof(uint)), iterations);
+            Buffer.BlockCopy(salt, 0, buffer, 1, saltSize);
+            BinaryPrimitives.WriteInt32LittleEndian(buffer.AsSpan().Slice(1 + saltSize, sizeof(uint)), iterations);
             return buffer;
         }
 
