@@ -91,6 +91,23 @@ namespace VaultCrypt
         }
 
 
+        internal static byte[] EncryptAndPadFileEncryptionOptions(ref FileEncryptionOptions options)
+        {
+            VaultReader vaultReader = VaultRegistry.GetVaultReader(VaultSession.VERSION);
+            byte[] encryptionOptionsBytes = SerializeEncryptionOptions(ref options);
+
+            if (encryptionOptionsBytes.Length + vaultReader.ExtraEncryptionDataSize > vaultReader.EncryptionOptionsSize)
+            {
+                throw new Exception("File name too long, try shortening the name or switching to different encryption method");
+            }
+            byte[] paddedFileOptions = new byte[vaultReader.EncryptionOptionsSize - vaultReader.ExtraEncryptionDataSize];
+            Buffer.BlockCopy(encryptionOptionsBytes, 0, paddedFileOptions, 0, encryptionOptionsBytes.Length);
+            CryptographicOperations.ZeroMemory(encryptionOptionsBytes);
+
+            byte[] encryptedFileOptions = vaultReader.VaultEncryption(paddedFileOptions);
+            CryptographicOperations.ZeroMemory(paddedFileOptions);
+            return encryptedFileOptions;
+        }
 
         internal static byte[] SerializeEncryptionOptions(ref EncryptionOptions.FileEncryptionOptions encryptionOptions)
         {
