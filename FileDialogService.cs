@@ -8,12 +8,12 @@ namespace VaultCrypt
 {
     class FileDialogService
     {
-        internal static string? OpenFile(string title)
+        internal static string? OpenFile(string title, bool allFiles)
         {
             var dialog = new Microsoft.Win32.OpenFileDialog
             {
                 Title = title,
-                Filter = "Vault files (*.vlt)|*.vlt|All files (*.*)|*.*"
+                Filter = allFiles == true ? string.Empty : "Vault files (*.vlt)|*.vlt|All files (*.*)|*.*"
             };
 
             if (dialog.ShowDialog() == true)
