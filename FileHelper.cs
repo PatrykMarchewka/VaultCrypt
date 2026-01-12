@@ -19,13 +19,13 @@ namespace VaultCrypt
         /// <summary>
         /// Checks whether there is enough free space to perform operation
         /// </summary>
-        /// <param name="path">Path of the file to check</param>
+        /// <param name="filePath">Path of the file to check</param>
         /// <exception cref="Exception">There is not enough free space on the disk with the vault or file can't be located</exception>
-        internal static void CheckFreeSpace(NormalizedPath path)
+        internal static void CheckFreeSpace(NormalizedPath filePath)
         {
             long availableBytes = new DriveInfo(Path.GetPathRoot(VaultSession.VAULTPATH)).AvailableFreeSpace;
 
-            if (availableBytes < (GetTotalBytes(path) * 1.05))
+            if (availableBytes < (GetTotalBytes(filePath) * 1.05))
             {
                 throw new Exception("Not enough free space");
             }
@@ -36,11 +36,11 @@ namespace VaultCrypt
             return (GC.GetGCMemoryInfo().HighMemoryLoadThresholdBytes - GC.GetGCMemoryInfo().MemoryLoadBytes);
         }
 
-        internal static long GetTotalBytes(NormalizedPath path)
+        private static long GetTotalBytes(NormalizedPath filePath)
         {
-            if (File.Exists(path))
+            if (File.Exists(filePath))
             {
-                return new FileInfo(path).Length;
+                return new FileInfo(filePath).Length;
 
             }
             else
