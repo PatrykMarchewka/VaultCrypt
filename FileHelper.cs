@@ -90,6 +90,36 @@ namespace VaultCrypt
             }
         }
 
+        private static void ZeroOutPartOfFile(Stream stream, long offset, ulong length)
+        {
+            Span<byte> zeroes = stackalloc byte[1024];
+
+            stream.Seek(offset, SeekOrigin.Begin);
+            while (length > 0)
+            {
+                //Length is provided as ulong to support fileSizes above 2GB
+                int chunk = (int)Math.Min(length, (ulong)zeroes.Length);
+                stream.Write(zeroes[..chunk]);
+                length -= (ulong)chunk;
+            }
+        }
+
+        private static void CopyPartOfFile(Stream source, long offset, ulong length, Stream destination, long destinationOffset)
+        {
+            //8MB buffer
+            byte[] buffer = new byte[8_388_608];
+
+            source.Seek(offset, SeekOrigin.Begin);
+            destination.Seek(destinationOffset, SeekOrigin.Begin);
+            while (length > 0)
+            {
+                //Length is provided as ulong to support fileSizes above 2GB
+                int chunkSize = (int)Math.Min(length, (ulong)buffer.Length);
+                source.ReadExactly(buffer, 0, chunkSize);
+                destination.Write(buffer, 0, chunkSize);
+                length -= (ulong)chunkSize;
+            }
+        }
     }
     internal class NormalizedPath
     {
