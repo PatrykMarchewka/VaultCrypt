@@ -59,54 +59,6 @@ namespace VaultCrypt
 
         
 
-        internal static void WriteSmallFile()
-        {
-            WriteSmallFile(VaultSession.VAULTPATH);
-        }
-
-        internal static void WriteSmallFile(NormalizedPath folderPath)
-        {
-            string path = folderPath + "vault.tmp";
-
-
-            byte[] data = new byte[1024];
-            RandomNumberGenerator.Fill(data);
-            byte[] returned;
-            try
-            {
-                File.WriteAllBytes(path, data);
-                returned = File.ReadAllBytes(path);
-                
-            }
-            catch
-            {
-                throw new Exception("Cant save file to disk");
-            }
-            finally
-            {
-                try
-                {
-                    File.Delete(path);
-                }
-                catch (Exception)
-                {
-                    throw new Exception($"Cannot delete: {path}");
-                }
-            }
-
-            if (data.Length != returned.Length)
-            {
-                throw new Exception("Couldnt write 1kb file to disk, file size differs");
-            }
-
-            for (int i = 0; i < data.Length; i++)
-            {
-                if (data[i] != returned[i])
-                {
-                    throw new Exception("Couldnt write file to disk, data corrupted");
-                }
-            }
-        }
 
         internal static void WriteReadyChunk(ConcurrentDictionary<int, byte[]> results, ref int nextToWrite, ref int currentIndex, Stream fileFS, object lockObject)
         {

@@ -109,7 +109,6 @@ namespace VaultCrypt.ViewModels
             }
 
             NormalizedPath folderPath = NormalizedPath.From(VaultFolder);
-            FileHelper.WriteSmallFile(folderPath);
 
 
             FileHelper.CreateVault(folderPath, VaultName, passwordBytes, SelectedPreset.Iterations);
