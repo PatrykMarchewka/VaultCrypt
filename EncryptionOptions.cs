@@ -137,6 +137,16 @@ namespace VaultCrypt
             return chunkBytes;
         }
 
+        internal static FileEncryptionOptions GetDecryptedFileEncryptionOptions(Stream vaultFS, long metadataOffset)
+        {
+            var reader = VaultRegistry.GetVaultReader(VaultSession.VERSION);
+
+            byte[] decryptedMetadata = reader.ReadAndDecryptData(vaultFS, metadataOffset, reader.MetadataOffsetsSize);
+            EncryptionOptions.FileEncryptionOptions encryptionOptions = EncryptionOptionsRegistry.GetReader(decryptedMetadata[0]).DeserializeEncryptionOptions(decryptedMetadata);
+            CryptographicOperations.ZeroMemory(decryptedMetadata);
+            return encryptionOptions;
+        }
+
         internal static void WipeFileEncryptionOptions(ref EncryptionOptions.FileEncryptionOptions options)
         {
             EncryptionOptionsRegistry.GetReader(options.version).ClearEncryptionOptions(ref options);
