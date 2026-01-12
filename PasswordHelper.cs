@@ -40,7 +40,7 @@ namespace VaultCrypt
             return GetSlicedKey(EncryptionOptions.GetEncryptionProtocolInfo[protocol].keySize);
         }
 
-        internal static byte[] SecureStringToUTF8ToBytes(SecureString secureString)
+        internal static byte[] SecureStringToBytes(SecureString secureString)
         {
             //Null Pointer
             IntPtr bstrPointer = IntPtr.Zero;
@@ -55,14 +55,7 @@ namespace VaultCrypt
 
                 byte[] utf16Bytes = new byte[length];
                 Marshal.Copy(bstrPointer, utf16Bytes, 0, length);
-
-                //Convert to utf8
-                //TODO: Try to fix this, we store string for a period of time until GC cleans it, so the password is temporarily in memory
-                string temp = Encoding.Unicode.GetString(utf16Bytes);
-                byte[] utf8Bytes = Encoding.UTF8.GetBytes(temp);
-
-                CryptographicOperations.ZeroMemory(utf16Bytes);
-                return utf8Bytes;
+                return utf16Bytes;
             }
             finally
             {

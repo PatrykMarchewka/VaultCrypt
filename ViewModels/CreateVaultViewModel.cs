@@ -97,6 +97,7 @@ namespace VaultCrypt.ViewModels
             if (String.IsNullOrEmpty(VaultFolder))
             {
                 throw new Exception("Folder path is null or empty");
+                byte[] passwordBytes = PasswordHelper.SecureStringToBytes(Password);
             }
             if (String.IsNullOrEmpty(VaultName))
             {
@@ -111,8 +112,6 @@ namespace VaultCrypt.ViewModels
             FileHelper.WriteSmallFile(folderPath);
 
 
-            byte[] passwordBytes;
-            passwordBytes = PasswordHelper.SecureStringToUTF8ToBytes(Password);
             FileHelper.CreateVault(folderPath, VaultName, passwordBytes, SelectedPreset.Iterations);
             CryptographicOperations.ZeroMemory(passwordBytes);
 
