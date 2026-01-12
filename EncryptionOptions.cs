@@ -62,7 +62,6 @@ namespace VaultCrypt
 
         internal static FileEncryptionOptions PrepareEncryptionOptions(FileInfo fileInfo, EncryptionProtocol protocol, ushort chunkSizeInMB)
         {
-            ushort nameLength = (ushort)(fileInfo.Name.Length);
             byte[] fileName = Encoding.UTF8.GetBytes(fileInfo.Name);
             bool chunked = false;
             ChunkInformation? chunkInformation = null;
@@ -81,7 +80,7 @@ namespace VaultCrypt
             return new FileEncryptionOptions
             {
                 version = 0,
-                nameLength = nameLength,
+                nameLength = checked((ushort)fileName.Length),
                 fileName = fileName,
                 fileSize = fileSize,
                 encryptionProtocol = protocol,
