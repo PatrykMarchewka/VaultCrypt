@@ -141,23 +141,25 @@ namespace VaultCrypt
         internal virtual void ReadVaultSession(Stream stream)
         {
             long[] offsets = ReadMetadataOffsets(stream);
-
-            Span<byte> buffer = stackalloc byte[EncryptionOptionsSize];
             foreach (long offset in offsets)
             {
-                stream.Seek(offset, SeekOrigin.Begin);
-                stream.ReadExactly(buffer);
-                byte[] decrypted = VaultDecryption(buffer);
-                CryptographicOperations.ZeroMemory(buffer);
-                byte version = decrypted[0];
-                EncryptionOptionsReader reader = EncryptionOptionsRegistry.GetReader(version);
-                EncryptionOptions.FileEncryptionOptions fileEncryptionOptions = reader.DeserializeEncryptionOptions(decrypted);
+                byte[] decrypted = ReadAndDecryptData(stream, offset, EncryptionOptionsSize);
+                EncryptionOptions.FileEncryptionOptions fileEncryptionOptions = EncryptionOptionsRegistry.GetReader(decrypted[0]).DeserializeEncryptionOptions(decrypted); ;
                 CryptographicOperations.ZeroMemory(decrypted);
                 VaultSession.ENCRYPTED_FILES.Add(offset, Encoding.UTF8.GetString(fileEncryptionOptions.fileName));
                 EncryptionOptions.WipeFileEncryptionOptions(ref fileEncryptionOptions);
             }
         }
 
+        internal byte[] ReadAndDecryptData(Stream stream, long offset, int length)
+        {
+            byte[] buffer = new byte[length];
+            stream.Seek(offset, SeekOrigin.Begin);
+            stream.ReadExactly(buffer, 0, length);
+            byte[] decrypted = VaultDecryption(buffer);
+            CryptographicOperations.ZeroMemory(buffer);
+            return decrypted;
+        }
         internal virtual void ReadVaultHeader(Stream stream)
         {
             //v0 = [version (1byte)] + [salt (32 bytes)][iterations (4 bytes)]...
