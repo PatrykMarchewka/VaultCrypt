@@ -246,20 +246,15 @@ namespace VaultCrypt
         internal virtual void AddAndSaveMetadataOffsets(Stream stream, long newOffset)
         {
             long[] oldOffsets = ReadMetadataOffsets(stream);
-            byte[] newOffsets = new byte[sizeof(ushort) + ((oldOffsets.Length + 1) * sizeof(long))];
-            Buffer.BlockCopy(oldOffsets, 0, newOffsets, sizeof(ushort), oldOffsets.Length * sizeof(long));
-            CryptographicOperations.ZeroMemory(MemoryMarshal.AsBytes(newOffsets.AsSpan()));
-
-            BinaryPrimitives.WriteUInt16LittleEndian(newOffsets.AsSpan(0, sizeof(ushort)), (ushort)(oldOffsets.Length + 1));
-            BinaryPrimitives.WriteInt64LittleEndian(newOffsets.AsSpan(newOffsets.Length - 8), newOffset);
-            if (newOffsets.Length > (sizeof(ushort) + MetadataOffsetsSize))
+            if (oldOffsets.Length + 1 > (sizeof(ushort) + MetadataOffsetsSize))
             {
                 throw new Exception("Too many files in the vault");
             }
-            byte[] encryptedMetadataOffsets = PadMetadataOffsetsAndEncrypt(newOffsets);
-
-            WriteMetadataOffsets(stream, encryptedMetadataOffsets);
-            CryptographicOperations.ZeroMemory(encryptedMetadataOffsets);
+            long[] newOffsets = new long[oldOffsets.Length + 1];
+            oldOffsets.AsSpan().CopyTo(newOffsets);
+            newOffsets[oldOffsets.Length] = newOffset;
+            CryptographicOperations.ZeroMemory(MemoryMarshal.AsBytes(oldOffsets.AsSpan()));
+            SaveMetadataOffsets(stream, newOffsets);
         }
 
         /// <summary>
@@ -267,17 +262,28 @@ namespace VaultCrypt
         /// </summary>
         /// <param name="stream"></param>
         /// <param name="itemIndex"></param>
-        internal virtual void RemoveAndSaveMetadataOffsets(Stream stream, ushort itemIndex)
+        internal void RemoveAndSaveMetadataOffsets(Stream stream, ushort itemIndex)
         {
             long[] oldOffsets = ReadMetadataOffsets(stream);
             long[] newOffsets = oldOffsets.Where((offset, index) => index != itemIndex).ToArray();
             CryptographicOperations.ZeroMemory(MemoryMarshal.AsBytes(oldOffsets.AsSpan()));
-            byte[] newOffsetsBytes = new byte[newOffsets.Length * sizeof(long)];
-            Buffer.BlockCopy(newOffsets, 0, newOffsetsBytes, 0, newOffsets.Length * sizeof(long));
-            CryptographicOperations.ZeroMemory(MemoryMarshal.AsBytes(newOffsets.AsSpan()));
-            BinaryPrimitives.WriteUInt16LittleEndian(newOffsetsBytes.AsSpan(0, sizeof(ushort)), checked((ushort)(newOffsets.Length * sizeof(long))));
+            SaveMetadataOffsets(stream, newOffsets);
+        }
 
-            byte[] encryptedMetadataOffsets = PadMetadataOffsetsAndEncrypt(newOffsetsBytes);
+        internal virtual byte[] PrepareMetadataOffsets(long[] offsets)
+        {
+            byte[] offsetsBytes = new byte[sizeof(ushort) + (offsets.Length * sizeof(long))];
+            Buffer.BlockCopy(offsets, 0, offsetsBytes, sizeof(ushort), offsets.Length * sizeof(long));
+            CryptographicOperations.ZeroMemory(MemoryMarshal.AsBytes(offsets.AsSpan()));
+            BinaryPrimitives.WriteUInt16LittleEndian(offsetsBytes.AsSpan(0, sizeof(ushort)), (ushort)(offsets.Length));
+            return offsetsBytes;
+        }
+
+        internal void SaveMetadataOffsets(Stream stream, long[] offsets)
+        {
+            byte[] offsetsBytes = PrepareMetadataOffsets(offsets);
+            byte[] encryptedMetadataOffsets = PadMetadataOffsetsAndEncrypt(offsetsBytes);
+            CryptographicOperations.ZeroMemory(offsetsBytes);
             WriteMetadataOffsets(stream, encryptedMetadataOffsets);
             CryptographicOperations.ZeroMemory(encryptedMetadataOffsets);
         }
