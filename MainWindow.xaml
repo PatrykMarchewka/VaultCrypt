@@ -5,6 +5,7 @@
         xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
         xmlns:local="clr-namespace:VaultCrypt"
         mc:Ignorable="d"
-        Title="VaultCrypt" SizeToContent="WidthAndHeight">
+        Title="VaultCrypt" SizeToContent="WidthAndHeight" MinWidth="250" MinHeight="100" d:Width="800" d:Height="200" ResizeMode="CanMinimize">
     <ContentControl Content="{Binding CurrentView}"/>
+
 </Window>
