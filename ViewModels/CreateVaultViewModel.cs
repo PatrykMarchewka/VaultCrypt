@@ -94,12 +94,11 @@ namespace VaultCrypt.ViewModels
 
         internal void CreateVault(INavigationService nav)
         {
-            if (String.IsNullOrEmpty(VaultFolder))
+            if (String.IsNullOrWhiteSpace(VaultFolder))
             {
                 throw new Exception("Folder path is null or empty");
-                byte[] passwordBytes = PasswordHelper.SecureStringToBytes(Password);
             }
-            if (String.IsNullOrEmpty(VaultName))
+            if (String.IsNullOrWhiteSpace(VaultName))
             {
                 throw new Exception("Vault name is null or empty");
             }
