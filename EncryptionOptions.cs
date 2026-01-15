@@ -141,7 +141,7 @@ namespace VaultCrypt
         {
             var reader = VaultRegistry.GetVaultReader(VaultSession.VERSION);
 
-            byte[] decryptedMetadata = reader.ReadAndDecryptData(vaultFS, metadataOffset, reader.MetadataOffsetsSize);
+            byte[] decryptedMetadata = reader.ReadAndDecryptData(vaultFS, metadataOffset, reader.EncryptionOptionsSize);
             EncryptionOptions.FileEncryptionOptions encryptionOptions = EncryptionOptionsRegistry.GetReader(decryptedMetadata[0]).DeserializeEncryptionOptions(decryptedMetadata);
             CryptographicOperations.ZeroMemory(decryptedMetadata);
             return encryptionOptions;
