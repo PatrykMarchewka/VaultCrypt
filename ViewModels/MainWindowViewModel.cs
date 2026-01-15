@@ -25,12 +25,14 @@ namespace VaultCrypt.ViewModels
         private readonly CreateVaultViewModel _createVaultViewModel;
         private readonly OpenVaultViewModel _openVaultViewModel;
         private readonly PasswordInputViewModel _passwordInputViewModel;
+        private readonly EncryptFileViewModel _encryptFileViewModel;
         internal MainWindowViewModel()
         {
             _mainViewViewModel = new MainViewViewModel(this);
             _createVaultViewModel = new CreateVaultViewModel(this);
             _openVaultViewModel = new OpenVaultViewModel(this);
             _passwordInputViewModel = new PasswordInputViewModel(this);
+            _encryptFileViewModel = new EncryptFileViewModel(this);
 
             CurrentView = _mainViewViewModel;
         }
@@ -61,6 +63,11 @@ namespace VaultCrypt.ViewModels
         public void NavigateToPasswordInput(string vaultPath)
         {
             Navigate(_passwordInputViewModel, vaultPath);
+        }
+
+        public void NavigateToEncryptFile(NormalizedPath filePath)
+        {
+            Navigate(_encryptFileViewModel, filePath);
         }
         private void OnPropertyChanged(string name) { PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(name)); }
         public event PropertyChangedEventHandler? PropertyChanged;

@@ -13,6 +13,7 @@ namespace VaultCrypt
         void NavigateToCreateVault();
         void NavigateToOpenVault(SecureString password, string vaultPath);
         void NavigateToPasswordInput(string vaultPath);
+        void NavigateToEncryptFile(NormalizedPath filePath);
     }
 
     interface INavigated
