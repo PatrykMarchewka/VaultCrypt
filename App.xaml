@@ -62,19 +62,13 @@
         <DataTemplate DataType="{x:Type vm:PasswordInputViewModel}">
             <views:PasswordInput/>
         </DataTemplate>
+
+        <DataTemplate DataType="{x:Type vm:EncryptFileViewModel}">
+            <views:EncryptFile/>
+        </DataTemplate>
         
-        
-        
-        
-        
-        
-        
-        
-        
-        
-        
-        
-        
-        
+        <DataTemplate DataType="{x:Type vm:EncryptionProgressViewModel}">
+            <views:EncryptionProgress/>
+        </DataTemplate>
     </Application.Resources>
 </Application>
