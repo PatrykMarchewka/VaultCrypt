@@ -17,7 +17,10 @@
             <Setter Property="VerticalAlignment" Value="Center"/>
         </Style>
         
-
+        <Style TargetType="TextBlock" x:Key="BlackTextStyle">
+            <Setter Property="Foreground" Value="Black"/>
+        </Style>
+        
         <Style TargetType="TextBox">
             <Setter Property="Margin" Value="5"/>
         </Style>
@@ -34,6 +37,13 @@
 
         <Style TargetType="ComboBox">
             <Setter Property="Margin" Value="5,0,5,0"/>
+            <Setter Property="ItemTemplate">
+                <Setter.Value>
+                    <DataTemplate>
+                        <TextBlock Style="{StaticResource BlackTextStyle}" Text="{Binding}"/>
+                    </DataTemplate>
+                </Setter.Value>
+            </Setter>
         </Style>
 
         
