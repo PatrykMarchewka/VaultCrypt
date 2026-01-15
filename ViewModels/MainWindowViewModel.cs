@@ -53,6 +53,7 @@ namespace VaultCrypt.ViewModels
 
         public void NavigateToMain()
         {
+            VaultSession.Dispose();
             Navigate(_mainViewViewModel);
         }
 
