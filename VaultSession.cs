@@ -1,12 +1,14 @@
 ﻿using System;
 using System.Buffers.Binary;
 using System.Collections.Generic;
+using System.ComponentModel;
 using System.IO;
 using System.Linq;
 using System.Runtime.InteropServices;
 using System.Security.Cryptography;
 using System.Text;
 using System.Threading.Tasks;
+using VaultCrypt.ViewModels;
 
 namespace VaultCrypt
 {
@@ -35,7 +37,7 @@ namespace VaultCrypt
                 VaultReader reader = VaultRegistry.GetVaultReader(VERSION);
                 reader.ReadVaultHeader(fs);
                 KEY = PasswordHelper.DeriveKey(password);
-                reader.ReadVaultSession(fs);
+                VaultHelper.RefreshEncryptedFilesList(fs);
             }
         }
 
@@ -105,6 +107,16 @@ namespace VaultCrypt
             VaultSession.ITERATIONS = iterations;
             VaultSession.KEY = PasswordHelper.DeriveKey(password);
         }
+
+        internal static void RefreshEncryptedFilesList(Stream vaultFS)
+        {
+            VaultSession.ENCRYPTED_FILES.Clear();
+            VaultRegistry.GetVaultReader(VaultSession.VERSION).ReadVaultSession(vaultFS);
+            OpenVaultViewModel.EncryptedFilesCollectionView.Refresh();
+        }
+
+
+
         public class ProgressionContext : INotifyPropertyChanged
         {
             private int _completed;
