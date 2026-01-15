@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Buffers.Binary;
+using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Configuration;
 using System.IO;
@@ -16,33 +17,96 @@ namespace VaultCrypt
 {
     internal class Encryption
     {
+
+        internal static async Task Encrypt(EncryptionOptions.EncryptionProtocol protocol, ushort chunkSizeInMB, NormalizedPath filePath, VaultHelper.ProgressionContext context)
         {
+            FileInfo fileInfo = new FileInfo(filePath);
+            FileHelper.CheckFreeSpace(filePath);
+            
+            EncryptionOptions.FileEncryptionOptions options = EncryptionOptions.PrepareEncryptionOptions(fileInfo, protocol, chunkSizeInMB);
+            int totalChunks = options.chunkInformation != null ? options.chunkInformation.Value.totalChunks : 1;
+            int concurrentChunkCount = FileHelper.CalculateConcurrency(options.chunked, chunkSizeInMB);
+
+            byte[] key = PasswordHelper.GetSlicedKey(protocol);
+
+            byte[] paddedFileOptions = EncryptionOptions.EncryptAndPadFileEncryptionOptions(ref options);
+            EncryptionOptions.WipeFileEncryptionOptions(ref options);
+
+            await using FileStream vaultFS = new FileStream(VaultSession.VAULTPATH, FileMode.Open, FileAccess.ReadWrite);
+            await using FileStream fileFS = new FileStream(filePath, FileMode.Open, FileAccess.Read);
+
+            VaultRegistry.GetVaultReader(VaultSession.VERSION).AddAndSaveMetadataOffsets(vaultFS, vaultFS.Seek(0, SeekOrigin.End));
+
+            vaultFS.Write(paddedFileOptions);
+            CryptographicOperations.ZeroMemory(paddedFileOptions);
+            await EncryptChunks(fileFS, vaultFS, totalChunks, concurrentChunkCount, chunkSizeInMB, protocol, key, context);
+            CryptographicOperations.ZeroMemory(key);
+        }
+
+        static async Task EncryptChunks(Stream fileFS, Stream vaultFS, int totalChunks, int concurrentChunkCount, ushort chunkSizeInMB, EncryptionOptions.EncryptionProtocol protocol, byte[] key, VaultHelper.ProgressionContext context)
+        {
+            var tasks = new List<Task>();
+            var results = new ConcurrentDictionary<int, byte[]>();
+            int nextToWrite = 0;
+            int chunkIndex = 0;
+            byte[] buffer = new byte[Math.Min((chunkSizeInMB * 1024 * 1024), fileFS.Length)];
+            var encryptMethod = EncryptionOptions.GetEncryptionProtocolInfo[protocol].encryptMethod;
+
+            //Object created to stop multiple threads for trying to write into vault file
+            object writeLock = new object();
+            while (chunkIndex < totalChunks)
+            {
+                context.CancellationToken.ThrowIfCancellationRequested();
+                int bytesRead = await fileFS.ReadAsync(buffer);
+                byte[] chunk = new byte[bytesRead];
+                Buffer.BlockCopy(buffer, 0, chunk, 0, bytesRead);
+                CryptographicOperations.ZeroMemory(buffer);
+
+                int currentIndex = chunkIndex++;
+
+                if (tasks.Count >= concurrentChunkCount)
+                {
+                    var finished = await Task.WhenAny(tasks);
+                    tasks.Remove(finished);
+                }
+
+                tasks.Add(Task.Run(() =>
+                {
+                    byte[] encrypted = encryptMethod(chunk, key);
+                    results.TryAdd(currentIndex, encrypted);
+                    FileHelper.WriteReadyChunk(results, ref nextToWrite, currentIndex, vaultFS, writeLock);
+                    //Reporting current index + 1 because currentIndex is zero based while user gets to see 1 based indexing
+                    context.Progress.Report(new VaultHelper.ProgressStatus(currentIndex + 1, totalChunks));
+                }));
+            }
+            await Task.WhenAll(tasks);
+        }
+
         internal static class AesGcmEncryption
         {
             internal static byte[] EncryptBytes(byte[] data, byte[] key)
             {
+                byte[] iv = new byte[12];
+                RandomNumberGenerator.Fill(iv);
+                byte[] authentication = new byte[16];
+                byte[] output = new byte[data.Length];
+                byte[] encrypted = new byte[iv.Length + authentication.Length + output.Length];
                 using (AesGcm aesGcm = new AesGcm(key, 16))
                 {
-                    byte[] iv = new byte[12];
-                    RandomNumberGenerator.Fill(iv);
-                    byte[] authentication = new byte[16];
-                    byte[] output = new byte[data.Length];
-
                     aesGcm.Encrypt(iv, data, output, authentication);
-
-                    byte[] encrypted = new byte[iv.Length + authentication.Length + output.Length];
-
-
-                    Buffer.BlockCopy(iv, 0, encrypted, 0, iv.Length);
-                    Buffer.BlockCopy(authentication, 0, encrypted, iv.Length, authentication.Length);
-                    Buffer.BlockCopy(output, 0, encrypted, iv.Length + authentication.Length, output.Length);
-                    return encrypted;
                 }
+                CryptographicOperations.ZeroMemory(data);
+                Buffer.BlockCopy(iv, 0, encrypted, 0, iv.Length);
+                Buffer.BlockCopy(authentication, 0, encrypted, iv.Length, authentication.Length);
+                Buffer.BlockCopy(output, 0, encrypted, iv.Length + authentication.Length, output.Length);
+
+                CryptographicOperations.ZeroMemory(iv);
+                CryptographicOperations.ZeroMemory(authentication);
+                CryptographicOperations.ZeroMemory(output);
+                return encrypted;
             }
-        }
 
 
-        
 
 
 

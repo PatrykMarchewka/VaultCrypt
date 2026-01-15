@@ -60,7 +60,7 @@ namespace VaultCrypt
         
 
 
-        internal static void WriteReadyChunk(ConcurrentDictionary<int, byte[]> results, ref int nextToWrite, ref int currentIndex, Stream fileFS, object lockObject)
+        internal static void WriteReadyChunk(ConcurrentDictionary<int, byte[]> results, ref int nextToWrite, int currentIndex, Stream fileFS, object lockObject)
         {
             lock (lockObject)
             {
