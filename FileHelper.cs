@@ -120,6 +120,40 @@ namespace VaultCrypt
                 length -= (ulong)chunkSize;
             }
         }
+
+        internal static void TrimVault(VaultHelper.ProgressionContext context)
+        {
+            CheckFreeSpace(VaultSession.VAULTPATH);
+            using FileStream vaultfs = new FileStream(VaultSession.VAULTPATH, FileMode.Open, FileAccess.Read);
+            using FileStream newVaultfs = new FileStream(VaultSession.VAULTPATH + "_TRIMMED.vlt", FileMode.Create);
+
+            var reader = VaultRegistry.GetVaultReader(VaultSession.VERSION);
+            CopyPartOfFile(vaultfs, 0, (ulong)reader.HeaderSize, newVaultfs, newVaultfs.Seek(0, SeekOrigin.End));
+            var fileList = VaultSession.ENCRYPTED_FILES.ToList();
+            long[] newVaultOffsets = new long[fileList.Count];
+            for (int i = 0; i < fileList.Count; i++)
+            {
+                context.CancellationToken.ThrowIfCancellationRequested();
+                long currentOffset = fileList[i].Key;
+                long nextOffset = long.MaxValue;
+                if (i + 1 < fileList.Count)
+                {
+                    nextOffset = fileList[i + 1].Key;
+                }
+
+                EncryptionOptions.FileEncryptionOptions encryptionOptions = EncryptionOptions.GetDecryptedFileEncryptionOptions(vaultfs, currentOffset);
+                ulong fileSize = encryptionOptions.fileSize;
+                EncryptionOptions.WipeFileEncryptionOptions(ref encryptionOptions);
+                //Calculating toread to allow copying of partially encrypted files
+                ulong toread = Math.Min((ulong)(nextOffset - currentOffset), (ulong)reader.EncryptionOptionsSize + fileSize);
+                newVaultOffsets[i] = newVaultfs.Seek(0, SeekOrigin.End);
+                CopyPartOfFile(vaultfs, currentOffset, toread, newVaultfs, newVaultOffsets[i]);
+                //Reporting current index + 1 because i is zero based while user gets to see 1 based indexing, total is filelList.Count + 1 because last action is saving new header
+                context.Progress.Report(new VaultHelper.ProgressStatus(i + 1, fileList.Count + 1));
+            }
+            reader.SaveMetadataOffsets(newVaultfs, newVaultOffsets);
+            context.Progress.Report(new VaultHelper.ProgressStatus(fileList.Count + 1, fileList.Count + 1));
+        }
     }
     internal class NormalizedPath
     {

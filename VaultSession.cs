@@ -178,6 +178,7 @@ namespace VaultCrypt
         internal virtual short KeySize => EncryptionOptions.GetEncryptionProtocolInfo[EncryptionProtocol].keySize; //Size in bytes of the key used to encrypt/decrypt vault data
         internal virtual short EncryptionOptionsSize => 1024; //Size of already encrypted EncryptionOptions
         internal virtual short MetadataOffsetsSize => 4096; //Size of metadata offsets before encryption
+        internal virtual short HeaderSize => (short)(1 + SaltSize + sizeof(int) + ExtraEncryptionDataSize + sizeof(ushort) + MetadataOffsetsSize); //Full size of vault header
 
 
 
