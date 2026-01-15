@@ -154,6 +154,30 @@ namespace VaultCrypt
             reader.SaveMetadataOffsets(newVaultfs, newVaultOffsets);
             context.Progress.Report(new VaultHelper.ProgressStatus(fileList.Count + 1, fileList.Count + 1));
         }
+
+        internal static void DeleteFileFromVault(KeyValuePair<long, string> FileMetadataEntry, VaultHelper.ProgressionContext context)
+        {
+            using FileStream vaultFS = new FileStream(VaultSession.VAULTPATH, FileMode.Open, FileAccess.ReadWrite);
+            EncryptionOptions.FileEncryptionOptions encryptionOptions = EncryptionOptions.GetDecryptedFileEncryptionOptions(vaultFS, FileMetadataEntry.Key);
+            //If the file is at the end, just trim the entire file, otherwise zero out the block
+            if (VaultSession.ENCRYPTED_FILES.Last().Equals(FileMetadataEntry))
+            {
+                vaultFS.SetLength(FileMetadataEntry.Key);
+            }
+            else
+            {
+                //Calculate length incase of partially written file
+                var encryptionMetadataSize = VaultRegistry.GetVaultReader(VaultSession.VERSION).EncryptionOptionsSize;
+                var fileList = VaultSession.ENCRYPTED_FILES.ToList();
+                int currentKey = fileList.FindIndex(file => file.Key == FileMetadataEntry.Key);
+                ulong length = Math.Min(encryptionOptions.fileSize + (ulong)encryptionMetadataSize, (ulong)(fileList[currentKey + 1].Key - fileList[currentKey].Key));
+                ZeroOutPartOfFile(vaultFS, FileMetadataEntry.Key, length);
+            }
+            EncryptionOptions.WipeFileEncryptionOptions(ref encryptionOptions);
+            VaultRegistry.GetVaultReader(VaultSession.VERSION).RemoveAndSaveMetadataOffsets(vaultFS, checked((ushort)VaultSession.ENCRYPTED_FILES.ToList().FindIndex(file => file.Equals(FileMetadataEntry))));
+            context.Progress.Report(new VaultHelper.ProgressStatus(1, 1));
+        }
+
     }
     internal class NormalizedPath
     {
