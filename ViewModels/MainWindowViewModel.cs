@@ -1,7 +1,9 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.ComponentModel;
+using System.IO;
 using System.Linq;
+using System.Security;
 using System.Text;
 using System.Threading.Tasks;
 using System.Windows.Input;
@@ -26,6 +28,8 @@ namespace VaultCrypt.ViewModels
         private readonly OpenVaultViewModel _openVaultViewModel;
         private readonly PasswordInputViewModel _passwordInputViewModel;
         private readonly EncryptFileViewModel _encryptFileViewModel;
+        private readonly EncryptionProgressViewModel _encryptionProgressViewModel;
+
         internal MainWindowViewModel()
         {
             _mainViewViewModel = new MainViewViewModel(this);
@@ -33,6 +37,7 @@ namespace VaultCrypt.ViewModels
             _openVaultViewModel = new OpenVaultViewModel(this);
             _passwordInputViewModel = new PasswordInputViewModel(this);
             _encryptFileViewModel = new EncryptFileViewModel(this);
+            _encryptionProgressViewModel = new EncryptionProgressViewModel(this);
 
             CurrentView = _mainViewViewModel;
         }
@@ -45,6 +50,7 @@ namespace VaultCrypt.ViewModels
             }
             CurrentView = viewModel;
         }
+
         public void NavigateToMain()
         {
             Navigate(_mainViewViewModel);
@@ -69,6 +75,19 @@ namespace VaultCrypt.ViewModels
         {
             Navigate(_encryptFileViewModel, filePath);
         }
+
+        public void NavigateToProgress(VaultHelper.ProgressionContext context)
+        {
+            Navigate(_encryptionProgressViewModel, context);
+        }
+
+        public void NavigateFromProgress()
+        {
+            using var vaultFS = new FileStream(VaultSession.VAULTPATH, FileMode.Open, FileAccess.Read, FileShare.ReadWrite);
+            VaultHelper.RefreshEncryptedFilesList(vaultFS);
+            Navigate(_openVaultViewModel);
+        }
+
         private void OnPropertyChanged(string name) { PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(name)); }
         public event PropertyChangedEventHandler? PropertyChanged;
     }

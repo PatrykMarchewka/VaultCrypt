@@ -14,6 +14,8 @@ namespace VaultCrypt
         void NavigateToOpenVault(SecureString password, string vaultPath);
         void NavigateToPasswordInput(string vaultPath);
         void NavigateToEncryptFile(NormalizedPath filePath);
+        void NavigateToProgress(VaultHelper.ProgressionContext context);
+        void NavigateFromProgress();
     }
 
     interface INavigated
