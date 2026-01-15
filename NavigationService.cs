@@ -11,6 +11,7 @@ namespace VaultCrypt
     {
         void NavigateToMain();
         void NavigateToCreateVault();
+        void NavigateToOpenVault(SecureString password, string vaultPath);
         void NavigateToPasswordInput(string vaultPath);
     }
 

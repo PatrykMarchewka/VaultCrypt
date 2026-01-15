@@ -23,11 +23,13 @@ namespace VaultCrypt.ViewModels
 
         private readonly MainViewViewModel _mainViewViewModel;
         private readonly CreateVaultViewModel _createVaultViewModel;
+        private readonly OpenVaultViewModel _openVaultViewModel;
         private readonly PasswordInputViewModel _passwordInputViewModel;
         internal MainWindowViewModel()
         {
             _mainViewViewModel = new MainViewViewModel(this);
             _createVaultViewModel = new CreateVaultViewModel(this);
+            _openVaultViewModel = new OpenVaultViewModel(this);
             _passwordInputViewModel = new PasswordInputViewModel(this);
 
             CurrentView = _mainViewViewModel;
@@ -49,6 +51,11 @@ namespace VaultCrypt.ViewModels
         public void NavigateToCreateVault()
         {
             Navigate(_createVaultViewModel);
+        }
+
+        public void NavigateToOpenVault(SecureString password, string vaultPath)
+        {
+            Navigate(_openVaultViewModel, new { Password = password, VaultPath = vaultPath });
         }
 
         public void NavigateToPasswordInput(string vaultPath)
