@@ -130,7 +130,7 @@ namespace VaultCrypt.ViewModels
             if (parameters is { } p)
             {
                 password = (SecureString)p.GetType().GetProperty("Password")!.GetValue(p)!;
-                vaultPath = NormalizedPath.From((string)p.GetType().GetProperty("VaultPath")!.GetValue(p)!);
+                vaultPath = (NormalizedPath)p.GetType().GetProperty("VaultPath")!.GetValue(p)!;
             }
             CreateSession();
         }

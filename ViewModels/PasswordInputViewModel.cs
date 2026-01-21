@@ -13,7 +13,7 @@ namespace VaultCrypt.ViewModels
 {
     internal class PasswordInputViewModel : INotifyPropertyChanged, INavigated, IViewModel, INavigatingViewModel
     {
-        internal NormalizedPath? vaultPath;
+        private NormalizedPath? VaultPath;
 
         private SecureString _password;
         public SecureString Password
@@ -54,7 +54,7 @@ namespace VaultCrypt.ViewModels
 
         public void OnNavigatedTo(object? parameters)
         {
-            this.vaultPath = NormalizedPath.From((string)parameters!);
+            this.VaultPath = (NormalizedPath)parameters!;
         }
 
         private void OnPropertyChanged(string name) { PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(name)); }
