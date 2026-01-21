@@ -49,4 +49,8 @@ namespace VaultCrypt
         internal override void Request(INavigationService nav) => nav.NavigateFromProgress();
     }
 
+    internal sealed record NavigateToExceptionThrownRequest(Exception ex) : NavigationRequest
+    {
+        internal override void Request(INavigationService nav) => nav.NavigateToExceptionThrown(ex);
+    }
 }

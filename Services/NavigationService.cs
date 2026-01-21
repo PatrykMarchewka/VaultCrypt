@@ -98,6 +98,10 @@ namespace VaultCrypt.Services
             Navigate(viewModels.OpenVault);
         }
 
+        public void NavigateToExceptionThrown(Exception ex)
+        {
+            Navigate(viewModels.ExceptionThrown, ex);
+        }
         public event Action<IViewModel> ChangeView;
     }
 

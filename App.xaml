@@ -70,5 +70,9 @@
         <DataTemplate DataType="{x:Type vm:ProgressViewModel}">
             <views:Progress/>
         </DataTemplate>
+
+        <DataTemplate DataType="{x:Type vm:ExceptionThrownViewModel}">
+            <views:ExceptionThrown/>
+        </DataTemplate>
     </Application.Resources>
 </Application>

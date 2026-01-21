@@ -15,6 +15,7 @@ namespace VaultCrypt.ViewModels
         public PasswordInputViewModel PasswordInput { get; } = new PasswordInputViewModel();
         public EncryptFileViewModel EncryptFile { get; } = new EncryptFileViewModel();
         public ProgressViewModel Progress { get; } = new ProgressViewModel();
+        public ExceptionThrownViewModel ExceptionThrown { get; } = new ExceptionThrownViewModel();
 
         public IEnumerable<IViewModel> AllViewModels
         {
@@ -27,6 +28,7 @@ namespace VaultCrypt.ViewModels
                 yield return PasswordInput;
                 yield return EncryptFile;
                 yield return Progress;
+                yield return ExceptionThrown;
             }
         }
     }
