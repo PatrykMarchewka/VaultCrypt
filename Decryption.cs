@@ -73,7 +73,7 @@ namespace VaultCrypt
                 if (chunkIndex == chunkInformation.totalChunks)
                 {
                     //read the extraData + chunkInformation.finalChunkSize
-                    bytesRead = await vaultFS.ReadAsync(buffer, 0, bytesRead);
+                    bytesRead = await vaultFS.ReadAsync(buffer, 0, checked((int)(extraData + chunkInformation.finalChunkSize)));
                 }
                 else
                 {
