@@ -22,6 +22,10 @@ namespace VaultCrypt.Services
     
     internal class NavigationService : INavigationService
     {
+        public void HandleNavigation(NavigationRequest navigationRequest)
+        {
+            navigationRequest.Request(this);
+        }
         private void Navigate(IViewModel viewModel, object? parameters = null)
         {
             if (viewModel is INavigated nav && parameters != null)
