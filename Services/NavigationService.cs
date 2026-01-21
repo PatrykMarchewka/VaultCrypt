@@ -5,11 +5,13 @@ using System.Linq;
 using System.Security;
 using System.Text;
 using System.Threading.Tasks;
+using VaultCrypt.ViewModels;
 
 namespace VaultCrypt.Services
 {
     interface INavigationService
     {
+        event Action<IViewModel> ChangeView;
         void HandleNavigation(NavigationRequest request);
         void NavigateToMain();
         void NavigateToCreateVault();
@@ -18,21 +20,44 @@ namespace VaultCrypt.Services
         void NavigateToEncryptFile(NormalizedPath filePath);
         void NavigateToProgress(VaultHelper.ProgressionContext context);
         void NavigateFromProgress();
+        void NavigateToExceptionThrown(Exception ex);
+
     }
+
     
+
     internal class NavigationService : INavigationService
     {
+        private readonly ViewModelState viewModels;
+
+        internal NavigationService(ViewModelState viewModels)
+        {
+            this.viewModels = viewModels;
+
+            foreach (var viewModel in viewModels.AllViewModels)
+            {
+                if (viewModel is INavigatingViewModel navigatingModel)
+                {
+                    navigatingModel.NavigationRequested += request => this.HandleNavigation(request);
+                }
+            }
+        }
+
+        
+
         public void HandleNavigation(NavigationRequest navigationRequest)
         {
             navigationRequest.Request(this);
         }
+
+
         private void Navigate(IViewModel viewModel, object? parameters = null)
         {
             if (viewModel is INavigated nav && parameters != null)
             {
                 nav.OnNavigatedTo(parameters);
             }
-            NavigateEvent?.Invoke(viewModel);
+            ChangeView?.Invoke(viewModel);
         }
 
         public void NavigateToMain()
@@ -72,6 +97,8 @@ namespace VaultCrypt.Services
             VaultHelper.RefreshEncryptedFilesList(vaultFS);
             Navigate(viewModels.OpenVault);
         }
+
+        public event Action<IViewModel> ChangeView;
     }
 
     interface INavigated
