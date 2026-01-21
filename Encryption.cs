@@ -37,6 +37,8 @@ namespace VaultCrypt
 
             VaultRegistry.GetVaultReader(VaultSession.VERSION).AddAndSaveMetadataOffsets(vaultFS, vaultFS.Seek(0, SeekOrigin.End));
 
+            //Seek to the end of file to make sure its saved at the end and not after metadata data
+            vaultFS.Seek(0, SeekOrigin.End);
             vaultFS.Write(paddedFileOptions);
             CryptographicOperations.ZeroMemory(paddedFileOptions);
             await EncryptChunks(fileFS, vaultFS, totalChunks, concurrentChunkCount, chunkSizeInMB, protocol, key, context);
