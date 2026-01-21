@@ -8,25 +8,25 @@ using System.Windows.Input;
 
 namespace VaultCrypt.ViewModels
 {
-    internal class MainViewViewModel : INotifyPropertyChanged, IViewModel
+    internal class MainViewViewModel : INotifyPropertyChanged, IViewModel, INavigatingViewModel
     {
 
 
         public ICommand CreateVaultCommand { get; }
         public ICommand OpenVaultCommand { get; }
 
-        internal MainViewViewModel(INavigationService nav)
+        internal MainViewViewModel()
         {
-            CreateVaultCommand = new RelayCommand(_ => nav.NavigateToCreateVault());
-            OpenVaultCommand = new RelayCommand(_ => SelectVaultFilePickerOpen(nav));
+            CreateVaultCommand = new RelayCommand(_ => NavigationRequested?.Invoke(new NavigateToCreateVaultRequest()));
+            OpenVaultCommand = new RelayCommand(_ => SelectVaultFilePickerOpen());
         }
 
-        internal void SelectVaultFilePickerOpen(INavigationService nav)
+        internal void SelectVaultFilePickerOpen()
         {
             string? path = FileDialogService.OpenFile("Select vault file", false);
             if (path != null)
             {
-                nav.NavigateToPasswordInput(path);
+                NavigationRequested?.Invoke(new NavigateToPasswordInputRequest(path));
             }
 
         }
@@ -35,5 +35,6 @@ namespace VaultCrypt.ViewModels
 
         private void OnPropertyChanged(string name) { PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(name)); }
         public event PropertyChangedEventHandler? PropertyChanged;
+        public event Action<NavigationRequest> NavigationRequested;
     }
 }

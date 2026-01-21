@@ -7,10 +7,11 @@ using System.Security.Cryptography;
 using System.Text;
 using System.Threading.Tasks;
 using System.Windows.Input;
+using VaultCrypt.Services;
 
 namespace VaultCrypt.ViewModels
 {
-    internal class PasswordInputViewModel : INotifyPropertyChanged, INavigated, IViewModel
+    internal class PasswordInputViewModel : INotifyPropertyChanged, INavigated, IViewModel, INavigatingViewModel
     {
         internal NormalizedPath? vaultPath;
 
@@ -28,13 +29,13 @@ namespace VaultCrypt.ViewModels
 
         public ICommand GoBackCommand { get; }
         public ICommand OpenVaultCommand { get; }
-        internal PasswordInputViewModel(INavigationService nav)
+        internal PasswordInputViewModel()
         {
-            GoBackCommand = new RelayCommand(_ => nav.NavigateToMain());
-            OpenVaultCommand = new RelayCommand(_ => OpenVault(nav));
+            GoBackCommand = new RelayCommand(_ => NavigationRequested?.Invoke(new NavigateToMainRequest()));
+            OpenVaultCommand = new RelayCommand(_ => OpenVault());
         }
 
-        private void OpenVault(INavigationService nav)
+        private void OpenVault()
         {
             if (Password == null  || Password.Length == 0)
             {
@@ -42,7 +43,8 @@ namespace VaultCrypt.ViewModels
             }
             else
             {
-                nav.NavigateToOpenVault(Password, vaultPath!);
+                NavigationRequested?.Invoke(new NavigateToOpenVaultRequest(Password, VaultPath));
+                this.Password.Clear();
             }
 
         }
@@ -57,5 +59,6 @@ namespace VaultCrypt.ViewModels
 
         private void OnPropertyChanged(string name) { PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(name)); }
         public event PropertyChangedEventHandler? PropertyChanged;
+        public event Action<NavigationRequest> NavigationRequested;
     }
 }

@@ -7,10 +7,11 @@ using System.Security;
 using System.Text;
 using System.Threading.Tasks;
 using System.Windows.Input;
+using VaultCrypt.Services;
 
 namespace VaultCrypt.ViewModels
 {
-    class EncryptionProgressViewModel : INotifyPropertyChanged, INavigated, IViewModel
+    class ProgressViewModel : INotifyPropertyChanged, INavigated, IViewModel, INavigatingViewModel
     {
         private VaultHelper.ProgressionContext _context;
         public VaultHelper.ProgressionContext Context
@@ -30,26 +31,26 @@ namespace VaultCrypt.ViewModels
 
         public ICommand FinishCommand { get; }
         public ICommand CancelCommand { get; }
-        public EncryptionProgressViewModel(INavigationService nav)
+        public ProgressViewModel()
         {
-            FinishCommand = new RelayCommand(_ => Finish(nav), _ => (Context.Completed == Context.Total && Context.Completed != 0));
-            CancelCommand = new RelayCommand(_ => Cancel(nav), _ => (Context.Completed != Context.Total || Context.Completed == 0));
+            FinishCommand = new RelayCommand(_ => Finish(), _ => (Context.Completed == Context.Total && Context.Completed != 0));
+            CancelCommand = new RelayCommand(_ => Cancel(), _ => (Context.Completed != Context.Total || Context.Completed == 0));
         }
 
-        private void Finish(INavigationService nav)
+        private void Finish()
         {
-            NavigateBack(nav);
+            NavigateBack();
         }
 
-        private void Cancel(INavigationService nav)
+        private void Cancel()
         {
             Context.CancellationTokenSource.Cancel();
-            NavigateBack(nav);
+            NavigateBack();
         }
 
-        private void NavigateBack(INavigationService nav)
+        private void NavigateBack()
         {
-            nav.NavigateFromProgress();
+            NavigationRequested?.Invoke(new NavigateToMainRequest());
         }
 
         private void _context_PropertyChanged(object? sender, PropertyChangedEventArgs e)
@@ -72,5 +73,6 @@ namespace VaultCrypt.ViewModels
 
         private void OnPropertyChanged(string name) { PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(name)); }
         public event PropertyChangedEventHandler? PropertyChanged;
+        public event Action<NavigationRequest> NavigationRequested;
     }
 }
