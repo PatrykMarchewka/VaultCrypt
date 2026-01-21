@@ -84,7 +84,7 @@ namespace VaultCrypt.ViewModels
 
         internal void SelectFolder()
         {
-            string? path = FileDialogService.OpenFolder("Select folder");
+            string? path = FileDialogHelper.OpenFolder("Select folder");
 
             if (path != null)
             {

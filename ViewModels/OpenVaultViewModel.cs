@@ -86,7 +86,7 @@ namespace VaultCrypt.ViewModels
 
         private void AddNewFile()
         {
-            var dialog = FileDialogService.OpenFile("Select file to encrypt", true);
+            var dialog = FileDialogHelper.OpenFile("Select file to encrypt", true);
 
             if (dialog != null)
             {
@@ -96,7 +96,7 @@ namespace VaultCrypt.ViewModels
 
         private async Task DecryptFile()
         {
-            var folder = FileDialogService.OpenFolder("Select folder to save file");
+            var folder = FileDialogHelper.OpenFolder("Select folder to save file");
             if (folder != null)
             {
                 var context = new VaultHelper.ProgressionContext();

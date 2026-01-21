@@ -6,7 +6,7 @@ using System.Threading.Tasks;
 
 namespace VaultCrypt
 {
-    class FileDialogService
+    class FileDialogHelper
     {
         internal static string? OpenFile(string title, bool allFiles)
         {

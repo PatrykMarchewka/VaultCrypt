@@ -23,7 +23,7 @@ namespace VaultCrypt.ViewModels
 
         internal void SelectVaultFilePickerOpen()
         {
-            string? path = FileDialogService.OpenFile("Select vault file", false);
+            NormalizedPath? path = NormalizedPath.From(FileDialogHelper.OpenFile("Select vault file", false));
             if (path != null)
             {
                 NavigationRequested?.Invoke(new NavigateToPasswordInputRequest(path));
