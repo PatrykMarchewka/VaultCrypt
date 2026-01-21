@@ -11,7 +11,7 @@ using System.Windows.Input;
 
 namespace VaultCrypt.ViewModels
 {
-    internal class CreateVaultViewModel : INotifyPropertyChanged, IViewModel
+    internal class CreateVaultViewModel : INotifyPropertyChanged, IViewModel, INavigatingViewModel
     {
         private string _vaultFolder;
         public string VaultFolder
@@ -73,13 +73,13 @@ namespace VaultCrypt.ViewModels
         public ICommand SelectFolderCommand { get; }
         public ICommand CreateVaultCommand { get; }
 
-        internal CreateVaultViewModel(INavigationService nav)
+        internal CreateVaultViewModel()
         {
             SelectedPreset = IterationPresets[0];
 
-            GoBackCommand = new RelayCommand(_ => nav.NavigateToMain());
+            GoBackCommand = new RelayCommand(_ => NavigationRequested?.Invoke(new NavigateToMainRequest()));
             SelectFolderCommand = new RelayCommand(_ => SelectFolder());
-            CreateVaultCommand = new RelayCommand(_ => CreateVault(nav));
+            CreateVaultCommand = new RelayCommand(_ => CreateVault());
         }
 
         internal void SelectFolder()
@@ -92,7 +92,7 @@ namespace VaultCrypt.ViewModels
             }
         }
 
-        internal void CreateVault(INavigationService nav)
+        internal void CreateVault()
         {
             if (String.IsNullOrWhiteSpace(VaultFolder))
             {
@@ -113,12 +113,13 @@ namespace VaultCrypt.ViewModels
             FileHelper.CreateVault(folderPath, VaultName, passwordBytes, SelectedPreset.Iterations);
             CryptographicOperations.ZeroMemory(passwordBytes);
 
-            nav.NavigateToPasswordInput(folderPath + "\\" + VaultName + ".vlt");
+            NavigationRequested?.Invoke(new NavigateToPasswordInputRequest(vaultPath));
         }
 
 
         private void OnPropertyChanged(string name) { PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(name)); }
         public event PropertyChangedEventHandler? PropertyChanged;
+        public event Action<NavigationRequest> NavigationRequested;
     }
 
     internal record IterationPreset(string Name, int Iterations);

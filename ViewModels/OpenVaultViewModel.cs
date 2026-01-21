@@ -10,10 +10,11 @@ using System.Text;
 using System.Threading.Tasks;
 using System.Windows.Data;
 using System.Windows.Input;
+using VaultCrypt.Services;
 
 namespace VaultCrypt.ViewModels
 {
-    internal class OpenVaultViewModel : INotifyPropertyChanged, INavigated, IViewModel
+    internal class OpenVaultViewModel : INotifyPropertyChanged, INavigated, IViewModel, INavigatingViewModel
     {
 
         private SecureString? password;
@@ -58,14 +59,14 @@ namespace VaultCrypt.ViewModels
         public ICommand TrimCommand { get; }
 
 
-        internal OpenVaultViewModel(INavigationService nav)
+        internal OpenVaultViewModel()
         {
             EncryptedFilesCollectionView = CollectionViewSource.GetDefaultView(VaultSession.ENCRYPTED_FILES);
-            GoBackCommand = new RelayCommand(_ => GoBack(nav));
-            AddNewFileCommand = new RelayCommand(_ => AddNewFile(nav));
-            DecryptFileCommand = new RelayCommand(_ => DecryptFile(nav), _ => SelectedFile != null);
-            DeleteFileCommand = new RelayCommand(_ => DeleteFile(nav), _ => SelectedFile != null);
-            TrimCommand = new RelayCommand(_ => Trim(nav));
+            GoBackCommand = new RelayCommand(_ => GoBack());
+            AddNewFileCommand = new RelayCommand(_ => AddNewFile());
+            DecryptFileCommand = new RelayCommand(_ => DecryptFile(), _ => SelectedFile != null);
+            DeleteFileCommand = new RelayCommand(_ => DeleteFile(), _ => SelectedFile != null);
+            TrimCommand = new RelayCommand(_ => Trim());
         }
 
         private void CreateSession()
@@ -77,44 +78,44 @@ namespace VaultCrypt.ViewModels
             CryptographicOperations.ZeroMemory(password);
         }
 
-        private void GoBack(INavigationService nav)
+        private void GoBack()
         {
             Dispose();
-            nav.NavigateToMain();
+            NavigationRequested?.Invoke(new NavigateToMainRequest());
         }
 
-        private void AddNewFile(INavigationService nav)
+        private void AddNewFile()
         {
             var dialog = FileDialogService.OpenFile("Select file to encrypt", true);
 
             if (dialog != null)
             {
-                nav.NavigateToEncryptFile(NormalizedPath.From(dialog));
+                NavigationRequested?.Invoke(new NavigateToEncryptFileRequest(NormalizedPath.From(dialog)));
             }
         }
 
-        private async Task DecryptFile(INavigationService nav)
+        private async Task DecryptFile()
         {
             var folder = FileDialogService.OpenFolder("Select folder to save file");
             if (folder != null)
             {
                 var context = new VaultHelper.ProgressionContext();
-                nav.NavigateToProgress(context);
+                NavigationRequested?.Invoke(new NavigateToProgressRequest(context));
                 await Decryption.Decrypt(SelectedFile!.Value.Key, NormalizedPath.From(folder), context);
             }
         }
 
-        private async Task DeleteFile(INavigationService nav)
+        private async Task DeleteFile()
         {
             var context = new VaultHelper.ProgressionContext();
-            nav.NavigateToProgress(context);
+            NavigationRequested?.Invoke(new NavigateToProgressRequest(context));
             await Task.Run(() => FileHelper.DeleteFileFromVault(SelectedFile!.Value, context));
         }
 
-        private async Task Trim(INavigationService nav)
+        private async Task Trim()
         {
             var context = new VaultHelper.ProgressionContext();
-            nav.NavigateToProgress(context);
+            NavigationRequested?.Invoke(new NavigateToProgressRequest(context));
             await Task.Run(() => FileHelper.TrimVault(context));
         }
 
@@ -143,5 +144,6 @@ namespace VaultCrypt.ViewModels
 
         private void OnPropertyChanged(string name) { PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(name)); }
         public event PropertyChangedEventHandler? PropertyChanged;
+        public event Action<NavigationRequest> NavigationRequested;
     }
 }

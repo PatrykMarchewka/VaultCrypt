@@ -8,10 +8,11 @@ using System.Threading.Tasks;
 using System.Windows;
 using System.Windows.Input;
 using static VaultCrypt.EncryptionOptions;
+using VaultCrypt.Services;
 
 namespace VaultCrypt.ViewModels
 {
-    internal class EncryptFileViewModel : INotifyPropertyChanged, INavigated, IViewModel
+    internal class EncryptFileViewModel : INotifyPropertyChanged, INavigated, IViewModel, INavigatingViewModel
     {
         private NormalizedPath filePath;
         public IReadOnlyList<ChunkSizePreset> ChunkSizePresets { get; } = [
@@ -57,18 +58,18 @@ namespace VaultCrypt.ViewModels
 
         public ICommand GoBackCommand { get; }
         public ICommand EncryptCommand { get; }
-        public EncryptFileViewModel(INavigationService nav)
+        public EncryptFileViewModel()
         {
             SelectedPreset = ChunkSizePresets[0];
 
-            GoBackCommand = new RelayCommand(_ => nav.NavigateToMain());
-            EncryptCommand = new RelayCommand(_ => Encrypt(filePath!, nav));
+            GoBackCommand = new RelayCommand(_ => NavigationRequested?.Invoke(new NavigateToMainRequest()));
+            EncryptCommand = new RelayCommand(_ => Encrypt(filePath!));
         }
 
-        private async Task Encrypt(NormalizedPath filePath, INavigationService nav)
+        private async Task Encrypt(NormalizedPath filePath)
         {
             var context = new VaultHelper.ProgressionContext();
-            nav.NavigateToProgress(context);
+            NavigationRequested?.Invoke(new NavigateToProgressRequest(context));
             await Encryption.Encrypt(SelectedProtocol, SelectedPreset.SizeInMB, filePath, context);
             
         }
@@ -81,6 +82,7 @@ namespace VaultCrypt.ViewModels
 
         private void OnPropertyChanged(string name) { PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(name)); }
         public event PropertyChangedEventHandler? PropertyChanged;
+        public event Action<NavigationRequest> NavigationRequested;
     }
 
     internal record ChunkSizePreset(string Name, ushort SizeInMB);
