@@ -66,9 +66,9 @@
         <DataTemplate DataType="{x:Type vm:EncryptFileViewModel}">
             <views:EncryptFile/>
         </DataTemplate>
-        
-        <DataTemplate DataType="{x:Type vm:EncryptionProgressViewModel}">
-            <views:EncryptionProgress/>
+
+        <DataTemplate DataType="{x:Type vm:ProgressViewModel}">
+            <views:Progress/>
         </DataTemplate>
     </Application.Resources>
 </Application>

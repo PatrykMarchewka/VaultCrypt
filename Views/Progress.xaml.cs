@@ -16,11 +16,11 @@ using System.Windows.Shapes;
 namespace VaultCrypt.Views
 {
     /// <summary>
-    /// Logika interakcji dla klasy EncryptionProgress.xaml
+    /// Logika interakcji dla klasy Progress.xaml
     /// </summary>
-    public partial class EncryptionProgress : UserControl
+    public partial class Progress : UserControl
     {
-        public EncryptionProgress()
+        public Progress()
         {
             InitializeComponent();
         }
