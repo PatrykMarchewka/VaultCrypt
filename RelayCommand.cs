@@ -3,14 +3,16 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
+using System.Windows;
 using System.Windows.Input;
 
-namespace VaultCrypt.ViewModels
+namespace VaultCrypt
 {
     internal class RelayCommand : ICommand
     {
         private readonly Action<object> _execute;
         private readonly Func<object, bool> _canExecute;
+        private static event Action<Exception> ExceptionThrowRequested;
 
         internal RelayCommand(Action<object> execute, Func<object,bool> canExecute)
         {
@@ -20,11 +22,21 @@ namespace VaultCrypt.ViewModels
 
         internal RelayCommand(Action<object> execute) : this(execute, null) { }
 
+        public static void SubscribeToExceptionThrowEvent(Action<Exception> action) => ExceptionThrowRequested += action;
         public void RaiseCanExecuteChanged() => CanExecuteChanged?.Invoke(this, EventArgs.Empty);
-
-
         public bool CanExecute(object parameter) { return _canExecute?.Invoke(parameter) ?? true; }
-        public void Execute(object parameter) { _execute(parameter); }
+        public void Execute(object parameter)
+        {
+            try
+            {
+                _execute(parameter);
+            }
+            catch (Exception ex)
+            {
+                ExceptionThrowRequested?.Invoke(ex);
+            }
+            
+        }
         public event EventHandler CanExecuteChanged;
     }
 }
