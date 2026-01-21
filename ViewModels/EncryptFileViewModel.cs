@@ -7,7 +7,6 @@ using System.Text;
 using System.Threading.Tasks;
 using System.Windows;
 using System.Windows.Input;
-using static VaultCrypt.EncryptionOptions;
 using VaultCrypt.Services;
 
 namespace VaultCrypt.ViewModels
@@ -42,8 +41,8 @@ namespace VaultCrypt.ViewModels
             }
         }
 
-        private EncryptionProtocol _selectedProtocol;
-        public EncryptionProtocol SelectedProtocol
+        private EncryptionOptions.EncryptionProtocol _selectedProtocol;
+        public EncryptionOptions.EncryptionProtocol SelectedProtocol
         {
             get => _selectedProtocol;
             set
@@ -54,7 +53,7 @@ namespace VaultCrypt.ViewModels
             }
         }
 
-        public Array EncryptionProtocolEnumValues => Enum.GetValues(typeof(EncryptionProtocol));
+        public Array EncryptionProtocolEnumValues => Enum.GetValues(typeof(EncryptionOptions.EncryptionProtocol));
 
         public ICommand GoBackCommand { get; }
         public ICommand EncryptCommand { get; }
