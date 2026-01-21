@@ -20,8 +20,6 @@ namespace VaultCrypt
         public MainWindow()
         {
             InitializeComponent();
-            var viewmodel = new MainWindowViewModel();
-            this.DataContext = viewmodel;
         }
     }
 }
