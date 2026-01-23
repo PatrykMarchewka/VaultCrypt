@@ -198,58 +198,119 @@ namespace VaultCrypt
 
         internal virtual void ReadVaultSession(Stream stream)
         {
-            long[] offsets = ReadMetadataOffsets(stream);
-            foreach (long offset in offsets)
+            long[] offsets = null!;
+            try
             {
-                byte[] decrypted = ReadAndDecryptData(stream, offset, EncryptionOptionsSize);
-                EncryptionOptions.FileEncryptionOptions fileEncryptionOptions = EncryptionOptionsRegistry.GetReader(decrypted[0]).DeserializeEncryptionOptions(decrypted); ;
-                CryptographicOperations.ZeroMemory(decrypted);
-                VaultSession.ENCRYPTED_FILES.Add(offset, Encoding.UTF8.GetString(fileEncryptionOptions.fileName));
-                EncryptionOptions.WipeFileEncryptionOptions(ref fileEncryptionOptions);
+                offsets = ReadMetadataOffsets(stream);
+                byte[] decrypted = null!;
+                foreach (long offset in offsets)
+                {
+                    EncryptionOptions.FileEncryptionOptions fileEncryptionOptions = new();
+                    try
+                    {
+                        decrypted = ReadAndDecryptData(stream, offset, EncryptionOptionsSize);
+                        fileEncryptionOptions = EncryptionOptionsRegistry.GetReader(decrypted[0]).DeserializeEncryptionOptions(decrypted);
+                        VaultSession.ENCRYPTED_FILES.Add(offset, Encoding.UTF8.GetString(fileEncryptionOptions.fileName));
+                    }
+                    catch
+                    {
+                        VaultSession.ENCRYPTED_FILES.Add(offset, "Unknown file (Corrupted data!)");
+                        continue;
+                    }
+                    finally
+                    {
+                        if (decrypted is not null) CryptographicOperations.ZeroMemory(decrypted);
+                        EncryptionOptions.WipeFileEncryptionOptions(ref fileEncryptionOptions);
+                    }
+                }
+            }
+            finally
+            {
+                if (offsets is not null) CryptographicOperations.ZeroMemory(MemoryMarshal.AsBytes(offsets.AsSpan()));
             }
         }
 
         internal byte[] ReadAndDecryptData(Stream stream, long offset, int length)
         {
             byte[] buffer = new byte[length];
-            stream.Seek(offset, SeekOrigin.Begin);
-            stream.ReadExactly(buffer, 0, length);
-            byte[] decrypted = VaultDecryption(buffer);
-            CryptographicOperations.ZeroMemory(buffer);
-            return decrypted;
+            try
+            {
+                stream.Seek(offset, SeekOrigin.Begin);
+                stream.ReadExactly(buffer, 0, length);
+                return VaultDecryption(buffer);
+            }
+            finally
+            {
+                CryptographicOperations.ZeroMemory(buffer);
+            }
         }
         internal virtual void ReadVaultHeader(Stream stream)
         {
             //v0 = [version (1byte)] + [salt (32 bytes)][iterations (4 bytes)]...
             Span<byte> buffer = stackalloc byte[SaltSize + sizeof(uint)]; //Default salt size + 4 for uint ITERATIONS
-            stream.ReadExactly(buffer);
-            VaultSession.SALT = buffer[..SaltSize].ToArray();
-            VaultSession.ITERATIONS = BinaryPrimitives.ReadInt32LittleEndian(buffer.Slice(SaltSize, sizeof(uint)));
-            CryptographicOperations.ZeroMemory(buffer);
+            try
+            {
+                stream.ReadExactly(buffer);
+                VaultSession.SALT = buffer[..SaltSize].ToArray();
+                VaultSession.ITERATIONS = BinaryPrimitives.ReadInt32LittleEndian(buffer.Slice(SaltSize, sizeof(uint)));          
+            }
+            catch(EndOfStreamException ex)
+            {
+                throw VaultException.EndOfFileException(ex);
+            }
+            catch(Exception ex)
+            {
+                throw new VaultException("Failed to read vault header", ex);
+            }
+            finally
+            {
+                CryptographicOperations.ZeroMemory(buffer);
+            }
+            
         }
 
         private long[] ReadMetadataOffsets(Stream stream)
         {
-            byte[] decrypted = ReadMetadataOffsetsBytes(stream);
-            ushort fileCount = BinaryPrimitives.ReadUInt16LittleEndian(decrypted);
-
-            long[] offsets = new long[fileCount];
-            for (int i = 0; i < fileCount; i++)
+            byte[] decrypted = null!;
+            long[] offsets = null!;
+            try
             {
-                int readOffset = sizeof(ushort) + (i * sizeof(long));
-                offsets[i] = BinaryPrimitives.ReadInt64LittleEndian(decrypted.AsSpan(readOffset, sizeof(long)));
+                decrypted = ReadMetadataOffsetsBytes(stream);
+                ushort fileCount = BinaryPrimitives.ReadUInt16LittleEndian(decrypted);
+
+                offsets = new long[fileCount];
+                for (int i = 0; i < fileCount; i++)
+                {
+                    int readOffset = sizeof(ushort) + (i * sizeof(long));
+                    offsets[i] = BinaryPrimitives.ReadInt64LittleEndian(decrypted.AsSpan(readOffset, sizeof(long)));
+                }
+                return offsets;
             }
-            CryptographicOperations.ZeroMemory(decrypted);
-            return offsets;
+            catch(Exception ex)
+            {
+                if (offsets is not null) CryptographicOperations.ZeroMemory(MemoryMarshal.AsBytes(offsets.AsSpan()));
+                throw new VaultException("Failed to read metadata offsets", ex);
+            }
+            finally
+            {
+                if (decrypted is not null) CryptographicOperations.ZeroMemory(decrypted);
+            }
+            
         }
 
         internal virtual byte[] ReadMetadataOffsetsBytes(Stream stream)
         {
-            //v0 = [version (1byte)][salt (32 bytes)][iterations (4 bytes)] + [metadata offsets (28 bytes for AES decryption + 2 bytes ushort number + 4KB (4096 bytes)]...
             stream.Seek(sizeof(byte) + SaltSize + sizeof(uint), SeekOrigin.Begin);
-            Span<byte> buffer = stackalloc byte[ExtraEncryptionDataSize + sizeof(ushort) + MetadataOffsetsSize]; //28 bytes for AES decryption + 2 bytes ushort number + 4KB (4096) for maximum of 512 files per vault
-            stream.ReadExactly(buffer);
-            return VaultDecryption(buffer);
+            Span<byte> buffer = stackalloc byte[EncryptionOptions.GetEncryptionProtocolInfo[EncryptionProtocol].encryptionDataSize + sizeof(ushort) + MetadataOffsetsSize]; //28 bytes for AES decryption + 2 bytes ushort number + 4KB (4096) for maximum of 512 files per vault
+            try
+            {
+                stream.ReadExactly(buffer);
+                return VaultDecryption(buffer);
+            }
+            finally
+            {
+                CryptographicOperations.ZeroMemory(buffer);
+            }
         }
 
         /// <summary>
@@ -260,16 +321,30 @@ namespace VaultCrypt
         /// <exception cref="Exception"></exception>
         internal virtual void AddAndSaveMetadataOffsets(Stream stream, long newOffset)
         {
-            long[] oldOffsets = ReadMetadataOffsets(stream);
-            if (oldOffsets.Length + 1 > (sizeof(ushort) + MetadataOffsetsSize))
+            long[] oldOffsets = null!;
+            long[] newOffsets = null!;
+            try
             {
-                throw new Exception("Too many files in the vault");
+                oldOffsets = ReadMetadataOffsets(stream);
+                if (oldOffsets.Length + 1 > (sizeof(ushort) + MetadataOffsetsSize))
+                {
+                    throw new VaultException("Cannot add any more files to this vault");
+                }
+                newOffsets = new long[oldOffsets.Length + 1];
+                oldOffsets.AsSpan().CopyTo(newOffsets);
+                newOffsets[oldOffsets.Length] = newOffset;
+                SaveMetadataOffsets(stream, newOffsets);
             }
-            long[] newOffsets = new long[oldOffsets.Length + 1];
-            oldOffsets.AsSpan().CopyTo(newOffsets);
-            newOffsets[oldOffsets.Length] = newOffset;
-            CryptographicOperations.ZeroMemory(MemoryMarshal.AsBytes(oldOffsets.AsSpan()));
-            SaveMetadataOffsets(stream, newOffsets);
+            catch(Exception ex)
+            {
+                throw new VaultException("Failed to add new metadata offset", ex);
+            }
+            finally
+            {
+                if (oldOffsets is not null) CryptographicOperations.ZeroMemory(MemoryMarshal.AsBytes(oldOffsets.AsSpan()));
+                if (newOffsets is not null) CryptographicOperations.ZeroMemory(MemoryMarshal.AsBytes(newOffsets.AsSpan()));
+            }
+            
         }
 
         /// <summary>
@@ -279,28 +354,49 @@ namespace VaultCrypt
         /// <param name="itemIndex"></param>
         internal void RemoveAndSaveMetadataOffsets(Stream stream, ushort itemIndex)
         {
-            long[] oldOffsets = ReadMetadataOffsets(stream);
-            long[] newOffsets = oldOffsets.Where((offset, index) => index != itemIndex).ToArray();
-            CryptographicOperations.ZeroMemory(MemoryMarshal.AsBytes(oldOffsets.AsSpan()));
-            SaveMetadataOffsets(stream, newOffsets);
+            long[] oldOffsets = null!;
+            long[] newOffsets = null!;
+            try
+            {
+                oldOffsets = ReadMetadataOffsets(stream);
+                newOffsets = oldOffsets.Where((offset, index) => index != itemIndex).ToArray();
+                CryptographicOperations.ZeroMemory(MemoryMarshal.AsBytes(oldOffsets.AsSpan()));
+                SaveMetadataOffsets(stream, newOffsets);
+            }
+            catch(Exception ex)
+            {
+                throw new VaultException($"Failed to remove metadata offset for item {itemIndex + 1}", ex);
+            }
+            finally
+            {
+                if (oldOffsets is not null) CryptographicOperations.ZeroMemory(MemoryMarshal.AsBytes(oldOffsets.AsSpan()));
+                if (newOffsets is not null) CryptographicOperations.ZeroMemory(MemoryMarshal.AsBytes(newOffsets.AsSpan()));
+            }
         }
 
         internal virtual byte[] PrepareMetadataOffsets(long[] offsets)
         {
             byte[] offsetsBytes = new byte[sizeof(ushort) + (offsets.Length * sizeof(long))];
             Buffer.BlockCopy(offsets, 0, offsetsBytes, sizeof(ushort), offsets.Length * sizeof(long));
-            CryptographicOperations.ZeroMemory(MemoryMarshal.AsBytes(offsets.AsSpan()));
             BinaryPrimitives.WriteUInt16LittleEndian(offsetsBytes.AsSpan(0, sizeof(ushort)), (ushort)(offsets.Length));
             return offsetsBytes;
         }
 
         internal void SaveMetadataOffsets(Stream stream, long[] offsets)
         {
-            byte[] offsetsBytes = PrepareMetadataOffsets(offsets);
-            byte[] encryptedMetadataOffsets = PadMetadataOffsetsAndEncrypt(offsetsBytes);
-            CryptographicOperations.ZeroMemory(offsetsBytes);
-            WriteMetadataOffsets(stream, encryptedMetadataOffsets);
-            CryptographicOperations.ZeroMemory(encryptedMetadataOffsets);
+            byte[] offsetsBytes = null!;
+            byte[] encryptedMetadataOffsets = null!;
+            try
+            {
+                offsetsBytes = PrepareMetadataOffsets(offsets);
+                encryptedMetadataOffsets = PadMetadataOffsetsAndEncrypt(offsetsBytes);
+                WriteMetadataOffsets(stream, encryptedMetadataOffsets);
+            }
+            finally
+            {
+                if (offsetsBytes is not null) CryptographicOperations.ZeroMemory(offsetsBytes);
+                if (encryptedMetadataOffsets is not null) CryptographicOperations.ZeroMemory(encryptedMetadataOffsets);
+            }
         }
 
         /// <summary>
@@ -311,11 +407,22 @@ namespace VaultCrypt
         private byte[] PadMetadataOffsetsAndEncrypt(byte[] metadataOffsets)
         {
             byte[] paddedMetadataOffsets = new byte[sizeof(ushort) + MetadataOffsetsSize]; //2 bytes ushort for number of currently attached offsets
-            Buffer.BlockCopy(metadataOffsets, 0, paddedMetadataOffsets, 0, metadataOffsets.Length);
-            CryptographicOperations.ZeroMemory(metadataOffsets);
-            byte[] encryptedMetadataOffsets = VaultEncryption(paddedMetadataOffsets);
-            CryptographicOperations.ZeroMemory(paddedMetadataOffsets);
-            return encryptedMetadataOffsets;
+            byte[] encryptedMetadataOffsets = null!;
+            try
+            {
+                Buffer.BlockCopy(metadataOffsets, 0, paddedMetadataOffsets, 0, metadataOffsets.Length);
+                encryptedMetadataOffsets = VaultEncryption(paddedMetadataOffsets);
+                return encryptedMetadataOffsets;
+            }
+            catch(Exception ex)
+            {
+                if (encryptedMetadataOffsets is not null) CryptographicOperations.ZeroMemory(encryptedMetadataOffsets);
+                throw new VaultException("Failed to pad and encrypt metadata offsets", ex);
+            }
+            finally
+            {
+                CryptographicOperations.ZeroMemory(paddedMetadataOffsets);
+            }
         }
 
         internal virtual void WriteMetadataOffsets(Stream stream, byte[] encryptedMetadataOffsets)
