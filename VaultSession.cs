@@ -185,12 +185,10 @@ namespace VaultCrypt
     {
         internal abstract byte Version { get; }
         internal abstract EncryptionOptions.EncryptionProtocol EncryptionProtocol { get; }
-        internal virtual short ExtraEncryptionDataSize => EncryptionOptions.GetEncryptionProtocolInfo[EncryptionProtocol].encryptionDataSize; //Size in bytes of extra data added by encrypting
         internal virtual short SaltSize => 32; //Size in bytes of the salt
-        internal virtual short KeySize => EncryptionOptions.GetEncryptionProtocolInfo[EncryptionProtocol].keySize; //Size in bytes of the key used to encrypt/decrypt vault data
         internal virtual short EncryptionOptionsSize => 1024; //Size of already encrypted EncryptionOptions
-        internal virtual short MetadataOffsetsSize => 4096; //Size of metadata offsets before encryption
-        internal virtual short HeaderSize => (short)(1 + SaltSize + sizeof(int) + ExtraEncryptionDataSize + sizeof(ushort) + MetadataOffsetsSize); //Full size of vault header
+        internal virtual short MetadataOffsetsSize => 4096; //Size of metadata offsets collection before encryption
+        internal virtual short HeaderSize => (short)(1 + SaltSize + sizeof(int) + EncryptionOptions.GetEncryptionProtocolInfo[EncryptionProtocol].encryptionDataSize + sizeof(ushort) + MetadataOffsetsSize); //Full size of vault header
 
 
 
@@ -324,7 +322,7 @@ namespace VaultCrypt
 
         internal virtual byte[] VaultEncryption(byte[] data)
         {
-            byte[] slicedKey = new byte[KeySize];
+            byte[] slicedKey = new byte[EncryptionOptions.GetEncryptionProtocolInfo[EncryptionProtocol].keySize];
             Buffer.BlockCopy(VaultSession.KEY, 0, slicedKey, 0, slicedKey.Length);
 
             return Encryption.AesGcmEncryption.EncryptBytes(data, slicedKey);
@@ -332,7 +330,7 @@ namespace VaultCrypt
 
         internal virtual byte[] VaultDecryption(Span<byte> data)
         {
-            byte[] slicedKey = new byte[KeySize];
+            byte[] slicedKey = new byte[EncryptionOptions.GetEncryptionProtocolInfo[EncryptionProtocol].keySize];
             Buffer.BlockCopy(VaultSession.KEY, 0, slicedKey, 0, slicedKey.Length);
 
             return Decryption.AesGcmDecryption.DecryptBytes(data, slicedKey);

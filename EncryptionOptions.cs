@@ -95,11 +95,11 @@ namespace VaultCrypt
             VaultReader vaultReader = VaultRegistry.GetVaultReader(VaultSession.VERSION);
             byte[] encryptionOptionsBytes = SerializeEncryptionOptions(ref options);
 
-            if (encryptionOptionsBytes.Length + vaultReader.ExtraEncryptionDataSize > vaultReader.EncryptionOptionsSize)
+            if (encryptionOptionsBytes.Length + EncryptionOptions.GetEncryptionProtocolInfo[vaultReader.EncryptionProtocol].encryptionDataSize > vaultReader.EncryptionOptionsSize)
             {
                 throw new Exception("File name too long, try shortening the name or switching to different encryption method");
             }
-            byte[] paddedFileOptions = new byte[vaultReader.EncryptionOptionsSize - vaultReader.ExtraEncryptionDataSize];
+            byte[] paddedFileOptions = new byte[vaultReader.EncryptionOptionsSize - EncryptionOptions.GetEncryptionProtocolInfo[vaultReader.EncryptionProtocol].encryptionDataSize];
             Buffer.BlockCopy(encryptionOptionsBytes, 0, paddedFileOptions, 0, encryptionOptionsBytes.Length);
             CryptographicOperations.ZeroMemory(encryptionOptionsBytes);
 
