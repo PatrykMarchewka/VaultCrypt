@@ -8,7 +8,6 @@ using System.Runtime.InteropServices;
 using System.Security.Cryptography;
 using System.Text;
 using System.Threading.Tasks;
-using VaultCrypt.ViewModels;
 
 namespace VaultCrypt
 {
@@ -56,6 +55,8 @@ namespace VaultCrypt
 
     internal static class VaultHelper
     {
+        internal static event Action? EncryptedFilesListUpdated;
+
         /// <summary>
         /// Creates vault file (.vlt)
         /// </summary>
@@ -112,7 +113,7 @@ namespace VaultCrypt
         {
             VaultSession.ENCRYPTED_FILES.Clear();
             VaultRegistry.GetVaultReader(VaultSession.VERSION).ReadVaultSession(vaultFS);
-            OpenVaultViewModel.EncryptedFilesCollectionView.Refresh();
+            EncryptedFilesListUpdated?.Invoke();
         }
 
 
