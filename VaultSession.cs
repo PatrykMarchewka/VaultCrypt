@@ -45,6 +45,9 @@ namespace VaultCrypt
         {
             CryptographicOperations.ZeroMemory(KEY);
             CryptographicOperations.ZeroMemory(SALT);
+            //Changing KEY and SALT to empty array to hide the size of KEY and SALT
+            KEY = Array.Empty<byte>();
+            SALT = Array.Empty<byte>();
             ENCRYPTED_FILES.Clear();
             VAULTPATH = NormalizedPath.From(String.Empty);
             ITERATIONS = 0;
