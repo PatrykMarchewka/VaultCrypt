@@ -50,7 +50,7 @@ namespace VaultCrypt.ViewModels
 
         private void NavigateBack()
         {
-            NavigationRequested?.Invoke(new NavigateToMainRequest());
+            NavigationRequested?.Invoke(new NavigateFromProgressRequest());
         }
 
         private void _context_PropertyChanged(object? sender, PropertyChangedEventArgs e)
