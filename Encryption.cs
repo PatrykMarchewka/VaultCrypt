@@ -86,36 +86,36 @@ namespace VaultCrypt
 
         internal static class AesGcmEncryption
         {
-            internal static byte[] EncryptBytes(byte[] data, byte[] key)
+            internal static byte[] EncryptBytes(ReadOnlySpan<byte> data, ReadOnlySpan<byte> key)
             {
                 byte[] iv = new byte[12];
-                RandomNumberGenerator.Fill(iv);
                 byte[] authentication = new byte[16];
                 byte[] output = new byte[data.Length];
                 byte[] encrypted = new byte[iv.Length + authentication.Length + output.Length];
-                using (AesGcm aesGcm = new AesGcm(key, 16))
+                try
                 {
-                    aesGcm.Encrypt(iv, data, output, authentication);
+                    RandomNumberGenerator.Fill(iv);
+                    using (AesGcm aesGcm = new AesGcm(key, 16))
+                    {
+                        aesGcm.Encrypt(iv, data, output, authentication);
+                    }
+                    Buffer.BlockCopy(iv, 0, encrypted, 0, iv.Length);
+                    Buffer.BlockCopy(authentication, 0, encrypted, iv.Length, authentication.Length);
+                    Buffer.BlockCopy(output, 0, encrypted, iv.Length + authentication.Length, output.Length);
+                    return encrypted;
                 }
-                CryptographicOperations.ZeroMemory(data);
-                Buffer.BlockCopy(iv, 0, encrypted, 0, iv.Length);
-                Buffer.BlockCopy(authentication, 0, encrypted, iv.Length, authentication.Length);
-                Buffer.BlockCopy(output, 0, encrypted, iv.Length + authentication.Length, output.Length);
-
-                CryptographicOperations.ZeroMemory(iv);
-                CryptographicOperations.ZeroMemory(authentication);
-                CryptographicOperations.ZeroMemory(output);
-                return encrypted;
+                catch (Exception ex)
+                {
+                    CryptographicOperations.ZeroMemory(encrypted);
+                    throw VaultException.EncryptionFailed(ex);
+                }
+                finally
+                {
+                    CryptographicOperations.ZeroMemory(iv);
+                    CryptographicOperations.ZeroMemory(authentication);
+                    CryptographicOperations.ZeroMemory(output);
+                }
             }
-
-
-
-
-
-
-
-
-
         }
     }
 }
