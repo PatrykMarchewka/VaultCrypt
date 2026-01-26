@@ -38,7 +38,7 @@ namespace VaultCrypt
             EncryptionOptions.WipeFileEncryptionOptions(ref encryptionOptions);
         }
 
-        static byte[] DecryptInOneChunk(Stream vaultFS, ulong fileSize, byte[] key, Func<byte[], byte[], byte[]> decryptMethod)
+        static byte[] DecryptInOneChunk(Stream vaultFS, ulong fileSize, byte[] key, Func<ReadOnlyMemory<byte>, ReadOnlyMemory<byte>, byte[]> decryptMethod)
         {
             byte[] buffer = new byte[fileSize];
             vaultFS.ReadExactly(buffer);
@@ -56,7 +56,7 @@ namespace VaultCrypt
         /// <param name="decryptMethod"></param>
         /// <param name="context"></param>
         /// <returns></returns>
-        static async Task DecryptInMultipleChunks(Stream vaultFS, Stream fileFS, EncryptionOptions.ChunkInformation chunkInformation, short extraData, byte[] key, Func<byte[], byte[], byte[]> decryptMethod, VaultHelper.ProgressionContext context)
+        static async Task DecryptInMultipleChunks(Stream vaultFS, Stream fileFS, EncryptionOptions.ChunkInformation chunkInformation, short extraData, byte[] key, Func<ReadOnlyMemory<byte>, ReadOnlyMemory<byte>, byte[]> decryptMethod, VaultHelper.ProgressionContext context)
         {
             var tasks = new List<Task>();
             var results = new ConcurrentDictionary<int, byte[]>();

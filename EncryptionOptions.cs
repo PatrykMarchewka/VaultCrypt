@@ -53,11 +53,11 @@ namespace VaultCrypt
             AES256GCM
         }
 
-        internal static readonly Dictionary<EncryptionProtocol, (byte keySize, short encryptionDataSize, Func<byte[], byte[], byte[]> encryptMethod, Func<byte[], byte[], byte[]> decryptMethod)> GetEncryptionProtocolInfo = new()
+        internal static readonly Dictionary<EncryptionProtocol, (byte keySize, short encryptionDataSize, Func<ReadOnlyMemory<byte>, ReadOnlyMemory<byte>, byte[]> encryptMethod, Func<ReadOnlyMemory<byte>, ReadOnlyMemory<byte>, byte[]> decryptMethod)> GetEncryptionProtocolInfo = new()
         {
-            {EncryptionProtocol.AES128GCM, (keySize: 16, encryptionDataSize: 28, encryptMethod: (data, key) => Encryption.AesGcmEncryption.EncryptBytes(data, key), decryptMethod: (data, key) => Decryption.AesGcmDecryption.DecryptBytes(data, key)) },
-            {EncryptionProtocol.AES192GCM, (keySize: 24, encryptionDataSize: 28, encryptMethod: (data, key) => Encryption.AesGcmEncryption.EncryptBytes(data, key), decryptMethod: (data, key) => Decryption.AesGcmDecryption.DecryptBytes(data, key)) },
-            {EncryptionProtocol.AES256GCM, (keySize:32, encryptionDataSize: 28, encryptMethod: (data, key) => Encryption.AesGcmEncryption.EncryptBytes(data, key), decryptMethod: (data, key) => Decryption.AesGcmDecryption.DecryptBytes(data, key)) }
+            {EncryptionProtocol.AES128GCM, (keySize: 16, encryptionDataSize: 28, encryptMethod: (data, key) => Encryption.AesGcmEncryption.EncryptBytes(data.Span, key.Span), decryptMethod: (data, key) => Decryption.AesGcmDecryption.DecryptBytes(data.Span, key.Span)) },
+            {EncryptionProtocol.AES192GCM, (keySize: 24, encryptionDataSize: 28, encryptMethod: (data, key) => Encryption.AesGcmEncryption.EncryptBytes(data.Span, key.Span), decryptMethod: (data, key) => Decryption.AesGcmDecryption.DecryptBytes(data.Span, key.Span)) },
+            {EncryptionProtocol.AES256GCM, (keySize:32, encryptionDataSize: 28, encryptMethod: (data, key) => Encryption.AesGcmEncryption.EncryptBytes(data.Span, key.Span), decryptMethod: (data, key) => Decryption.AesGcmDecryption.DecryptBytes(data.Span, key.Span)) }
         };
 
         internal static FileEncryptionOptions PrepareEncryptionOptions(FileInfo fileInfo, EncryptionProtocol protocol, ushort chunkSizeInMB)
