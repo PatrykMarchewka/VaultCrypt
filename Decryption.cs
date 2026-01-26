@@ -117,27 +117,32 @@ namespace VaultCrypt
 
         internal static class AesGcmDecryption
         {
-            internal static byte[] DecryptBytes(ReadOnlySpan<byte> data, byte[] key)
+            /// <summary>
+            /// 
+            /// </summary>
+            /// <param name="data"></param>
+            /// <param name="key"></param>
+            /// <returns></returns>
+            /// <exception cref="VaultException">Thrown when decryption failed</exception>
+            internal static byte[] DecryptBytes(ReadOnlySpan<byte> data, ReadOnlySpan<byte> key)
             {
                 ReadOnlySpan<byte> iv = data.Slice(0,12);
                 ReadOnlySpan<byte> tag = data.Slice(12, 16);
                 ReadOnlySpan<byte> encryptedData = data.Slice(28);
 
                 byte[] decrypted = new byte[encryptedData.Length];
-                using (AesGcm aesGcm = new AesGcm(key, 16))
+                try
                 {
-                    try
-                    {
-                        aesGcm.Decrypt(iv, encryptedData, tag, decrypted);
-                    }
-                    catch (CryptographicException ex)
-                    {
-                        throw new Exception(ex.Message);
-                    }
-                    
-                }
+                    using AesGcm aesGcm = new AesGcm(key, 16);
+                    aesGcm.Decrypt(iv, encryptedData, tag, decrypted);
+                    return decrypted;
 
-                return decrypted;
+                }
+                catch (Exception ex)
+                {
+                    CryptographicOperations.ZeroMemory(decrypted);
+                    throw VaultException.DecryptionFailed(ex);
+                }
             }
         }
     }
