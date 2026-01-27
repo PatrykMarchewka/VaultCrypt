@@ -13,8 +13,8 @@ namespace VaultCrypt.ViewModels
 {
     class ProgressViewModel : INotifyPropertyChanged, INavigated, IViewModel, INavigatingViewModel
     {
-        private VaultHelper.ProgressionContext _context;
-        public VaultHelper.ProgressionContext Context
+        private ProgressionContext _context;
+        public ProgressionContext Context
         {
             get => _context;
             set
@@ -66,7 +66,7 @@ namespace VaultCrypt.ViewModels
 
         public void OnNavigatedTo(object? parameters)
         {
-            Context = (VaultHelper.ProgressionContext)parameters!;
+            Context = (ProgressionContext)parameters!;
         }
 
 

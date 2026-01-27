@@ -101,7 +101,7 @@ namespace VaultCrypt.ViewModels
             var folder = FileDialogHelper.OpenFolder("Select folder to save file");
             if (folder != null)
             {
-                var context = new VaultHelper.ProgressionContext();
+                var context = new ProgressionContext();
                 NavigationRequested?.Invoke(new NavigateToProgressRequest(context));
                 await Decryption.Decrypt(SelectedFile!.Value.Key, NormalizedPath.From(folder), context);
             }
@@ -109,14 +109,14 @@ namespace VaultCrypt.ViewModels
 
         private async Task DeleteFile()
         {
-            var context = new VaultHelper.ProgressionContext();
+            var context = new ProgressionContext();
             NavigationRequested?.Invoke(new NavigateToProgressRequest(context));
             await Task.Run(() => FileHelper.DeleteFileFromVault(SelectedFile!.Value, context));
         }
 
         private async Task Trim()
         {
-            var context = new VaultHelper.ProgressionContext();
+            var context = new ProgressionContext();
             NavigationRequested?.Invoke(new NavigateToProgressRequest(context));
             await Task.Run(() => FileHelper.TrimVault(context));
         }

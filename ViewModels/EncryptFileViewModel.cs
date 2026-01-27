@@ -67,7 +67,7 @@ namespace VaultCrypt.ViewModels
 
         private async Task Encrypt(NormalizedPath filePath)
         {
-            var context = new VaultHelper.ProgressionContext();
+            var context = new ProgressionContext();
             NavigationRequested?.Invoke(new NavigateToProgressRequest(context));
             await Encryption.Encrypt(SelectedProtocol, SelectedPreset.SizeInMB, filePath, context);
             

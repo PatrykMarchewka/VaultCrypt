@@ -121,7 +121,7 @@ namespace VaultCrypt
             }
         }
 
-        internal static void TrimVault(VaultHelper.ProgressionContext context)
+        internal static void TrimVault(ProgressionContext context)
         {
             CheckFreeSpace(VaultSession.VAULTPATH);
             using FileStream vaultfs = new FileStream(VaultSession.VAULTPATH, FileMode.Open, FileAccess.Read);
@@ -149,10 +149,10 @@ namespace VaultCrypt
                 newVaultOffsets[i] = newVaultfs.Seek(0, SeekOrigin.End);
                 CopyPartOfFile(vaultfs, currentOffset, toread, newVaultfs, newVaultOffsets[i]);
                 //Reporting current index + 1 because i is zero based while user gets to see 1 based indexing, total is filelList.Count + 1 because last action is saving new header
-                context.Progress.Report(new VaultHelper.ProgressStatus(i + 1, fileList.Count + 1));
+                context.Progress.Report(new ProgressStatus(i + 1, fileList.Count + 1));
             }
             reader.SaveMetadataOffsets(newVaultfs, newVaultOffsets);
-            context.Progress.Report(new VaultHelper.ProgressStatus(fileList.Count + 1, fileList.Count + 1));
+            context.Progress.Report(new ProgressStatus(fileList.Count + 1, fileList.Count + 1));
         }
 
         internal static void DeleteFileFromVault(KeyValuePair<long, string> FileMetadataEntry, VaultHelper.ProgressionContext context)
@@ -175,7 +175,7 @@ namespace VaultCrypt
             }
             EncryptionOptions.WipeFileEncryptionOptions(ref encryptionOptions);
             VaultRegistry.GetVaultReader(VaultSession.VERSION).RemoveAndSaveMetadataOffsets(vaultFS, checked((ushort)VaultSession.ENCRYPTED_FILES.ToList().FindIndex(file => file.Equals(FileMetadataEntry))));
-            context.Progress.Report(new VaultHelper.ProgressStatus(1, 1));
+            context.Progress.Report(new ProgressStatus(1, 1));
         }
 
     }

@@ -11,7 +11,7 @@ namespace VaultCrypt
 {
     internal class Decryption
     {
-        internal static async Task Decrypt(long metadataOffset, NormalizedPath folderPath, VaultHelper.ProgressionContext context)
+        internal static async Task Decrypt(long metadataOffset, NormalizedPath folderPath, ProgressionContext context)
         {
             await using FileStream vaultFS = new FileStream(VaultSession.VAULTPATH, FileMode.Open, FileAccess.Read);
             EncryptionOptions.FileEncryptionOptions encryptionOptions = EncryptionOptions.GetDecryptedFileEncryptionOptions(vaultFS, metadataOffset);
@@ -56,7 +56,7 @@ namespace VaultCrypt
         /// <param name="decryptMethod"></param>
         /// <param name="context"></param>
         /// <returns></returns>
-        static async Task DecryptInMultipleChunks(Stream vaultFS, Stream fileFS, EncryptionOptions.ChunkInformation chunkInformation, short extraData, byte[] key, Func<ReadOnlyMemory<byte>, ReadOnlyMemory<byte>, byte[]> decryptMethod, VaultHelper.ProgressionContext context)
+        static async Task DecryptInMultipleChunks(Stream vaultFS, Stream fileFS, EncryptionOptions.ChunkInformation chunkInformation, short extraData, byte[] key, Func<ReadOnlyMemory<byte>, ReadOnlyMemory<byte>, byte[]> decryptMethod, ProgressionContext context)
         {
             var tasks = new List<Task>();
             var results = new ConcurrentDictionary<int, byte[]>();

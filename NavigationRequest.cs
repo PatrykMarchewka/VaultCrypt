@@ -39,7 +39,7 @@ namespace VaultCrypt
         internal override void Request(INavigationService nav) => nav.NavigateToEncryptFile(filePath);
     }
 
-    internal sealed record NavigateToProgressRequest(VaultHelper.ProgressionContext context) : NavigationRequest
+    internal sealed record NavigateToProgressRequest(ProgressionContext context) : NavigationRequest
     {
         internal override void Request(INavigationService nav) => nav.NavigateToProgress(context);
     }

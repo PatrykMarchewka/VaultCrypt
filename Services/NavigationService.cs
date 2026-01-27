@@ -18,7 +18,7 @@ namespace VaultCrypt.Services
         void NavigateToOpenVault(SecureString password, NormalizedPath vaultPath);
         void NavigateToPasswordInput(NormalizedPath vaultPath);
         void NavigateToEncryptFile(NormalizedPath filePath);
-        void NavigateToProgress(VaultHelper.ProgressionContext context);
+        void NavigateToProgress(ProgressionContext context);
         void NavigateFromProgress();
         void NavigateToExceptionThrown(Exception ex);
 
@@ -86,7 +86,7 @@ namespace VaultCrypt.Services
             Navigate(viewModels.EncryptFile, filePath);
         }
 
-        public void NavigateToProgress(VaultHelper.ProgressionContext context)
+        public void NavigateToProgress(ProgressionContext context)
         {
             Navigate(viewModels.Progress, context);
         }

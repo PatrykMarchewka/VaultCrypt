@@ -18,7 +18,7 @@ namespace VaultCrypt
     internal class Encryption
     {
 
-        internal static async Task Encrypt(EncryptionOptions.EncryptionProtocol protocol, ushort chunkSizeInMB, NormalizedPath filePath, VaultHelper.ProgressionContext context)
+        internal static async Task Encrypt(EncryptionOptions.EncryptionProtocol protocol, ushort chunkSizeInMB, NormalizedPath filePath, ProgressionContext context)
         {
             FileInfo fileInfo = new FileInfo(filePath);
             FileHelper.CheckFreeSpace(filePath);
@@ -45,7 +45,7 @@ namespace VaultCrypt
             CryptographicOperations.ZeroMemory(key);
         }
 
-        static async Task EncryptChunks(Stream fileFS, Stream vaultFS, int totalChunks, int concurrentChunkCount, ushort chunkSizeInMB, EncryptionOptions.EncryptionProtocol protocol, byte[] key, VaultHelper.ProgressionContext context)
+        static async Task EncryptChunks(Stream fileFS, Stream vaultFS, int totalChunks, int concurrentChunkCount, ushort chunkSizeInMB, EncryptionOptions.EncryptionProtocol protocol, byte[] key, ProgressionContext context)
         {
             var tasks = new List<Task>();
             var results = new ConcurrentDictionary<int, byte[]>();
@@ -78,7 +78,7 @@ namespace VaultCrypt
                     results.TryAdd(currentIndex, encrypted);
                     FileHelper.WriteReadyChunk(results, ref nextToWrite, currentIndex, vaultFS, writeLock);
                     //Reporting current index + 1 because currentIndex is zero based while user gets to see 1 based indexing
-                    context.Progress.Report(new VaultHelper.ProgressStatus(currentIndex + 1, totalChunks));
+                    context.Progress.Report(new ProgressStatus(currentIndex + 1, totalChunks));
                 }));
             }
             await Task.WhenAll(tasks);
