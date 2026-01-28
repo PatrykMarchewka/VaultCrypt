@@ -7,6 +7,7 @@ using System.Linq;
 using System.Security.Cryptography;
 using System.Text;
 using System.Threading.Tasks;
+using VaultCrypt.Exceptions;
 
 namespace VaultCrypt
 {
@@ -23,45 +24,54 @@ namespace VaultCrypt
         /// <exception cref="Exception">There is not enough free space on the disk with the vault or file can't be located</exception>
         internal static void CheckFreeSpace(NormalizedPath filePath)
         {
-            long availableBytes = new DriveInfo(Path.GetPathRoot(VaultSession.VAULTPATH)).AvailableFreeSpace;
+            ArgumentNullException.ThrowIfNull(filePath);
 
+            long availableBytes = new DriveInfo(Path.GetPathRoot(VaultSession.CurrentSession.VAULTPATH)!).AvailableFreeSpace;
             if (availableBytes < (GetTotalBytes(filePath) * 1.05))
             {
-                throw new Exception("Not enough free space");
+                throw new VaultException("Not enough free space");
             }
         }
 
-        internal static long CheckFreeRamSpace()
+        private static long CheckFreeRamSpace()
         {
             return (GC.GetGCMemoryInfo().HighMemoryLoadThresholdBytes - GC.GetGCMemoryInfo().MemoryLoadBytes);
         }
 
         private static long GetTotalBytes(NormalizedPath filePath)
         {
+            ArgumentNullException.ThrowIfNull(filePath);
+
             if (File.Exists(filePath))
             {
-                return new FileInfo(filePath).Length;
+                return new FileInfo(filePath!).Length;
 
             }
             else
             {
-                throw new Exception("Cant find the file");
+                throw new VaultException($"Cant find the file at {filePath}");
             }
         }
 
         internal static int CalculateConcurrency(bool chunked, ushort chunkSizeInMB)
         {
+            ArgumentOutOfRangeException.ThrowIfZero(chunkSizeInMB);
+
             if (!chunked) return 1;
             int threadCount = Math.Max(1, Environment.ProcessorCount);
             int ramSpace = (int)(CheckFreeRamSpace() / (chunkSizeInMB * 1024 * 1024));
             return Math.Min(threadCount, ramSpace);
         }
 
-        
 
 
         internal static void WriteReadyChunk(ConcurrentDictionary<int, byte[]> results, ref int nextToWrite, int currentIndex, Stream fileFS, object lockObject)
         {
+            ArgumentNullException.ThrowIfNull(results);
+            ArgumentOutOfRangeException.ThrowIfNegative(nextToWrite);
+            ArgumentOutOfRangeException.ThrowIfNegative(currentIndex);
+            ArgumentNullException.ThrowIfNull(fileFS);
+            ArgumentNullException.ThrowIfNull(lockObject);
             lock (lockObject)
             {
                 byte[] ready;
@@ -70,15 +80,14 @@ namespace VaultCrypt
                     Monitor.Wait(lockObject);
                 }
 
-                if (!results.TryRemove(nextToWrite, out ready!)) throw new Exception("Missing chunk");
-
+                if (!results.TryRemove(nextToWrite, out ready!)) throw new VaultException("Missing chunk");
                 try
                 {
                     fileFS.Write(ready, 0, ready.Length);
                 }
-                catch
+                catch(Exception ex)
                 {
-                    throw new Exception("Couldnt write to file");
+                    throw new VaultException("Couldnt write to file", ex);
                 }
                 finally
                 {
@@ -92,8 +101,11 @@ namespace VaultCrypt
 
         private static void ZeroOutPartOfFile(Stream stream, long offset, ulong length)
         {
-            Span<byte> zeroes = stackalloc byte[1024];
+            ArgumentNullException.ThrowIfNull(stream);
+            ArgumentOutOfRangeException.ThrowIfNegative(offset);
+            ArgumentOutOfRangeException.ThrowIfZero(length);
 
+            Span<byte> zeroes = stackalloc byte[1024];
             stream.Seek(offset, SeekOrigin.Begin);
             while (length > 0)
             {
@@ -106,44 +118,81 @@ namespace VaultCrypt
 
         private static void CopyPartOfFile(Stream source, long offset, ulong length, Stream destination, long destinationOffset)
         {
+            ArgumentNullException.ThrowIfNull(source);
+            ArgumentOutOfRangeException.ThrowIfNegative(offset);
+            ArgumentOutOfRangeException.ThrowIfZero(length);
+            ArgumentNullException.ThrowIfNull(destination);
+            ArgumentOutOfRangeException.ThrowIfZero(destinationOffset);
+
             //8MB buffer
             byte[] buffer = new byte[8_388_608];
 
             source.Seek(offset, SeekOrigin.Begin);
             destination.Seek(destinationOffset, SeekOrigin.Begin);
-            while (length > 0)
+            try
             {
-                //Length is provided as ulong to support fileSizes above 2GB
-                int chunkSize = (int)Math.Min(length, (ulong)buffer.Length);
-                source.ReadExactly(buffer, 0, chunkSize);
-                destination.Write(buffer, 0, chunkSize);
-                length -= (ulong)chunkSize;
+                while (length > 0)
+                {
+                    //Length is provided as ulong to support fileSizes above 2GB
+                    int chunkSize = (int)Math.Min(length, (ulong)buffer.Length);
+                    source.ReadExactly(buffer, 0, chunkSize);
+                    destination.Write(buffer, 0, chunkSize);
+                    length -= (ulong)chunkSize;
+                }
             }
+            catch(EndOfStreamException ex)
+            {
+                throw VaultException.EndOfFileException(ex);
+            }
+            catch(Exception ex)
+            {
+                throw new VaultException("Failed to copy file", ex);
+            }
+            finally
+            {
+                CryptographicOperations.ZeroMemory(buffer);
+            }
+            
         }
 
         internal static void TrimVault(ProgressionContext context)
         {
-            CheckFreeSpace(VaultSession.VAULTPATH);
-            using FileStream vaultfs = new FileStream(VaultSession.VAULTPATH, FileMode.Open, FileAccess.Read);
-            using FileStream newVaultfs = new FileStream(VaultSession.VAULTPATH + "_TRIMMED.vlt", FileMode.Create);
+            CheckFreeSpace(VaultSession.CurrentSession.VAULTPATH);
+            using FileStream vaultfs = new FileStream(VaultSession.CurrentSession.VAULTPATH!, FileMode.Open, FileAccess.Read);
+            using FileStream newVaultfs = new FileStream(VaultSession.CurrentSession.VAULTPATH + "_TRIMMED.vlt", FileMode.Create);
 
-            var reader = VaultRegistry.GetVaultReader(VaultSession.VERSION);
+            var reader = VaultSession.CurrentSession.VAULT_READER;
             CopyPartOfFile(vaultfs, 0, (ulong)reader.HeaderSize, newVaultfs, newVaultfs.Seek(0, SeekOrigin.End));
-            var fileList = VaultSession.ENCRYPTED_FILES.ToList();
-            long[] newVaultOffsets = new long[fileList.Count];
-            for (int i = 0; i < fileList.Count; i++)
+            var fileList = VaultSession.CurrentSession.ENCRYPTED_FILES.ToList();
+            int fileListCount = fileList.Count;
+
+            long[] newVaultOffsets = new long[fileListCount];
+            for (int i = 0; i < fileListCount; i++)
             {
                 context.CancellationToken.ThrowIfCancellationRequested();
                 long currentOffset = fileList[i].Key;
                 long nextOffset = long.MaxValue;
-                if (i + 1 < fileList.Count)
+                if (i + 1 < fileListCount)
                 {
                     nextOffset = fileList[i + 1].Key;
                 }
 
-                EncryptionOptions.FileEncryptionOptions encryptionOptions = EncryptionOptions.GetDecryptedFileEncryptionOptions(vaultfs, currentOffset);
-                ulong fileSize = encryptionOptions.fileSize;
-                EncryptionOptions.WipeFileEncryptionOptions(ref encryptionOptions);
+                ulong fileSize = 0;
+                EncryptionOptions.FileEncryptionOptions encryptionOptions = default;
+                try
+                {
+                    encryptionOptions = EncryptionOptions.GetDecryptedFileEncryptionOptions(vaultfs, currentOffset);
+                    fileSize = encryptionOptions.fileSize;
+                }
+                catch
+                {
+                    continue;
+                }
+                finally
+                {
+                    EncryptionOptions.WipeFileEncryptionOptions(ref encryptionOptions);
+                }
+                
                 //Calculating toread to allow copying of partially encrypted files
                 ulong toread = Math.Min((ulong)(nextOffset - currentOffset), (ulong)reader.EncryptionOptionsSize + fileSize);
                 newVaultOffsets[i] = newVaultfs.Seek(0, SeekOrigin.End);
@@ -152,29 +201,43 @@ namespace VaultCrypt
                 context.Progress.Report(new ProgressStatus(i + 1, fileList.Count + 1));
             }
             reader.SaveMetadataOffsets(newVaultfs, newVaultOffsets);
-            context.Progress.Report(new ProgressStatus(fileList.Count + 1, fileList.Count + 1));
+            context.Progress.Report(new ProgressStatus(fileListCount + 1, fileListCount + 1));
         }
 
-        internal static void DeleteFileFromVault(KeyValuePair<long, string> FileMetadataEntry, VaultHelper.ProgressionContext context)
+        internal static void DeleteFileFromVault(KeyValuePair<long, string> FileMetadataEntry, ProgressionContext context)
         {
-            using FileStream vaultFS = new FileStream(VaultSession.VAULTPATH, FileMode.Open, FileAccess.ReadWrite);
-            EncryptionOptions.FileEncryptionOptions encryptionOptions = EncryptionOptions.GetDecryptedFileEncryptionOptions(vaultFS, FileMetadataEntry.Key);
+            ArgumentOutOfRangeException.ThrowIfNegative(FileMetadataEntry.Key);
+            ArgumentNullException.ThrowIfNull(context);
+
+
+            using FileStream vaultFS = new FileStream(VaultSession.CurrentSession.VAULTPATH!, FileMode.Open, FileAccess.ReadWrite);
+            
             //If the file is at the end, just trim the entire file, otherwise zero out the block
-            if (VaultSession.ENCRYPTED_FILES.Last().Equals(FileMetadataEntry))
+            if (VaultSession.CurrentSession.ENCRYPTED_FILES.Last().Equals(FileMetadataEntry))
             {
                 vaultFS.SetLength(FileMetadataEntry.Key);
             }
             else
             {
                 //Calculate length incase of partially written file
-                var encryptionMetadataSize = VaultRegistry.GetVaultReader(VaultSession.VERSION).EncryptionOptionsSize;
-                var fileList = VaultSession.ENCRYPTED_FILES.ToList();
+                var encryptionMetadataSize = VaultSession.CurrentSession.VAULT_READER.EncryptionOptionsSize;
+                var fileList = VaultSession.CurrentSession.ENCRYPTED_FILES.ToList();
                 int currentKey = fileList.FindIndex(file => file.Key == FileMetadataEntry.Key);
-                ulong length = Math.Min(encryptionOptions.fileSize + (ulong)encryptionMetadataSize, (ulong)(fileList[currentKey + 1].Key - fileList[currentKey].Key));
+                EncryptionOptions.FileEncryptionOptions encryptionOptions = default;
+                ulong length = 0;
+                try
+                {
+                    encryptionOptions = EncryptionOptions.GetDecryptedFileEncryptionOptions(vaultFS, FileMetadataEntry.Key);
+                    length = Math.Min(encryptionOptions.fileSize + (ulong)encryptionMetadataSize, (ulong)(fileList[currentKey + 1].Key - fileList[currentKey].Key));
+                }
+                finally
+                {
+                    EncryptionOptions.WipeFileEncryptionOptions(ref encryptionOptions);
+                }
+                
                 ZeroOutPartOfFile(vaultFS, FileMetadataEntry.Key, length);
             }
-            EncryptionOptions.WipeFileEncryptionOptions(ref encryptionOptions);
-            VaultRegistry.GetVaultReader(VaultSession.VERSION).RemoveAndSaveMetadataOffsets(vaultFS, checked((ushort)VaultSession.ENCRYPTED_FILES.ToList().FindIndex(file => file.Equals(FileMetadataEntry))));
+            VaultSession.CurrentSession.VAULT_READER.RemoveAndSaveMetadataOffsets(vaultFS, checked((ushort)VaultSession.CurrentSession.ENCRYPTED_FILES.ToList().FindIndex(file => file.Equals(FileMetadataEntry))));
             context.Progress.Report(new ProgressStatus(1, 1));
         }
 
@@ -191,7 +254,16 @@ namespace VaultCrypt
             return path.Length > 260 && !path.StartsWith(@"\\?\") ? @"\\?\" + path : path;
         }
 
-        internal static NormalizedPath From(string input) => new NormalizedPath(input);
+        /// <summary>
+        /// Normalizes string and returns it as NormalizedPath
+        /// </summary>
+        /// <param name="input">String to normalize</param>
+        /// <returns>NormalizedPath containing the path from the input</returns>
+        internal static NormalizedPath? From(string? input)
+        {
+            if (input is null) return null;
+            return new NormalizedPath(input);
+        }
 
         public override string ToString()
         {
