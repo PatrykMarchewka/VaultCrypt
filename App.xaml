@@ -3,8 +3,7 @@
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              xmlns:local="clr-namespace:VaultCrypt"
              xmlns:vm="clr-namespace:VaultCrypt.ViewModels"
-             xmlns:views="clr-namespace:VaultCrypt.Views"
-             StartupUri="MainWindow.xaml">
+             xmlns:views="clr-namespace:VaultCrypt.Views">
     <Application.Resources>
         <!--Putting it on Grid because UserControl has no Background property-->
         <Style TargetType="Grid">
@@ -46,7 +45,7 @@
             </Setter>
         </Style>
 
-        
+
         <DataTemplate DataType="{x:Type vm:MainViewViewModel}">
             <views:MainView/>
         </DataTemplate>
