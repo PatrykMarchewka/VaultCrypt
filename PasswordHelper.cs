@@ -30,12 +30,12 @@ namespace VaultCrypt
             }
         }
 
-        internal static byte[] GetSlicedKey(byte keySize)
+        internal static ReadOnlyMemory<byte> GetSlicedKey(byte keySize)
         {
-            return VaultSession.KEY.AsSpan(0, keySize).ToArray();
+            return VaultSession.CurrentSession.KEY.AsMemory(0, keySize);
         }
 
-        internal static byte[] GetSlicedKey(EncryptionOptions.EncryptionProtocol protocol)
+        internal static ReadOnlyMemory<byte> GetSlicedKey(EncryptionOptions.EncryptionProtocol protocol)
         {
             return GetSlicedKey(EncryptionOptions.GetEncryptionProtocolInfo[protocol].keySize);
         }

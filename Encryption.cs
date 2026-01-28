@@ -27,7 +27,7 @@ namespace VaultCrypt
             int totalChunks = options.chunkInformation != null ? options.chunkInformation.Value.totalChunks : 1;
             int concurrentChunkCount = FileHelper.CalculateConcurrency(options.chunked, chunkSizeInMB);
 
-            byte[] key = PasswordHelper.GetSlicedKey(protocol);
+            ReadOnlyMemory<byte> key = PasswordHelper.GetSlicedKey(protocol);
 
             byte[] paddedFileOptions = EncryptionOptions.EncryptAndPadFileEncryptionOptions(ref options);
             EncryptionOptions.WipeFileEncryptionOptions(ref options);
@@ -45,7 +45,7 @@ namespace VaultCrypt
             CryptographicOperations.ZeroMemory(key);
         }
 
-        static async Task EncryptChunks(Stream fileFS, Stream vaultFS, int totalChunks, int concurrentChunkCount, ushort chunkSizeInMB, EncryptionOptions.EncryptionProtocol protocol, byte[] key, ProgressionContext context)
+        static async Task EncryptChunks(Stream fileFS, Stream vaultFS, int totalChunks, int concurrentChunkCount, ushort chunkSizeInMB, EncryptionOptions.EncryptionProtocol protocol, ReadOnlyMemory<byte> key, ProgressionContext context)
         {
             var tasks = new List<Task>();
             var results = new ConcurrentDictionary<int, byte[]>();
