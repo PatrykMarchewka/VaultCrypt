@@ -68,7 +68,7 @@ namespace VaultCrypt.ViewModels
             DeleteFileCommand = new RelayCommand(_ => DeleteFile(), _ => SelectedFile != null);
             TrimCommand = new RelayCommand(_ => Trim());
 
-            VaultHelper.EncryptedFilesListUpdated += () => EncryptedFilesCollectionView.Refresh();
+            VaultSession.EncryptedFilesListUpdated += () => EncryptedFilesCollectionView.Refresh();
         }
 
         private void CreateSession()

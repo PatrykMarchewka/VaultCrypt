@@ -8,57 +8,29 @@ using System.Runtime.InteropServices;
 using System.Security.Cryptography;
 using System.Text;
 using System.Threading.Tasks;
+using VaultCrypt.Exceptions;
 
 namespace VaultCrypt
 {
-    internal static class VaultSession
+    internal class VaultSession : IDisposable
     {
-        internal static byte VERSION;
-        internal static byte[] KEY;
-        internal static NormalizedPath VAULTPATH;
-        internal static int ITERATIONS;
-        internal static byte[] SALT;
-        internal static Dictionary<long, string> ENCRYPTED_FILES = new();
+        
+        internal byte[] KEY { get; private set; }
+        internal NormalizedPath VAULTPATH { get; private set; }
+        internal Dictionary<long, string> ENCRYPTED_FILES { get; private set; }
+        internal VaultReader VAULT_READER { get; private set; }
 
-        //v0 = [version (1byte)][salt (32 bytes)][iterations (4 bytes)][metadata offsets (28 bytes for AES decryption + 2 bytes ushort number + 4KB (4096 bytes)][File #1 encryption options][File #1]...
-        public static void CreateSession(byte[] password, NormalizedPath path)
-        {
-            ArgumentNullException.ThrowIfNull(password);
-            ArgumentNullException.ThrowIfNullOrWhiteSpace(path);
-
-            VAULTPATH = path;
-            using (FileStream fs = new FileStream(path, FileMode.Open, FileAccess.Read))
-            {
-                Span<byte> buffer = stackalloc byte[1];
-                fs.ReadExactly(buffer);
-                VERSION = buffer[0];
-
-                VaultReader reader = VaultRegistry.GetVaultReader(VERSION);
-                reader.ReadVaultHeader(fs);
-                KEY = PasswordHelper.DeriveKey(password);
-                VaultHelper.RefreshEncryptedFilesList(fs);
-            }
-        }
-
-
-        public static void Dispose()
-        {
-            CryptographicOperations.ZeroMemory(KEY);
-            CryptographicOperations.ZeroMemory(SALT);
-            //Changing KEY and SALT to empty array to hide the size of KEY and SALT
-            KEY = Array.Empty<byte>();
-            SALT = Array.Empty<byte>();
-            ENCRYPTED_FILES.Clear();
-            VAULTPATH = NormalizedPath.From(String.Empty);
-            ITERATIONS = 0;
-            VERSION = 0;
-        }
-
-    }
-
-    internal static class VaultHelper
-    {
+        internal static VaultSession CurrentSession;
+        private const byte NewestVaultVersion = 0;
         internal static event Action? EncryptedFilesListUpdated;
+
+        internal VaultSession(NormalizedPath vaultPath, VaultReader vaultReader, byte[] password, byte[] salt, int iterations)
+        {
+            this.KEY = PasswordHelper.DeriveKey(password, salt, iterations);
+            this.VAULTPATH = vaultPath;
+            this.ENCRYPTED_FILES = new();
+            this.VAULT_READER = vaultReader;
+        }
 
         /// <summary>
         /// Creates vault file (.vlt)
@@ -76,50 +48,111 @@ namespace VaultCrypt
             ArgumentNullException.ThrowIfNull(password);
             ArgumentOutOfRangeException.ThrowIfNegativeOrZero(iterations);
 
-            NormalizedPath vaultPath = NormalizedPath.From(folderPath + "\\" + vaultName + ".vlt");
-            SetVaultSessionInfo(vaultPath, iterations, password);
-            VaultReader reader = VaultRegistry.GetVaultReader(VaultSession.VERSION);
-            byte[] buffer = PrepareVaultHeader(reader.SaltSize, iterations);
-            byte[] encryptedMetadata = reader.VaultEncryption(new byte[sizeof(ushort) + reader.MetadataOffsetsSize]);
-            byte[] data = new byte[buffer.Length + encryptedMetadata.Length];
-            Buffer.BlockCopy(buffer, 0, data, 0, buffer.Length);
-            Buffer.BlockCopy(encryptedMetadata, 0, data, buffer.Length, encryptedMetadata.Length);
-            File.WriteAllBytes(VaultSession.VAULTPATH, data);
+            NormalizedPath vaultPath = NormalizedPath.From($"{folderPath}\\{vaultName}.vlt")!;
+            VaultReader reader = VaultRegistry.GetVaultReader(NewestVaultVersion);
+            byte[] salt = null!;
+            byte[] buffer = null!;
+            byte[] encryptedMetadata = null!;
+            byte[] data = null!;
+            try
+            {
+                salt = PasswordHelper.GenerateRandomSalt(reader.SaltSize);
+                buffer = reader.PrepareVaultHeader(salt, iterations);
+                encryptedMetadata = reader.VaultEncryption(new byte[sizeof(ushort) + reader.MetadataOffsetsSize]);
+                data = new byte[buffer.Length + encryptedMetadata.Length];
+                Buffer.BlockCopy(buffer, 0, data, 0, buffer.Length);
+                Buffer.BlockCopy(encryptedMetadata, 0, data, buffer.Length, encryptedMetadata.Length);
+                File.WriteAllBytes(vaultPath!, data);
+                VaultSession.CurrentSession = new VaultSession(vaultPath, reader, password, salt, iterations);
+            }
+            finally
+            {
+                if (salt is not null) CryptographicOperations.ZeroMemory(salt);
+                if (buffer is not null) CryptographicOperations.ZeroMemory(buffer);
+                if (encryptedMetadata is not null) CryptographicOperations.ZeroMemory(encryptedMetadata);
+                if (data is not null) CryptographicOperations.ZeroMemory(data);
+            }
+
+            
+        }
+        internal static void RefreshEncryptedFilesList(Stream vaultFS)
+        {
+            ArgumentNullException.ThrowIfNull(vaultFS);
+
+            try
+            {
+                VaultSession.CurrentSession.ENCRYPTED_FILES.Clear();
+                VaultSession.CurrentSession.VAULT_READER.PopulateEncryptedFilesList(vaultFS);
+            }
+            catch(Exception ex)
+            {
+                throw new VaultException("Failed to refresh file list", ex);
+            }
+            finally
+            {
+                EncryptedFilesListUpdated?.Invoke();
+            }
         }
 
         /// <summary>
-        /// Prepares vault header
+        /// Creates new vault session
         /// </summary>
-        /// <param name="saltSize">Size of the salt</param>
-        /// <param name="iterations">Number of PBKDF2 iterations</param>
-        /// <returns>Byte array with vault header</returns>
-        private static byte[] PrepareVaultHeader(short saltSize, int iterations)
+        /// <param name="password">Password to unlock the vault with</param>
+        /// <param name="path">Path to the vault with extension</param>
+        public static void CreateSession(byte[] password, NormalizedPath path)
         {
-            byte[] buffer = new byte[1 + saltSize + sizeof(uint)]; //1 byte for version + 32 byte salt + 4 bytes for iterations number
-            buffer[0] = VaultSession.VERSION;
-            byte[] salt = VaultSession.SALT;
-            Buffer.BlockCopy(salt, 0, buffer, 1, saltSize);
-            BinaryPrimitives.WriteInt32LittleEndian(buffer.AsSpan().Slice(1 + saltSize, sizeof(uint)), iterations);
-            return buffer;
+            ArgumentNullException.ThrowIfNull(password);
+            ArgumentNullException.ThrowIfNullOrWhiteSpace(path);
+
+            try
+            {
+                using FileStream fs = new FileStream(path!, FileMode.Open, FileAccess.Read);
+                Span<byte> buffer = stackalloc byte[1];
+                fs.ReadExactly(buffer);
+                byte version = buffer[0];
+
+                VaultReader reader = VaultRegistry.GetVaultReader(version);
+                int iterations = reader.ReadIterationsNumber(fs);
+                byte[] salt = null!;
+                try
+                {
+                    salt = reader.ReadSalt(fs);
+                    CurrentSession = new VaultSession(path, reader, password, salt, iterations);
+                }
+                finally
+                {
+                    if(salt is not null) CryptographicOperations.ZeroMemory(salt);
+                }
+                RefreshEncryptedFilesList(fs);
+
+            }
+            catch(EndOfStreamException ex)
+            {
+                throw VaultException.EndOfFileException(ex);
+            }
+            catch(Exception ex)
+            {
+                throw new VaultException("Failed to create session", ex);
+            }
+
+            
+
         }
 
-        private static void SetVaultSessionInfo(NormalizedPath vaultPath, int iterations, byte[] password)
+        /// <summary>
+        /// Clears the sensitive vault session data from memory
+        /// </summary>
+        public void Dispose()
         {
-            VaultSession.VERSION = 0;
-            VaultSession.VAULTPATH = vaultPath;
-            VaultSession.SALT = PasswordHelper.GenerateRandomSalt();
-            VaultSession.ITERATIONS = iterations;
-            VaultSession.KEY = PasswordHelper.DeriveKey(password);
+            CryptographicOperations.ZeroMemory(KEY);
+            //Attempting to hide size of KEY by making it an empty array instead of zero-ed one
+            KEY = Array.Empty<byte>();
+            ENCRYPTED_FILES.Clear();
+            VAULTPATH = NormalizedPath.From(string.Empty)!;
+            VAULT_READER = null!;
         }
 
-        internal static void RefreshEncryptedFilesList(Stream vaultFS)
-        {
-            VaultSession.ENCRYPTED_FILES.Clear();
-            VaultRegistry.GetVaultReader(VaultSession.VERSION).ReadVaultSession(vaultFS);
-            EncryptedFilesListUpdated?.Invoke();
-        }
     }
-
 
     internal static class VaultRegistry
     {
@@ -132,7 +165,7 @@ namespace VaultCrypt
         {
             if (!registry.TryGetValue(version, out Lazy<VaultReader> reader))
             {
-                throw new Exception("Unknown vault version");
+                throw new VaultException($"Unknown vault version ({version})");
             }
             return reader.Value;
         }
@@ -152,6 +185,25 @@ namespace VaultCrypt
 
         internal virtual void ReadVaultSession(Stream stream)
         {
+        internal byte[] PrepareVaultHeader(byte[] salt, int iterations)
+        {
+            ArgumentNullException.ThrowIfNull(salt);
+            ArgumentOutOfRangeException.ThrowIfNegativeOrZero(iterations);
+
+            byte[] buffer = new byte[1 + SaltSize + sizeof(uint)];
+            try
+            {
+                buffer[0] = Version;
+                Buffer.BlockCopy(salt, 0, buffer, 1, SaltSize);
+                BinaryPrimitives.WriteInt32LittleEndian(buffer.AsSpan().Slice(1 + SaltSize, sizeof(uint)), iterations);
+                return buffer;
+            }
+            catch(Exception ex)
+            {
+                CryptographicOperations.ZeroMemory(buffer);
+                throw new VaultException("Failed to create vault header", ex);
+            }
+        }
             long[] offsets = null!;
             try
             {
