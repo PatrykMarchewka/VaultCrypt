@@ -100,10 +100,11 @@ namespace VaultCrypt
 
                     int currentIndex = chunkIndex++;
 
+                    if (tasks.Any(task => task.IsFaulted)) throw new VaultException("One or more tasks failed while encrypting");
                     if (tasks.Count >= concurrentChunkCount)
                     {
-                        var finished = await Task.WhenAny(tasks);
-                        tasks.Remove(finished);
+                        await Task.WhenAny(tasks);
+                        tasks.RemoveAll(task => task.IsCompleted);
                     }
 
                     tasks.Add(Task.Run(() =>
