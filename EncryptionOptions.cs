@@ -6,42 +6,70 @@ using System.Linq;
 using System.Security.Cryptography;
 using System.Text;
 using System.Threading.Tasks;
+using VaultCrypt.Exceptions;
 
 namespace VaultCrypt
 {
     internal class EncryptionOptions
     {
         /// <summary>
-        /// Pad it out to 1024Bytes
+        /// Record holding information about file that is either encrypted or about to be
+        /// <br/>
+        /// V0 = [version][nameLength][fileName][fileSize][encryptionProtocol][chunked][chunkInformation]
         /// </summary>
-        internal struct FileEncryptionOptions
+        internal record FileEncryptionOptions : IDisposable
         {
-            //byte = 1 byte | 0 to 255
-            //ushort = 2 bytes | 0 to 65 535
-            //uint = 4 bytes | 0 to 4 294 967 295
-            //ulong = 8 bytes | 0 to 1.8 * 10^19
-            internal byte version { get; init; } //Fixed 1 byte, version of the FileEncryptionOptions
-            internal ushort nameLength { get; init; } //Fixed 2 bytes, length of fileName text
-            internal byte[] fileName { get; init; } //Varying length (read from nameLength), file name with extension!
-            internal ulong fileSize { get; init; } //Fixed 8 bytes, Size in bytes of encrypted file
-            internal EncryptionProtocol encryptionProtocol { get; init; } //Fixed 1 byte, Encryption protocol enum
-            internal bool chunked { get; init; } //Fixed 1 byte, Whether file is chunked or not
-            internal ChunkInformation? chunkInformation { get; init; } //Fixed 8 bytes (2 bytes chunk size + 2 bytes total chunks count + 4 bytes final chunk size = 8 bytes)
+            internal byte Version { get; private set; } //Fixed 1 byte, version of the FileEncryptionOptions
+            internal ushort NameLength => checked((ushort)FileName.Length); //Fixed 2 bytes, length of fileName text
+            internal byte[] FileName { get; private set; } //Varying length (read from nameLength), file name with extension!
+            internal ulong FileSize { get; private set; } //Fixed 8 bytes, Size in bytes of encrypted file, with extra encryption metadata
+            internal EncryptionProtocol EncryptionProtocol { get; private set; } //Fixed 1 byte, Encryption protocol enum
+            internal bool IsChunked { get; private set; } //Fixed 1 byte, Whether file is chunked or not
+            internal ChunkInformation? ChunkInformation { get; private set; } //Fixed 8 bytes (2 bytes chunk size + 2 bytes total chunks count + 4 bytes final chunk size = 8 bytes)
+
+            internal FileEncryptionOptions(byte version, byte[] fileName, ulong fileSize, EncryptionProtocol encryptionProtocol, bool chunked, ChunkInformation? chunkInformation)
+            {
+                Version = version;
+                FileName = fileName;
+                FileSize = fileSize;
+                EncryptionProtocol = encryptionProtocol;
+                IsChunked = chunked;
+                ChunkInformation = chunkInformation;
+            }
+
+            public void Dispose()
+            {
+                Version = 0;
+                CryptographicOperations.ZeroMemory(FileName);
+                FileName = Array.Empty<byte>();
+                FileSize = 0;
+                EncryptionProtocol = 0;
+                IsChunked = false;
+                if (ChunkInformation is not null) ChunkInformation.Dispose();
+                ChunkInformation = null;
+            }
 
             //V0 = [version][nameLength][fileName][fileSize][encryptionProtocol][chunked][chunkInformation]
         }
 
-        internal struct ChunkInformation
+        internal record ChunkInformation : IDisposable
         {
-            internal ushort chunkSize { get; init; } //Fixed 2 bytes, Chunk sizes in MB
-            internal ushort totalChunks { get; init; } //Fixed 2 bytes, Number of chunks
-            internal uint finalChunkSize { get; init; } //Fixed 4 bytes, Size in bytes of last chunk
+            internal ushort ChunkSize { get; private set; } //Fixed 2 bytes, Chunk sizes in MB, without the extra encryption metadata
+            internal ushort TotalChunks { get; private set; } //Fixed 2 bytes, Number of chunks counting from 1
+            internal uint FinalChunkSize { get; private set; } //Fixed 4 bytes, Size in bytes of last chunk, without the extra encryption metadata
 
             internal ChunkInformation(ushort chunkSize, ushort totalChunks, uint finalChunkSize)
             {
-                this.chunkSize = chunkSize;
-                this.totalChunks = totalChunks;
-                this.finalChunkSize = finalChunkSize;
+                this.ChunkSize = chunkSize;
+                this.TotalChunks = totalChunks;
+                this.FinalChunkSize = finalChunkSize;
+            }
+
+            public void Dispose()
+            {
+                ChunkSize = 0;
+                TotalChunks = 0;
+                FinalChunkSize = 0;
             }
         }
 
@@ -62,6 +90,9 @@ namespace VaultCrypt
 
         internal static FileEncryptionOptions PrepareEncryptionOptions(FileInfo fileInfo, EncryptionProtocol protocol, ushort chunkSizeInMB)
         {
+            ArgumentNullException.ThrowIfNull(fileInfo);
+            ArgumentOutOfRangeException.ThrowIfZero(chunkSizeInMB);
+
             byte[] fileName = Encoding.UTF8.GetBytes(fileInfo.Name);
             bool chunked = false;
             ChunkInformation? chunkInformation = null;
@@ -72,163 +103,185 @@ namespace VaultCrypt
                 long chunkSize = chunkSizeInMB * 1024 * 1024;
                 long chunkNumber = (fileInfo.Length / chunkSize) + 1;
                 long lastChunk = fileInfo.Length - ((chunkNumber - 1) * chunkSize);
+                //Handle the chunks are exactly dividing the full file case
+                //Instead of producing empty last chunks it lowers the chunk count by one, after that the new last chunk is full sized one
+                //Before: Chunk number = 4096, Last chunk size = 0 (Bytes read: 4096*1MB + 0) [Throws when reading/encrypting/decrypting due to 0 byte input/output]
+                //After: Chunk number = 4095, Last chunk size = 1024 (Bytes read: 4095*1MB + 1MB)
+                if (lastChunk == 0)
+                {
+                    chunkNumber--;
+                    lastChunk = chunkSize;
+                }
                 chunkInformation = new ChunkInformation(chunkSizeInMB, checked((ushort)chunkNumber), checked((uint)lastChunk));
             }
             short extraBytes = GetEncryptionProtocolInfo[protocol].encryptionDataSize;
 
-            ulong fileSize = chunkInformation == null ? (ulong)(fileInfo.Length + extraBytes) : (ulong)(fileInfo.Length + (extraBytes * chunkInformation.Value.totalChunks));
-            return new FileEncryptionOptions
-            {
-                version = 0,
-                nameLength = checked((ushort)fileName.Length),
-                fileName = fileName,
-                fileSize = fileSize,
-                encryptionProtocol = protocol,
-                chunked = chunked,
-                chunkInformation = chunkInformation
-            };
+            ulong fileSize = chunkInformation is null ? (ulong)(fileInfo.Length + extraBytes) : (ulong)(fileInfo.Length + (extraBytes * chunkInformation.TotalChunks));
+            return new FileEncryptionOptions(0, fileName, fileSize, protocol, chunked, chunkInformation);
         }
 
 
-        internal static byte[] EncryptAndPadFileEncryptionOptions(ref FileEncryptionOptions options)
+        internal static byte[] EncryptAndPadFileEncryptionOptions(FileEncryptionOptions options)
         {
-            VaultReader vaultReader = VaultRegistry.GetVaultReader(VaultSession.VERSION);
-            byte[] encryptionOptionsBytes = SerializeEncryptionOptions(ref options);
+            ArgumentNullException.ThrowIfNull(options);
 
-            if (encryptionOptionsBytes.Length + EncryptionOptions.GetEncryptionProtocolInfo[vaultReader.EncryptionProtocol].encryptionDataSize > vaultReader.EncryptionOptionsSize)
+
+
+            VaultReader vaultReader = VaultSession.CurrentSession.VAULT_READER;
+            byte[] encryptionOptionsBytes = null!;
+            byte[] paddedFileOptions = new byte[vaultReader.EncryptionOptionsSize - GetEncryptionProtocolInfo[vaultReader.EncryptionProtocol].encryptionDataSize];
+            try
             {
-                throw new Exception("File name too long, try shortening the name or switching to different encryption method");
+                encryptionOptionsBytes = SerializeEncryptionOptions(options);
+                if (encryptionOptionsBytes.Length + EncryptionOptions.GetEncryptionProtocolInfo[vaultReader.EncryptionProtocol].encryptionDataSize > vaultReader.EncryptionOptionsSize)
+                {
+                    throw new VaultException("File name is too long");
+                }
+                Buffer.BlockCopy(encryptionOptionsBytes, 0, paddedFileOptions, 0, encryptionOptionsBytes.Length);
             }
-            byte[] paddedFileOptions = new byte[vaultReader.EncryptionOptionsSize - EncryptionOptions.GetEncryptionProtocolInfo[vaultReader.EncryptionProtocol].encryptionDataSize];
-            Buffer.BlockCopy(encryptionOptionsBytes, 0, paddedFileOptions, 0, encryptionOptionsBytes.Length);
-            CryptographicOperations.ZeroMemory(encryptionOptionsBytes);
-
-            byte[] encryptedFileOptions = vaultReader.VaultEncryption(paddedFileOptions);
-            CryptographicOperations.ZeroMemory(paddedFileOptions);
-            return encryptedFileOptions;
+            finally
+            {
+                if (encryptionOptionsBytes is not null) CryptographicOperations.ZeroMemory(encryptionOptionsBytes);
+            }
+            byte[] encryptedFileOptions = null!;
+            try
+            {
+                encryptedFileOptions = vaultReader.VaultEncryption(paddedFileOptions);
+                return encryptedFileOptions;
+            }
+            catch(Exception ex)
+            {
+                if (encryptedFileOptions is not null) CryptographicOperations.ZeroMemory(encryptedFileOptions);
+                throw new VaultException("Failed to encrypt padded file options", ex);
+            }
+            finally
+            {
+                CryptographicOperations.ZeroMemory(paddedFileOptions);
+            }
         }
 
-        internal static byte[] SerializeEncryptionOptions(ref EncryptionOptions.FileEncryptionOptions encryptionOptions)
+        private static byte[] SerializeEncryptionOptions(FileEncryptionOptions encryptionOptions)
         {
-            List<byte> bytes = new();
-            byte[] buffer = new byte[sizeof(byte) + sizeof(ushort) + encryptionOptions.nameLength + sizeof(long) + sizeof(byte) + sizeof(byte)]; //1 byte version, 2 byte name length, x bytes name, 8 bytes size, 1 byte encryptionprotocol, 1 byte chunkinformation
-            buffer[0] = 0;
-            BinaryPrimitives.WriteUInt16LittleEndian(buffer.AsSpan(sizeof(byte), sizeof(ushort)), encryptionOptions.nameLength);
-            encryptionOptions.fileName.CopyTo(buffer.AsSpan(sizeof(byte) + sizeof(ushort)));
-            BinaryPrimitives.WriteUInt64LittleEndian(buffer.AsSpan(sizeof(byte) + sizeof(ushort) + encryptionOptions.nameLength, sizeof(long)), encryptionOptions.fileSize);
-            buffer[sizeof(byte) + sizeof(ushort) + encryptionOptions.nameLength + sizeof(long)] = ((byte)encryptionOptions.encryptionProtocol);
-            buffer[sizeof(byte) + sizeof(ushort) + encryptionOptions.nameLength + sizeof(long) + sizeof(byte)] = encryptionOptions.chunked ? (byte)1 : (byte)0;
+            ArgumentNullException.ThrowIfNull(encryptionOptions);
 
-            bytes.AddRange(buffer);
-            CryptographicOperations.ZeroMemory(buffer);
-            if (encryptionOptions.chunked)
+            int baseOptionsSize = sizeof(byte) + sizeof(ushort) + encryptionOptions.NameLength + sizeof(long) + sizeof(byte) + sizeof(byte);
+            int chunkInfoSize = sizeof(ushort) + sizeof(ushort) + sizeof(uint);
+            int resultSize = encryptionOptions.IsChunked ? (baseOptionsSize + chunkInfoSize) : baseOptionsSize;
+            byte[] buffer = new byte[resultSize];
+            try
             {
-                bytes.AddRange(SerializeChunkInformation((EncryptionOptions.ChunkInformation)encryptionOptions.chunkInformation!));
+                int currentOffset = 0;
+                buffer[currentOffset++] = 0;
+                BinaryPrimitives.WriteUInt16LittleEndian(buffer.AsSpan(currentOffset, sizeof(ushort)), encryptionOptions.NameLength);
+                currentOffset += sizeof(ushort);
+                encryptionOptions.FileName.CopyTo(buffer.AsSpan(currentOffset));
+                currentOffset += encryptionOptions.NameLength;
+                BinaryPrimitives.WriteUInt64LittleEndian(buffer.AsSpan(currentOffset, sizeof(long)), encryptionOptions.FileSize);
+                currentOffset += sizeof(long);
+                buffer[currentOffset++] = ((byte)encryptionOptions.EncryptionProtocol);
+                buffer[currentOffset++] = encryptionOptions.IsChunked ? (byte)1 : (byte)0;
+
+                if (encryptionOptions.IsChunked)
+                {
+                    byte[] chunkInfo = null!;
+                    try
+                    {
+                        chunkInfo = SerializeChunkInformation(encryptionOptions.ChunkInformation!);
+                        Buffer.BlockCopy(chunkInfo, 0, buffer, currentOffset, chunkInfo.Length);
+                    }
+                    finally
+                    {
+                        if (chunkInfo is not null) CryptographicOperations.ZeroMemory(chunkInfo);
+                    }
+                }
+                return buffer;
             }
-            return bytes.ToArray();
+            catch(Exception ex)
+            {
+                CryptographicOperations.ZeroMemory(buffer);
+                throw new VaultException("Failed to serialize encryption options", ex);
+            }
         }
 
-        internal static byte[] SerializeChunkInformation(EncryptionOptions.ChunkInformation chunkInformation)
+        private static byte[] SerializeChunkInformation(ChunkInformation chunkInformation)
         {
             byte[] chunkBytes = new byte[8];
-            BinaryPrimitives.WriteUInt16LittleEndian(chunkBytes.AsSpan(0, 2), chunkInformation.chunkSize);
-            BinaryPrimitives.WriteUInt16LittleEndian(chunkBytes.AsSpan(2, 2), chunkInformation.totalChunks);
-            BinaryPrimitives.WriteUInt32LittleEndian(chunkBytes.AsSpan(4, 4), chunkInformation.finalChunkSize);
+            BinaryPrimitives.WriteUInt16LittleEndian(chunkBytes.AsSpan(0, 2), chunkInformation.ChunkSize);
+            BinaryPrimitives.WriteUInt16LittleEndian(chunkBytes.AsSpan(2, 2), chunkInformation.TotalChunks);
+            BinaryPrimitives.WriteUInt32LittleEndian(chunkBytes.AsSpan(4, 4), chunkInformation.FinalChunkSize);
             return chunkBytes;
         }
 
         internal static FileEncryptionOptions GetDecryptedFileEncryptionOptions(Stream vaultFS, long metadataOffset)
         {
-            var reader = VaultRegistry.GetVaultReader(VaultSession.VERSION);
-
-            byte[] decryptedMetadata = reader.ReadAndDecryptData(vaultFS, metadataOffset, reader.EncryptionOptionsSize);
-            EncryptionOptions.FileEncryptionOptions encryptionOptions = EncryptionOptionsRegistry.GetReader(decryptedMetadata[0]).DeserializeEncryptionOptions(decryptedMetadata);
-            CryptographicOperations.ZeroMemory(decryptedMetadata);
-            return encryptionOptions;
-        }
-
-        internal static void WipeFileEncryptionOptions(ref EncryptionOptions.FileEncryptionOptions options)
-        {
-            EncryptionOptionsRegistry.GetReader(options.version).ClearEncryptionOptions(ref options);
-        }
-    }
-
-    internal static class EncryptionOptionsRegistry
-    {
-        private readonly static Dictionary<byte, Lazy<EncryptionOptionsReader>> registry = new()
-        {
-            {0, new Lazy<EncryptionOptionsReader>(() => new EncryptionOptionsV0Reader()) }
-        };
-
-        internal static EncryptionOptionsReader GetReader(byte version)
-        {
-            if (!registry.TryGetValue(version, out Lazy<EncryptionOptionsReader> reader))
+            VaultReader vaultReader = VaultSession.CurrentSession.VAULT_READER;
+            byte[] decryptedMetadata = null!;
+            FileEncryptionOptions fileEncryptionOptions = null!;
+            try
             {
-                throw new Exception("Unknown encryption options version");
+                decryptedMetadata = vaultReader.ReadAndDecryptData(vaultFS, metadataOffset, vaultReader.EncryptionOptionsSize);
+                fileEncryptionOptions = Deserialize(decryptedMetadata);
             }
-            return reader.Value;
+            catch(Exception ex)
+            {
+                if (fileEncryptionOptions is not null) fileEncryptionOptions.Dispose();
+                throw new VaultException("Failed to get decrypted file encryption options", ex);
+            }
+            finally
+            {
+                if (decryptedMetadata is not null) CryptographicOperations.ZeroMemory(decryptedMetadata);
+            }
+            return fileEncryptionOptions;
         }
-    }
 
-
-
-    internal abstract class EncryptionOptionsReader
-    {
-        internal abstract byte Version { get; }
-
-        internal virtual EncryptionOptions.FileEncryptionOptions DeserializeEncryptionOptions(byte[] data)
+        private static FileEncryptionOptions Deserialize(ReadOnlySpan<byte> data)
         {
+            if (data.Length < 1) throw new VaultException($"Failed to deserialize data, got empty field");
             byte version = data[0];
-            ushort nameLength = BinaryPrimitives.ReadUInt16LittleEndian(data.AsSpan(1, sizeof(ushort)));
-            byte[] fileName = data.AsSpan(1 + sizeof(ushort), nameLength).ToArray();
-            ulong fileSize = BinaryPrimitives.ReadUInt64LittleEndian(data.AsSpan(1 + sizeof(ushort) + nameLength, sizeof(ulong)));
-            EncryptionOptions.EncryptionProtocol protocol = (EncryptionOptions.EncryptionProtocol)data[1 + sizeof(ushort) + nameLength + sizeof(ulong)];
-            bool chunked = data[1 + sizeof(ushort) + nameLength + sizeof(ulong) + 1] == 1 ? true : false;
-            EncryptionOptions.ChunkInformation? chunkInformation = null;
-            if (chunked)
+
+            return version switch
             {
-                chunkInformation = DeserializeChunkInformation(data[(1 + sizeof(ushort) + nameLength + sizeof(ulong) + 1 + 1)..]);
+                0 => DeserializeV0(data),
+                _ => throw new VaultException($"Failed to deserialize data, no parser for version {version}")
+            };
+        }
+
+        private static FileEncryptionOptions DeserializeV0(ReadOnlySpan<byte> data)
+        {
+            byte[] fileName = null!;
+            try
+            {
+                int currentIndex = 0;
+                byte version = data[currentIndex++];
+                ushort nameLength = BinaryPrimitives.ReadUInt16LittleEndian(data.Slice(currentIndex, sizeof(ushort)));
+                currentIndex += sizeof(ushort);
+                fileName = data.Slice(currentIndex, nameLength).ToArray();
+                currentIndex += nameLength;
+                ulong fileSize = BinaryPrimitives.ReadUInt64LittleEndian(data.Slice(currentIndex, sizeof(ulong)));
+                currentIndex += sizeof(ulong);
+                EncryptionProtocol protocol = (EncryptionProtocol)data[currentIndex++];
+                bool chunked = data[currentIndex++] == 1 ? true : false;
+                ChunkInformation? chunkInformation = null;
+                if (chunked)
+                {
+                    chunkInformation = DeserializeChunkInformation(data[currentIndex..]);
+                }
+                return new FileEncryptionOptions(version, fileName.ToArray(), fileSize, protocol, chunked, chunkInformation);
             }
-
-
-            return new EncryptionOptions.FileEncryptionOptions
+            finally
             {
-                version = version,
-                nameLength = nameLength,
-                fileName = fileName,
-                fileSize = fileSize,
-                encryptionProtocol = protocol,
-                chunked = chunked,
-                chunkInformation = chunkInformation
-            };
+                if (fileName is not null) CryptographicOperations.ZeroMemory(fileName);
+            }
         }
 
-        internal virtual EncryptionOptions.ChunkInformation DeserializeChunkInformation(byte[] chunkData)
+        private static ChunkInformation DeserializeChunkInformation(ReadOnlySpan<byte> chunkData)
         {
-            ushort chunkSize = BinaryPrimitives.ReadUInt16LittleEndian(chunkData.AsSpan(0, sizeof(ushort)));
-            ushort totalChunks = BinaryPrimitives.ReadUInt16LittleEndian(chunkData.AsSpan(sizeof(ushort), sizeof(ushort)));
-            uint finalChunkSize = BinaryPrimitives.ReadUInt32LittleEndian(chunkData.AsSpan(sizeof(ushort) + sizeof(ushort), sizeof(uint)));
+            if (chunkData.Length < (sizeof(ushort) + sizeof(ushort) + sizeof(uint))) throw new VaultException("Provided wrong chunk information length");
 
-            return new EncryptionOptions.ChunkInformation
-            {
-                chunkSize = chunkSize,
-                totalChunks = totalChunks,
-                finalChunkSize = finalChunkSize
-            };
+            ushort chunkSize = BinaryPrimitives.ReadUInt16LittleEndian(chunkData.Slice(0, sizeof(ushort)));
+            ushort totalChunks = BinaryPrimitives.ReadUInt16LittleEndian(chunkData.Slice(sizeof(ushort), sizeof(ushort)));
+            uint finalChunkSize = BinaryPrimitives.ReadUInt32LittleEndian(chunkData.Slice(sizeof(ushort) + sizeof(ushort), sizeof(uint)));
+            return new ChunkInformation(chunkSize, totalChunks, finalChunkSize);
         }
-
-        internal virtual void ClearEncryptionOptions(ref EncryptionOptions.FileEncryptionOptions options)
-        {
-            CryptographicOperations.ZeroMemory(options.fileName);
-            options = default;
-        }
-
-
-       
-    }
-
-    internal class EncryptionOptionsV0Reader : EncryptionOptionsReader
-    {
-        internal override byte Version => 0;
     }
 }

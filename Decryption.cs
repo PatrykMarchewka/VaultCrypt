@@ -23,16 +23,16 @@ namespace VaultCrypt
 
             try
             {
-                NormalizedPath filePath = NormalizedPath.From(folderPath + "\\" + Encoding.UTF8.GetString(encryptionOptions.fileName))!;
-                var encryptionProtocol = EncryptionOptions.GetEncryptionProtocolInfo[encryptionOptions.encryptionProtocol];
+                NormalizedPath filePath = NormalizedPath.From(folderPath + "\\" + Encoding.UTF8.GetString(encryptionOptions.FileName))!;
+                var encryptionProtocol = EncryptionOptions.GetEncryptionProtocolInfo[encryptionOptions.EncryptionProtocol];
                 ReadOnlyMemory<byte> key = PasswordHelper.GetSlicedKey(encryptionProtocol.keySize);
                 var decryptMethod = encryptionProtocol.decryptMethod;
-                if (!encryptionOptions.chunked)
+                if (!encryptionOptions.IsChunked)
                 {
                     byte[]? decrypted = null;
                     try
                     {
-                        decrypted = DecryptInOneChunk(vaultFS, encryptionOptions.fileSize, key, decryptMethod);
+                        decrypted = DecryptInOneChunk(vaultFS, encryptionOptions.FileSize, key, decryptMethod);
                         File.WriteAllBytes(filePath!, decrypted);
                         context.Progress.Report(new ProgressStatus(1, 1));
                     }
@@ -44,12 +44,12 @@ namespace VaultCrypt
                 else
                 {
                     await using FileStream fileFS = new FileStream(filePath!, FileMode.Create);
-                    await DecryptInMultipleChunks(vaultFS, fileFS, encryptionOptions.chunkInformation!.Value, encryptionProtocol.encryptionDataSize, key, decryptMethod, context);
+                    await DecryptInMultipleChunks(vaultFS, fileFS, encryptionOptions.ChunkInformation, encryptionProtocol.encryptionDataSize, key, decryptMethod, context);
                 }
             }
             finally
             {
-                EncryptionOptions.WipeFileEncryptionOptions(ref encryptionOptions);
+                encryptionOptions.Dispose();
             }
         }
 
@@ -102,14 +102,14 @@ namespace VaultCrypt
 
             var tasks = new List<Task>();
             var results = new ConcurrentDictionary<int, byte[]>();
-            int concurrentChunkCount = FileHelper.CalculateConcurrency(true, chunkInformation.chunkSize);
+            int concurrentChunkCount = FileHelper.CalculateConcurrency(true, chunkInformation.ChunkSize);
             int nextToWrite = 0;
             int chunkIndex = 0;
-            byte[] buffer = new byte[extraData + (chunkInformation.chunkSize * 1024 * 1024)];
+            byte[] buffer = new byte[extraData + (chunkInformation.ChunkSize * 1024 * 1024)];
             try
             {
                 object writeLock = new object();
-                while (chunkIndex < chunkInformation.totalChunks)
+                while (chunkIndex < chunkInformation.TotalChunks)
                 {
                     context.CancellationToken.ThrowIfCancellationRequested();
                     int bytesRead = 0;
@@ -117,10 +117,10 @@ namespace VaultCrypt
                     byte[] currentChunk = null!;
                     try
                     {
-                        if (chunkIndex == chunkInformation.totalChunks)
+                        if (chunkIndex == chunkInformation.TotalChunks)
                         {
                             //read the extraData + chunkInformation.finalChunkSize
-                            bytesRead = await vaultFS.ReadAsync(buffer, 0, checked((int)(extraData + chunkInformation.finalChunkSize)));
+                            bytesRead = await vaultFS.ReadAsync(buffer, 0, checked((int)(extraData + chunkInformation.FinalChunkSize)));
                         }
                         else
                         {
@@ -139,7 +139,6 @@ namespace VaultCrypt
                         CryptographicOperations.ZeroMemory(buffer);
                     }
 
-                    
 
                     if (tasks.Count >= concurrentChunkCount)
                     {
@@ -163,7 +162,7 @@ namespace VaultCrypt
                         }
                         FileHelper.WriteReadyChunk(results, ref nextToWrite, currentIndex, fileFS, writeLock);
                         //Reporting current index + 1 because currentIndex is zero based while user gets to see 1 based indexing
-                        context.Progress.Report(new ProgressStatus(currentIndex + 1, chunkInformation.totalChunks));
+                        context.Progress.Report(new ProgressStatus(currentIndex + 1, chunkInformation.TotalChunks));
                     }));
                 }
                 await Task.WhenAll(tasks);

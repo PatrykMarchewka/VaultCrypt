@@ -178,11 +178,11 @@ namespace VaultCrypt
                 }
 
                 ulong fileSize = 0;
-                EncryptionOptions.FileEncryptionOptions encryptionOptions = default;
+                EncryptionOptions.FileEncryptionOptions encryptionOptions = null;
                 try
                 {
                     encryptionOptions = EncryptionOptions.GetDecryptedFileEncryptionOptions(vaultfs, currentOffset);
-                    fileSize = encryptionOptions.fileSize;
+                    fileSize = encryptionOptions.FileSize;
                 }
                 catch
                 {
@@ -190,7 +190,7 @@ namespace VaultCrypt
                 }
                 finally
                 {
-                    EncryptionOptions.WipeFileEncryptionOptions(ref encryptionOptions);
+                    if(encryptionOptions is not null) encryptionOptions.Dispose();
                 }
                 
                 //Calculating toread to allow copying of partially encrypted files
@@ -223,16 +223,15 @@ namespace VaultCrypt
                 var encryptionMetadataSize = VaultSession.CurrentSession.VAULT_READER.EncryptionOptionsSize;
                 var fileList = VaultSession.CurrentSession.ENCRYPTED_FILES.ToList();
                 int currentKey = fileList.FindIndex(file => file.Key == FileMetadataEntry.Key);
-                EncryptionOptions.FileEncryptionOptions encryptionOptions = default;
+                EncryptionOptions.FileEncryptionOptions encryptionOptions = null!;
                 ulong length = 0;
                 try
                 {
                     encryptionOptions = EncryptionOptions.GetDecryptedFileEncryptionOptions(vaultFS, FileMetadataEntry.Key);
-                    length = Math.Min(encryptionOptions.fileSize + (ulong)encryptionMetadataSize, (ulong)(fileList[currentKey + 1].Key - fileList[currentKey].Key));
                 }
                 finally
                 {
-                    EncryptionOptions.WipeFileEncryptionOptions(ref encryptionOptions);
+                    if (encryptionOptions is not null) encryptionOptions.Dispose();
                 }
                 
                 ZeroOutPartOfFile(vaultFS, FileMetadataEntry.Key, length);

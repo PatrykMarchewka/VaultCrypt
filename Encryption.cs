@@ -32,8 +32,8 @@ namespace VaultCrypt
             {
                 FileInfo fileInfo = new FileInfo(filePath);
                 options = EncryptionOptions.PrepareEncryptionOptions(fileInfo, protocol, chunkSizeInMB);
-                int totalChunks = options.chunkInformation != null ? options.chunkInformation.Value.totalChunks : 1;
-                int concurrentChunkCount = FileHelper.CalculateConcurrency(options.chunked, chunkSizeInMB);
+                int totalChunks = options.ChunkInformation != null ? options.ChunkInformation!.TotalChunks : 1;
+                int concurrentChunkCount = FileHelper.CalculateConcurrency(options.IsChunked, chunkSizeInMB);
                 ReadOnlyMemory<byte> key = PasswordHelper.GetSlicedKey(protocol);
                 await using FileStream vaultFS = new FileStream(VaultSession.CurrentSession.VAULTPATH, FileMode.Open, FileAccess.ReadWrite);
                 await using FileStream fileFS = new FileStream(filePath, FileMode.Open, FileAccess.Read);
@@ -42,7 +42,7 @@ namespace VaultCrypt
                 byte[] paddedFileOptions = null!;
                 try
                 {
-                    paddedFileOptions = EncryptionOptions.EncryptAndPadFileEncryptionOptions(ref options);
+                    paddedFileOptions = EncryptionOptions.EncryptAndPadFileEncryptionOptions(options);
                     //Seek to the end of file to make sure its saved at the end and not after metadata data
                     vaultFS.Seek(0, SeekOrigin.End);
                     vaultFS.Write(paddedFileOptions);
@@ -56,7 +56,7 @@ namespace VaultCrypt
             }
             finally
             {
-                EncryptionOptions.WipeFileEncryptionOptions(ref options);
+                options.Dispose();
             }
         }
 
@@ -108,6 +108,7 @@ namespace VaultCrypt
 
                     tasks.Add(Task.Run(() =>
                     {
+                        context.CancellationToken.ThrowIfCancellationRequested();
                         byte[] encrypted = null!;
                         try
                         {
@@ -117,7 +118,7 @@ namespace VaultCrypt
                         finally
                         {
                             if (chunk is not null) CryptographicOperations.ZeroMemory(chunk);
-                            CryptographicOperations.ZeroMemory(encrypted);
+                            //encrypted field gets cleaned in FileHelper.WriteReadyChunk after writing
                         }
                         FileHelper.WriteReadyChunk(results, ref nextToWrite, currentIndex, vaultFS, writeLock);
                         //Reporting current index + 1 because currentIndex is zero based while user gets to see 1 based indexing

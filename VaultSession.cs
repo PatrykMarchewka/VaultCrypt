@@ -255,7 +255,7 @@ namespace VaultCrypt
                 byte[] decrypted = null!;
                 foreach (long offset in offsets)
                 {
-                    EncryptionOptions.FileEncryptionOptions fileEncryptionOptions = new();
+                    EncryptionOptions.FileEncryptionOptions fileEncryptionOptions = null!;
                     try
                     {
                         decrypted = ReadAndDecryptData(stream, offset, EncryptionOptionsSize);
@@ -270,7 +270,7 @@ namespace VaultCrypt
                     finally
                     {
                         if (decrypted is not null) CryptographicOperations.ZeroMemory(decrypted);
-                        EncryptionOptions.WipeFileEncryptionOptions(ref fileEncryptionOptions);
+                        if (fileEncryptionOptions is not null) fileEncryptionOptions.Dispose();
                     }
                 }
             }
