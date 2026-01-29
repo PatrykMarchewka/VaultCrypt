@@ -8,6 +8,7 @@ using System.Text;
 using System.Threading.Tasks;
 using System.Windows;
 using System.Windows.Input;
+using VaultCrypt.Exceptions;
 
 namespace VaultCrypt.ViewModels
 {
@@ -94,25 +95,26 @@ namespace VaultCrypt.ViewModels
 
         internal void CreateVault()
         {
-            if (String.IsNullOrWhiteSpace(VaultFolder))
+            ValidationHelper.NotEmptyString(VaultFolder, "Vault folder");
+            ValidationHelper.NotEmptyString(VaultName, "Vault name");
+            ValidationHelper.NotEmptySecureString(Password, "Vault password");
+
+            NormalizedPath folderPath = NormalizedPath.From(VaultFolder)!;
+            NormalizedPath vaultPath = NormalizedPath.From($"{folderPath}\\{VaultName}.vlt")!;
+            byte[]? passwordBytes = null;
+            try
             {
-                throw new Exception("Folder path is null or empty");
+                passwordBytes = PasswordHelper.SecureStringToBytes(Password);
+                VaultSession.CreateVault(folderPath, VaultName, passwordBytes, SelectedPreset.Iterations);
             }
-            if (String.IsNullOrWhiteSpace(VaultName))
+            catch(Exception ex)
             {
-                throw new Exception("Vault name is null or empty");
+                throw new VaultException("Failed to create vault", ex);
             }
-            if (Password.Length == 0)
+            finally
             {
-                throw new Exception("Password is empty");
+                CryptographicOperations.ZeroMemory(passwordBytes);
             }
-
-            NormalizedPath folderPath = NormalizedPath.From(VaultFolder);
-
-
-            FileHelper.CreateVault(folderPath, VaultName, passwordBytes, SelectedPreset.Iterations);
-            CryptographicOperations.ZeroMemory(passwordBytes);
-
             NavigationRequested?.Invoke(new NavigateToPasswordInputRequest(vaultPath));
         }
 

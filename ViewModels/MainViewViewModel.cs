@@ -10,8 +10,6 @@ namespace VaultCrypt.ViewModels
 {
     internal class MainViewViewModel : INotifyPropertyChanged, IViewModel, INavigatingViewModel
     {
-
-
         public ICommand CreateVaultCommand { get; }
         public ICommand OpenVaultCommand { get; }
 

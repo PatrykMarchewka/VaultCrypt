@@ -37,16 +37,10 @@ namespace VaultCrypt.ViewModels
 
         private void OpenVault()
         {
-            if (Password == null  || Password.Length == 0)
-            {
-                throw new Exception("Password is empty");
-            }
-            else
-            {
-                NavigationRequested?.Invoke(new NavigateToOpenVaultRequest(Password, VaultPath));
-                this.Password.Clear();
-            }
+            ValidationHelper.NotEmptySecureString(Password, "Password");
 
+            NavigationRequested?.Invoke(new NavigateToOpenVaultRequest(Password, VaultPath!));
+            this.Password.Clear();
         }
 
         

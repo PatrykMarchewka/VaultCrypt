@@ -10,6 +10,7 @@ using System.Text;
 using System.Threading.Tasks;
 using System.Windows.Data;
 using System.Windows.Input;
+using VaultCrypt.Exceptions;
 using VaultCrypt.Services;
 
 namespace VaultCrypt.ViewModels
@@ -73,11 +74,25 @@ namespace VaultCrypt.ViewModels
 
         private void CreateSession()
         {
-            byte[] password = PasswordHelper.SecureStringToBytes(this.password!);
-            this.password!.Clear();
-            VaultSession.CreateSessionFromFile(password, vaultPath!);
-            this.VaultName = Path.GetFileName(vaultPath!);
-            CryptographicOperations.ZeroMemory(password);
+            try
+            {
+                byte[] password = null!;
+                try
+                {
+                    password = PasswordHelper.SecureStringToBytes(this.password!);
+                    this.password!.Clear();
+                    VaultSession.CreateSessionFromFile(password, vaultPath!);
+                }
+                finally
+                {
+                    if (password is not null) CryptographicOperations.ZeroMemory(password);
+                }
+                this.VaultName = Path.GetFileName(vaultPath!);
+            }
+            catch(Exception ex)
+            {
+                throw new VaultException("Failed to open vault", ex);
+            }
         }
 
         private void GoBack()
@@ -101,24 +116,58 @@ namespace VaultCrypt.ViewModels
             var folder = FileDialogHelper.OpenFolder("Select folder to save file");
             if (folder != null)
             {
-                var context = new ProgressionContext();
-                NavigationRequested?.Invoke(new NavigateToProgressRequest(context));
-                await Decryption.Decrypt(SelectedFile!.Value.Key, NormalizedPath.From(folder), context);
+                try
+                {
+                    var context = new ProgressionContext();
+                    NavigationRequested?.Invoke(new NavigateToProgressRequest(context));
+                    await Decryption.Decrypt(SelectedFile!.Value.Key, NormalizedPath.From(folder), context);
+                }
+                catch(OperationCanceledException ex)
+                {
+                    throw VaultException.OperationCancelledException(ex);
+                }
+                catch(Exception ex)
+                {
+                    throw new VaultException("Failed to decrypt selected file");
+                }
             }
         }
 
         private async Task DeleteFile()
         {
-            var context = new ProgressionContext();
-            NavigationRequested?.Invoke(new NavigateToProgressRequest(context));
-            await Task.Run(() => FileHelper.DeleteFileFromVault(SelectedFile!.Value, context));
+            try
+            {
+                var context = new ProgressionContext();
+                NavigationRequested?.Invoke(new NavigateToProgressRequest(context));
+                await Task.Run(() => FileHelper.DeleteFileFromVault(SelectedFile!.Value, context));
+            }
+            catch (OperationCanceledException ex)
+            {
+                throw VaultException.OperationCancelledException(ex);
+            }
+            catch (Exception ex)
+            {
+                throw new VaultException("Failed to delete selected file from vault", ex);
+            }
         }
 
         private async Task Trim()
         {
-            var context = new ProgressionContext();
-            NavigationRequested?.Invoke(new NavigateToProgressRequest(context));
-            await Task.Run(() => FileHelper.TrimVault(context));
+            try
+            {
+                var context = new ProgressionContext();
+                NavigationRequested?.Invoke(new NavigateToProgressRequest(context));
+                await Task.Run(() => FileHelper.TrimVault(context));
+            }
+            catch (OperationCanceledException ex)
+            {
+                throw VaultException.OperationCancelledException(ex);
+            }
+            catch (Exception ex)
+            {
+                throw new VaultException("Failed to trim vault", ex);
+            }
+            
         }
 
         private void Filter(string text)

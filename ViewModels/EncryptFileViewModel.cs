@@ -7,6 +7,7 @@ using System.Text;
 using System.Threading.Tasks;
 using System.Windows;
 using System.Windows.Input;
+using VaultCrypt.Exceptions;
 using VaultCrypt.Services;
 
 namespace VaultCrypt.ViewModels
@@ -67,9 +68,20 @@ namespace VaultCrypt.ViewModels
 
         private async Task Encrypt(NormalizedPath filePath)
         {
-            var context = new ProgressionContext();
-            NavigationRequested?.Invoke(new NavigateToProgressRequest(context));
-            await Encryption.Encrypt(SelectedProtocol, SelectedPreset.SizeInMB, filePath, context);
+            try
+            {
+                var context = new ProgressionContext();
+                NavigationRequested?.Invoke(new NavigateToProgressRequest(context));
+                await Encryption.Encrypt(SelectedProtocol, SelectedPreset.SizeInMB, filePath, context);
+            }
+            catch (OperationCanceledException ex)
+            {
+                throw VaultException.OperationCancelledException(ex);
+            }
+            catch(Exception ex)
+            {
+                throw new VaultException("Failed to encrypt file", ex);
+            }
             
         }
 
