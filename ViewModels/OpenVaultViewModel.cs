@@ -61,7 +61,7 @@ namespace VaultCrypt.ViewModels
 
         internal OpenVaultViewModel()
         {
-            EncryptedFilesCollectionView = CollectionViewSource.GetDefaultView(VaultSession.ENCRYPTED_FILES);
+            EncryptedFilesCollectionView = CollectionViewSource.GetDefaultView(VaultSession.CurrentSession.ENCRYPTED_FILES);
             GoBackCommand = new RelayCommand(_ => GoBack());
             AddNewFileCommand = new RelayCommand(_ => AddNewFile());
             DecryptFileCommand = new RelayCommand(_ => DecryptFile(), _ => SelectedFile != null);
@@ -75,7 +75,7 @@ namespace VaultCrypt.ViewModels
         {
             byte[] password = PasswordHelper.SecureStringToBytes(this.password!);
             this.password!.Clear();
-            VaultSession.CreateSession(password, vaultPath!);
+            VaultSession.CreateSessionFromFile(password, vaultPath!);
             this.VaultName = Path.GetFileName(vaultPath!);
             CryptographicOperations.ZeroMemory(password);
         }

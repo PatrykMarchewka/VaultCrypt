@@ -62,7 +62,7 @@ namespace VaultCrypt.Services
 
         public void NavigateToMain()
         {
-            VaultSession.Dispose();
+            VaultSession.CurrentSession.Dispose();
             Navigate(viewModels.Main);
         }
 

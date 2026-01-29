@@ -20,16 +20,27 @@ namespace VaultCrypt
         internal Dictionary<long, string> ENCRYPTED_FILES { get; private set; }
         internal VaultReader VAULT_READER { get; private set; }
 
-        internal static VaultSession CurrentSession;
+        internal static VaultSession CurrentSession = new();
         private const byte NewestVaultVersion = 0;
         internal static event Action? EncryptedFilesListUpdated;
 
-        internal VaultSession(NormalizedPath vaultPath, VaultReader vaultReader, byte[] password, byte[] salt, int iterations)
+        /// <summary>
+        /// Empty constructor initializing empty session to avoid NullReferenceException
+        /// </summary>
+        private VaultSession()
         {
-            this.KEY = PasswordHelper.DeriveKey(password, salt, iterations);
-            this.VAULTPATH = vaultPath;
-            this.ENCRYPTED_FILES = new();
-            this.VAULT_READER = vaultReader;
+            KEY = Array.Empty<byte>();
+            ENCRYPTED_FILES = new();
+            VAULTPATH = NormalizedPath.From(string.Empty)!;
+            VAULT_READER = null!;
+        }
+
+        internal static void CreateSession(NormalizedPath vaultPath, VaultReader vaultReader, byte[] password, byte[] salt, int iterations)
+        {
+            CurrentSession.KEY = PasswordHelper.DeriveKey(password, salt, iterations);
+            CurrentSession.VAULTPATH = vaultPath;
+            CurrentSession.ENCRYPTED_FILES.Clear();
+            CurrentSession.VAULT_READER = vaultReader;
         }
 
         /// <summary>
@@ -58,12 +69,12 @@ namespace VaultCrypt
             {
                 salt = PasswordHelper.GenerateRandomSalt(reader.SaltSize);
                 buffer = reader.PrepareVaultHeader(salt, iterations);
+                CreateSession(vaultPath, reader, password, salt, iterations);
                 encryptedMetadata = reader.VaultEncryption(new byte[sizeof(ushort) + reader.MetadataOffsetsSize]);
                 data = new byte[buffer.Length + encryptedMetadata.Length];
                 Buffer.BlockCopy(buffer, 0, data, 0, buffer.Length);
                 Buffer.BlockCopy(encryptedMetadata, 0, data, buffer.Length, encryptedMetadata.Length);
-                File.WriteAllBytes(vaultPath!, data);
-                VaultSession.CurrentSession = new VaultSession(vaultPath, reader, password, salt, iterations);
+                File.WriteAllBytes(vaultPath!, data); 
             }
             finally
             {
@@ -99,7 +110,7 @@ namespace VaultCrypt
         /// </summary>
         /// <param name="password">Password to unlock the vault with</param>
         /// <param name="path">Path to the vault with extension</param>
-        public static void CreateSession(byte[] password, NormalizedPath path)
+        public static void CreateSessionFromFile(byte[] password, NormalizedPath path)
         {
             ArgumentNullException.ThrowIfNull(password);
             ArgumentNullException.ThrowIfNullOrWhiteSpace(path);
@@ -117,7 +128,7 @@ namespace VaultCrypt
                 try
                 {
                     salt = reader.ReadSalt(fs);
-                    CurrentSession = new VaultSession(path, reader, password, salt, iterations);
+                    CreateSession(path, reader, password, salt, iterations);
                 }
                 finally
                 {
@@ -258,9 +269,8 @@ namespace VaultCrypt
                     EncryptionOptions.FileEncryptionOptions fileEncryptionOptions = null!;
                     try
                     {
-                        decrypted = ReadAndDecryptData(stream, offset, EncryptionOptionsSize);
-                        fileEncryptionOptions = EncryptionOptionsRegistry.GetReader(decrypted[0]).DeserializeEncryptionOptions(decrypted);
-                        VaultSession.CurrentSession.ENCRYPTED_FILES.Add(offset, Encoding.UTF8.GetString(fileEncryptionOptions.fileName));
+                        fileEncryptionOptions = EncryptionOptions.GetDecryptedFileEncryptionOptions(stream, offset);
+                        VaultSession.CurrentSession.ENCRYPTED_FILES.Add(offset, Encoding.UTF8.GetString(fileEncryptionOptions.FileName));
                     }
                     catch
                     {
