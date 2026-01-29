@@ -122,7 +122,7 @@ namespace VaultCrypt
             ArgumentOutOfRangeException.ThrowIfNegative(offset);
             ArgumentOutOfRangeException.ThrowIfZero(length);
             ArgumentNullException.ThrowIfNull(destination);
-            ArgumentOutOfRangeException.ThrowIfZero(destinationOffset);
+            ArgumentOutOfRangeException.ThrowIfNegative(destinationOffset);
 
             //8MB buffer
             byte[] buffer = new byte[8_388_608];
@@ -157,6 +157,8 @@ namespace VaultCrypt
 
         internal static void TrimVault(ProgressionContext context)
         {
+            ArgumentNullException.ThrowIfNull(context);
+
             CheckFreeSpace(VaultSession.CurrentSession.VAULTPATH);
             using FileStream vaultfs = new FileStream(VaultSession.CurrentSession.VAULTPATH!, FileMode.Open, FileAccess.Read);
             using FileStream newVaultfs = new FileStream(VaultSession.CurrentSession.VAULTPATH + "_TRIMMED.vlt", FileMode.Create);
@@ -228,6 +230,7 @@ namespace VaultCrypt
                 try
                 {
                     encryptionOptions = EncryptionOptions.GetDecryptedFileEncryptionOptions(vaultFS, FileMetadataEntry.Key);
+                    length = Math.Min(encryptionOptions.FileSize + (ulong)encryptionMetadataSize, (ulong)(fileList[currentKey + 1].Key - fileList[currentKey].Key));
                 }
                 finally
                 {
