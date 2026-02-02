@@ -158,8 +158,8 @@ namespace VaultCrypt
                         }
                         finally
                         {
-                            if (decryptedChunk is not null) CryptographicOperations.ZeroMemory(decryptedChunk);
                             if(currentChunk is not null) CryptographicOperations.ZeroMemory(currentChunk);
+                            //decryptedChunk field gets cleaned in FileHelper.WriteReadyChunk after writing
                         }
                         FileHelper.WriteReadyChunk(results, ref nextToWrite, currentIndex, fileFS, writeLock);
                         //Reporting current index + 1 because currentIndex is zero based while user gets to see 1 based indexing
@@ -208,7 +208,6 @@ namespace VaultCrypt
                     using AesGcm aesGcm = new AesGcm(key, 16);
                     aesGcm.Decrypt(iv, encryptedData, tag, decrypted);
                     return decrypted;
-
                 }
                 catch (Exception ex)
                 {
