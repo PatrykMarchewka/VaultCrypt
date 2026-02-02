@@ -63,7 +63,7 @@ namespace VaultCrypt.ViewModels
             SelectedPreset = ChunkSizePresets[0];
 
             GoBackCommand = new RelayCommand(_ => NavigationRequested?.Invoke(new NavigateToMainRequest()));
-            EncryptCommand = new RelayCommand(_ => Encrypt(filePath!));
+            EncryptCommand = new RelayCommand(async _ => await Encrypt(filePath!), null!);
         }
 
         private async Task Encrypt(NormalizedPath filePath)

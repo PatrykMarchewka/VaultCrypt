@@ -65,9 +65,9 @@ namespace VaultCrypt.ViewModels
             EncryptedFilesCollectionView = CollectionViewSource.GetDefaultView(VaultSession.CurrentSession.ENCRYPTED_FILES);
             GoBackCommand = new RelayCommand(_ => GoBack());
             AddNewFileCommand = new RelayCommand(_ => AddNewFile());
-            DecryptFileCommand = new RelayCommand(_ => DecryptFile(), _ => SelectedFile != null);
-            DeleteFileCommand = new RelayCommand(_ => DeleteFile(), _ => SelectedFile != null);
-            TrimCommand = new RelayCommand(_ => Trim());
+            DecryptFileCommand = new RelayCommand(async _ => await DecryptFile(), _ => SelectedFile != null);
+            DeleteFileCommand = new RelayCommand(async _ => await DeleteFile(), _ => SelectedFile != null);
+            TrimCommand = new RelayCommand(async _ => await Trim());
 
             VaultSession.EncryptedFilesListUpdated += () => EncryptedFilesCollectionView.Refresh();
         }
