@@ -5,6 +5,7 @@ VaultCrypt is a desktop application allowing you to encrypt and store multiple f
 
 - [Tech stack](#tech-stack)
 - [Features](#features)
+- [Requirements](#requirements)
 - [Technical notes](#technical-notes)
 - [Releases](#releases)
 
@@ -23,11 +24,16 @@ VaultCrypt is a desktop application allowing you to encrypt and store multiple f
 - Files are split into **1–2048 MB** chunks, each encrypted independently.
 - Clean and intuitive WPF interface.
 
+## Requirements
+- Windows 10 (64-bit) or later
+
 ## Technical Notes
-- Supports **AES-GCM 128/192/256 (AES-GCM256 used for metadata by default)** encryption
+- Supported encryption algorithms:
+    - AES-GCM 128/192/256 **(AES-GCM256 used for vault metadata)**
+    - AES-CCM 128/192/256
 - Each vault can contain up to **512 files**
 - Vaults use a custom format `.vlt`
 - Includes a **Trim Vault** option to rebuild the vault without zeroed blocks and broken metadata
 
 ## Releases
-Latest release available at [GitHub](https://github.com/PatrykMarchewka/VaultCrypt/releases)
+Latest release available at [GitHub releases page](https://github.com/PatrykMarchewka/VaultCrypt/releases)
