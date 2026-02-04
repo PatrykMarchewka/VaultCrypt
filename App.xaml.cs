@@ -23,7 +23,8 @@ namespace VaultCrypt
             var exceptionService = new ExceptionHandlerService(dialogService, navigationService);
             RelayCommand.SubscribeToExceptionThrowEvent((ex) => exceptionService.HandleException(ex));
             navigationService.ChangeView += viewmodel => vms.MainWindow.CurrentView = viewmodel;
-            navigationService.NavigateToMain();
+            if (e.Args.Length > 0) navigationService.NavigateToPasswordInput(NormalizedPath.From(e.Args[0])!);
+            else navigationService.NavigateToMain();
             var window = new MainWindow
             {
                 DataContext = vms.MainWindow
