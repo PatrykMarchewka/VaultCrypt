@@ -219,7 +219,7 @@ namespace VaultCrypt
             public short ExtraEncryptionDataSize => 28;
             public byte[] EncryptBytes(ReadOnlySpan<byte> data, ReadOnlySpan<byte> key)
             {
-                if (data.Length == 0) throw new VaultException("Failed to decrypt bytes, provided data was empty");
+                if (data.Length == 0) throw new VaultException("Failed to encrypt bytes, provided data was empty");
                 if (key.Length == 0) throw new VaultException("Failed to encrypt bytes, provided key was empty");
 
                 byte[] iv = new byte[12];
