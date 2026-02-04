@@ -24,15 +24,14 @@ namespace VaultCrypt
             try
             {
                 NormalizedPath filePath = NormalizedPath.From(folderPath + "\\" + Encoding.UTF8.GetString(encryptionOptions.FileName))!;
-                var encryptionProtocol = EncryptionOptions.GetEncryptionProtocolInfo[encryptionOptions.EncryptionProtocol];
-                ReadOnlyMemory<byte> key = PasswordHelper.GetSlicedKey(encryptionProtocol.keySize);
-                var decryptMethod = encryptionProtocol.decryptMethod;
+                var encryptionProtocol = EncryptionAlgorithm.GetEncryptionAlgorithmProvider[encryptionOptions.EncryptionAlgorithm];
+                ReadOnlyMemory<byte> key = PasswordHelper.GetSlicedKey(encryptionProtocol.KeySize);
                 if (!encryptionOptions.IsChunked)
                 {
                     byte[]? decrypted = null;
                     try
                     {
-                        decrypted = DecryptInOneChunk(vaultFS, encryptionOptions.FileSize, key, decryptMethod);
+                        decrypted = DecryptInOneChunk(vaultFS, encryptionOptions.FileSize, key.Span, encryptionProtocol.EncryptionAlgorithm);
                         File.WriteAllBytes(filePath!, decrypted);
                         context.Progress.Report(new ProgressStatus(1, 1));
                     }
@@ -44,7 +43,7 @@ namespace VaultCrypt
                 else
                 {
                     await using FileStream fileFS = new FileStream(filePath!, FileMode.Create);
-                    await DecryptInMultipleChunks(vaultFS, fileFS, encryptionOptions.ChunkInformation, encryptionProtocol.encryptionDataSize, key, decryptMethod, context);
+                    await DecryptInMultipleChunks(vaultFS, fileFS, encryptionOptions.ChunkInformation!, encryptionProtocol.EncryptionAlgorithm.ExtraEncryptionDataSize, key, encryptionProtocol.EncryptionAlgorithm, context);
                 }
             }
             finally
@@ -53,18 +52,18 @@ namespace VaultCrypt
             }
         }
 
-        static byte[] DecryptInOneChunk(Stream vaultFS, ulong fileSize, ReadOnlyMemory<byte> key, Func<ReadOnlyMemory<byte>, ReadOnlyMemory<byte>, byte[]> decryptMethod)
+        static byte[] DecryptInOneChunk(Stream vaultFS, ulong fileSize, ReadOnlySpan<byte> key, EncryptionAlgorithm.IEncryptionAlgorithm encryptionAlgorithm)
         {
             ArgumentNullException.ThrowIfNull(vaultFS);
             ArgumentOutOfRangeException.ThrowIfNegativeOrZero(fileSize);
             if (key.Length == 0) throw new VaultException("Failed to decrypt data, provided key was empty");
-            ArgumentNullException.ThrowIfNull(decryptMethod);
+            ArgumentNullException.ThrowIfNull(encryptionAlgorithm);
 
             byte[] buffer = new byte[fileSize];
             try
             {
                 vaultFS.ReadExactly(buffer);
-                return decryptMethod(buffer, key);
+                return encryptionAlgorithm.DecryptBytes(buffer, key);
             }
             catch(EndOfStreamException ex)
             {
@@ -91,13 +90,13 @@ namespace VaultCrypt
         /// <param name="decryptMethod"></param>
         /// <param name="context"></param>
         /// <returns></returns>
-        static async Task DecryptInMultipleChunks(Stream vaultFS, Stream fileFS, EncryptionOptions.ChunkInformation chunkInformation, short extraData, ReadOnlyMemory<byte> key, Func<ReadOnlyMemory<byte>, ReadOnlyMemory<byte>, byte[]> decryptMethod, ProgressionContext context)
+        static async Task DecryptInMultipleChunks(Stream vaultFS, Stream fileFS, EncryptionOptions.ChunkInformation chunkInformation, short extraData, ReadOnlyMemory<byte> key, EncryptionAlgorithm.IEncryptionAlgorithm encryptionAlgorithm, ProgressionContext context)
         {
             ArgumentNullException.ThrowIfNull(vaultFS);
             ArgumentNullException.ThrowIfNull(fileFS);
             ArgumentOutOfRangeException.ThrowIfNegative(extraData);
             if (key.Length == 0) throw new VaultException("Failed to decrypt data, provided key was empty");
-            ArgumentNullException.ThrowIfNull(decryptMethod);
+            ArgumentNullException.ThrowIfNull(encryptionAlgorithm);
             ArgumentNullException.ThrowIfNull(context);
 
             var tasks = new List<Task>();
@@ -153,7 +152,7 @@ namespace VaultCrypt
                         byte[] decryptedChunk = null!;
                         try
                         {
-                            decryptedChunk = decryptMethod(currentChunk, key);
+                            decryptedChunk = encryptionAlgorithm.DecryptBytes(currentChunk, key.Span);
                             results.TryAdd(currentIndex, decryptedChunk);
                         }
                         finally
@@ -175,45 +174,6 @@ namespace VaultCrypt
                     CryptographicOperations.ZeroMemory(result);
                 }
                 results.Clear();
-            }
-        }
-
-
-
-
-
-
-
-        internal static class AesGcmDecryption
-        {
-            /// <summary>
-            /// 
-            /// </summary>
-            /// <param name="data"></param>
-            /// <param name="key"></param>
-            /// <returns></returns>
-            /// <exception cref="VaultException">Thrown when decryption failed</exception>
-            internal static byte[] DecryptBytes(ReadOnlySpan<byte> data, ReadOnlySpan<byte> key)
-            {
-                if (data.Length == 0) throw new VaultException("Failed to decrypt bytes, provided data was empty");
-                if (key.Length == 0) throw new VaultException("Failed to decrypt bytes, provided key was empty");
-
-                ReadOnlySpan<byte> iv = data.Slice(0,12);
-                ReadOnlySpan<byte> tag = data.Slice(12, 16);
-                ReadOnlySpan<byte> encryptedData = data.Slice(28);
-
-                byte[] decrypted = new byte[encryptedData.Length];
-                try
-                {
-                    using AesGcm aesGcm = new AesGcm(key, 16);
-                    aesGcm.Decrypt(iv, encryptedData, tag, decrypted);
-                    return decrypted;
-                }
-                catch (Exception ex)
-                {
-                    CryptographicOperations.ZeroMemory(decrypted);
-                    throw VaultException.DecryptionFailed(ex);
-                }
             }
         }
     }

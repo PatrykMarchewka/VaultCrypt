@@ -193,11 +193,11 @@ namespace VaultCrypt
     internal abstract class VaultReader
     {
         internal abstract byte Version { get; } //Numeric version of the vault
-        internal abstract EncryptionOptions.EncryptionProtocol EncryptionProtocol { get; } //Default encryption protocol to encrypt vault metadata with
+        internal abstract EncryptionAlgorithm.EncryptionAlgorithmEnum VaultEncryptionAlgorithm { get; } //Default encryption algorithm to encrypt vault metadata with
         internal virtual short SaltSize => 32; //Size in bytes of the salt
         internal virtual short EncryptionOptionsSize => 1024; //Size of already encrypted EncryptionOptions
         internal virtual short MetadataOffsetsSize => 4096; //Size of metadata offsets collection before encryption
-        internal virtual short HeaderSize => (short)(1 + SaltSize + sizeof(int) + EncryptionOptions.GetEncryptionProtocolInfo[EncryptionProtocol].encryptionDataSize + sizeof(ushort) + MetadataOffsetsSize); //Full size of vault header
+        internal virtual short HeaderSize => (short)(1 + SaltSize + sizeof(int) + EncryptionAlgorithm.GetEncryptionAlgorithmProvider[VaultEncryptionAlgorithm].EncryptionAlgorithm.ExtraEncryptionDataSize + sizeof(ushort) + MetadataOffsetsSize); //Full size of vault header
 
         #region Vault header
         internal byte[] ReadSalt(Stream stream)
@@ -324,7 +324,7 @@ namespace VaultCrypt
         internal virtual byte[] ReadMetadataOffsetsBytes(Stream stream)
         {
             stream.Seek(sizeof(byte) + SaltSize + sizeof(uint), SeekOrigin.Begin);
-            byte[] buffer = new byte[EncryptionOptions.GetEncryptionProtocolInfo[EncryptionProtocol].encryptionDataSize + sizeof(ushort) + MetadataOffsetsSize]; //28 bytes for AES decryption + 2 bytes ushort number + 4KB (4096) for maximum of 512 files per vault
+            byte[] buffer = new byte[EncryptionAlgorithm.GetEncryptionAlgorithmProvider[VaultEncryptionAlgorithm].EncryptionAlgorithm.ExtraEncryptionDataSize + sizeof(ushort) + MetadataOffsetsSize]; //Example: extra data (28 bytes for AES) + number of files (ushort) + max metadata offsets size
             try
             {
                 stream.ReadExactly(buffer);
@@ -481,11 +481,11 @@ namespace VaultCrypt
         {
             if (data.Length == 0) throw new VaultException("Failed to encrypt vault metadata, provided data was empty");
 
-            byte[] slicedKey = new byte[EncryptionOptions.GetEncryptionProtocolInfo[EncryptionProtocol].keySize];
+            byte[] slicedKey = new byte[EncryptionAlgorithm.GetEncryptionAlgorithmProvider[VaultEncryptionAlgorithm].KeySize];
             try
             {
                 Buffer.BlockCopy(VaultSession.CurrentSession.KEY, 0, slicedKey, 0, slicedKey.Length);
-                return EncryptionOptions.GetEncryptionProtocolInfo[EncryptionProtocol].encryptMethod.Invoke(data, slicedKey);
+                return EncryptionAlgorithm.GetEncryptionAlgorithmProvider[VaultEncryptionAlgorithm].EncryptionAlgorithm.EncryptBytes(data.Span, slicedKey);
             }
             catch(Exception ex)
             {
@@ -499,11 +499,11 @@ namespace VaultCrypt
         {
             if (data.Length == 0) throw new VaultException("Failed to decrypt vault metadata, provided data was empty");
 
-            byte[] slicedKey = new byte[EncryptionOptions.GetEncryptionProtocolInfo[EncryptionProtocol].keySize];
+            byte[] slicedKey = new byte[EncryptionAlgorithm.GetEncryptionAlgorithmProvider[VaultEncryptionAlgorithm].KeySize];
             try
             {
                 Buffer.BlockCopy(VaultSession.CurrentSession.KEY, 0, slicedKey, 0, slicedKey.Length);
-                return EncryptionOptions.GetEncryptionProtocolInfo[EncryptionProtocol].decryptMethod.Invoke(data, slicedKey);
+                return EncryptionAlgorithm.GetEncryptionAlgorithmProvider[VaultEncryptionAlgorithm].EncryptionAlgorithm.DecryptBytes(data.Span, slicedKey);
             }
             catch(Exception ex)
             {
@@ -518,7 +518,7 @@ namespace VaultCrypt
     internal class VaultV0Reader : VaultReader
     {
         internal override byte Version => 0;
-        internal override EncryptionOptions.EncryptionProtocol EncryptionProtocol => EncryptionOptions.EncryptionProtocol.AES256GCM;
+        internal override EncryptionAlgorithm.EncryptionAlgorithmEnum VaultEncryptionAlgorithm => EncryptionAlgorithm.EncryptionAlgorithmEnum.AES256GCM;
     }
 
 

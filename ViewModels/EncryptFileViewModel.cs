@@ -42,8 +42,8 @@ namespace VaultCrypt.ViewModels
             }
         }
 
-        private EncryptionOptions.EncryptionProtocol _selectedProtocol;
-        public EncryptionOptions.EncryptionProtocol SelectedProtocol
+        private EncryptionAlgorithm.EncryptionAlgorithmEnum _selectedProtocol;
+        public EncryptionAlgorithm.EncryptionAlgorithmEnum SelectedProtocol
         {
             get => _selectedProtocol;
             set
@@ -54,7 +54,7 @@ namespace VaultCrypt.ViewModels
             }
         }
 
-        public Array EncryptionProtocolEnumValues => Enum.GetValues(typeof(EncryptionOptions.EncryptionProtocol));
+        public Array EncryptionProtocolEnumValues => Enum.GetValues(typeof(EncryptionAlgorithm.EncryptionAlgorithmEnum));
 
         public ICommand GoBackCommand { get; }
         public ICommand EncryptCommand { get; }
