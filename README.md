@@ -40,5 +40,5 @@ VaultCrypt is a desktop application allowing you to encrypt and store multiple f
 Latest release available at [GitHub releases page](https://github.com/PatrykMarchewka/VaultCrypt/releases)
 
 # Licenses
-VaultCrypt is licensed under [MIT](LICENSE)
+VaultCrypt is licensed under [MIT](LICENSE)  
 This project includes third‑party components. Their licenses are listed in the [THIRD‑PARTY‑NOTICES](THIRD-PARTY-NOTICES.txt) file.
