@@ -7,10 +7,20 @@
     <ImplicitUsings>enable</ImplicitUsings>
     <UseWPF>true</UseWPF>
     <ApplicationIcon>Properties\VaultCryptLogo.ico</ApplicationIcon>
+	<AssemblyName>VaultCrypt</AssemblyName>
+	<RootNamespace>VaultCrypt</RootNamespace>
+	<Version>1.1.0</Version>
+	<FileVersion>1.1.0</FileVersion>
+	<AssemblyVersion>1.1.0</AssemblyVersion>
+	<Product>VaultCrypt</Product>
+	<Description>VaultCrypt is a desktop application allowing you to encrypt and store multiple files inside a single portable vault.</Description>
   </PropertyGroup>
 
   <ItemGroup>
     <Content Include="Properties\VaultCryptLogo.ico" />
   </ItemGroup>
 
+  <ItemGroup>
+    <PackageReference Include="BouncyCastle.Cryptography" Version="2.6.2" />
+  </ItemGroup>
 </Project>

@@ -13,8 +13,8 @@
         </Grid.RowDefinitions>
         
         <StackPanel Grid.Row="0" Orientation="Horizontal" HorizontalAlignment="Center">
-            <TextBlock Text="Encryption protocol"/>
-            <ComboBox ItemsSource="{Binding EncryptionProtocolEnumValues}" SelectedItem="{Binding SelectedProtocol}"/>
+            <TextBlock Text="Encryption algorithm"/>
+            <ComboBox ItemsSource="{Binding EncryptionAlgorithmEnumValues}" SelectedItem="{Binding SelectedAlgorithm}"/>
             <TextBlock Text="Chunk size"/>
             <ComboBox ItemsSource="{Binding ChunkSizePresets}" SelectedItem="{Binding SelectedPreset}">
                 <ComboBox.ItemTemplate>

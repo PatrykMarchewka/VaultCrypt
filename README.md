@@ -1,4 +1,4 @@
-# VaultCrypt
+# <img src="Properties/VaultCryptLogo.ico" style="height: 1em;"> VaultCrypt
 VaultCrypt is a desktop application allowing you to encrypt and store multiple files inside a single portable vault.
 
 ## Table of contents
@@ -20,6 +20,7 @@ VaultCrypt is a desktop application allowing you to encrypt and store multiple f
 - Vault automatically resizes when possible
     - If deleted file is the last entry, the vault shrinks
     - Otherwise the block is securely wiped by zeroing
+- Trimming function included to recreate the entire vault without zeroed blocks and broken metadata
 - Add or remove files through a clean and easy to use interface.
 - Files are split into **1–2048 MB** chunks, each encrypted independently.
 - Clean and intuitive WPF interface.
@@ -34,7 +35,10 @@ VaultCrypt is a desktop application allowing you to encrypt and store multiple f
     - ChaCha20-Poly1305
 - Each vault can contain up to **512 files**
 - Vaults use a custom format `.vlt`
-- Includes a **Trim Vault** option to rebuild the vault without zeroed blocks and broken metadata
 
 ## Releases
 Latest release available at [GitHub releases page](https://github.com/PatrykMarchewka/VaultCrypt/releases)
+
+# Licenses
+VaultCrypt is licensed under [MIT](LICENSE)
+This project includes third‑party components. Their licenses are listed in the [THIRD‑PARTY‑NOTICES](THIRD-PARTY-NOTICES.txt) file.

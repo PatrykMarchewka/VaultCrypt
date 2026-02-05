@@ -42,19 +42,19 @@ namespace VaultCrypt.ViewModels
             }
         }
 
-        private EncryptionAlgorithm.EncryptionAlgorithmEnum _selectedProtocol;
-        public EncryptionAlgorithm.EncryptionAlgorithmEnum SelectedProtocol
+        private EncryptionAlgorithm.EncryptionAlgorithmEnum _selectedAlgorithm;
+        public EncryptionAlgorithm.EncryptionAlgorithmEnum SelectedAlgorithm
         {
-            get => _selectedProtocol;
+            get => _selectedAlgorithm;
             set
             {
-                if (_selectedProtocol == value) return;
-                _selectedProtocol = value;
-                OnPropertyChanged(nameof(SelectedProtocol));
+                if (_selectedAlgorithm == value) return;
+                _selectedAlgorithm = value;
+                OnPropertyChanged(nameof(SelectedAlgorithm));
             }
         }
 
-        public Array EncryptionProtocolEnumValues => Enum.GetValues(typeof(EncryptionAlgorithm.EncryptionAlgorithmEnum));
+        public Array EncryptionAlgorithmEnumValues => Enum.GetValues(typeof(EncryptionAlgorithm.EncryptionAlgorithmEnum));
 
         public ICommand GoBackCommand { get; }
         public ICommand EncryptCommand { get; }
@@ -72,7 +72,7 @@ namespace VaultCrypt.ViewModels
             {
                 var context = new ProgressionContext();
                 NavigationRequested?.Invoke(new NavigateToProgressRequest(context));
-                await Encryption.Encrypt(SelectedProtocol, SelectedPreset.SizeInMB, filePath, context);
+                await Encryption.Encrypt(SelectedAlgorithm, SelectedPreset.SizeInMB, filePath, context);
             }
             catch (OperationCanceledException ex)
             {

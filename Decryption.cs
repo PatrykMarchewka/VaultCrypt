@@ -24,14 +24,14 @@ namespace VaultCrypt
             try
             {
                 NormalizedPath filePath = NormalizedPath.From(folderPath + "\\" + Encoding.UTF8.GetString(encryptionOptions.FileName))!;
-                var encryptionProtocol = EncryptionAlgorithm.GetEncryptionAlgorithmProvider[encryptionOptions.EncryptionAlgorithm];
-                ReadOnlyMemory<byte> key = PasswordHelper.GetSlicedKey(encryptionProtocol.KeySize);
+                var encryptionAlgorithmProvider = EncryptionAlgorithm.GetEncryptionAlgorithmProvider[encryptionOptions.EncryptionAlgorithm];
+                ReadOnlyMemory<byte> key = PasswordHelper.GetSlicedKey(encryptionAlgorithmProvider.KeySize);
                 if (!encryptionOptions.IsChunked)
                 {
                     byte[]? decrypted = null;
                     try
                     {
-                        decrypted = DecryptInOneChunk(vaultFS, encryptionOptions.FileSize, key.Span, encryptionProtocol.EncryptionAlgorithm);
+                        decrypted = DecryptInOneChunk(vaultFS, encryptionOptions.FileSize, key.Span, encryptionAlgorithmProvider.EncryptionAlgorithm);
                         File.WriteAllBytes(filePath!, decrypted);
                         context.Progress.Report(new ProgressStatus(1, 1));
                     }
@@ -43,7 +43,7 @@ namespace VaultCrypt
                 else
                 {
                     await using FileStream fileFS = new FileStream(filePath!, FileMode.Create);
-                    await DecryptInMultipleChunks(vaultFS, fileFS, encryptionOptions.ChunkInformation!, encryptionProtocol.EncryptionAlgorithm.ExtraEncryptionDataSize, key, encryptionProtocol.EncryptionAlgorithm, context);
+                    await DecryptInMultipleChunks(vaultFS, fileFS, encryptionOptions.ChunkInformation!, encryptionAlgorithmProvider.EncryptionAlgorithm.ExtraEncryptionDataSize, key, encryptionAlgorithmProvider.EncryptionAlgorithm, context);
                 }
             }
             finally

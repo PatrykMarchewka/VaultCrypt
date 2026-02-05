@@ -23,7 +23,7 @@ namespace VaultCrypt
             internal ushort NameLength => checked((ushort)FileName.Length); //Fixed 2 bytes, length of fileName text
             internal byte[] FileName { get; private set; } //Varying length (read from nameLength), file name with extension!
             internal ulong FileSize { get; private set; } //Fixed 8 bytes, Size in bytes of encrypted file, with extra encryption metadata
-            internal EncryptionAlgorithm.EncryptionAlgorithmEnum EncryptionAlgorithm { get; private set; } //Fixed 1 byte, Encryption protocol enum
+            internal EncryptionAlgorithm.EncryptionAlgorithmEnum EncryptionAlgorithm { get; private set; } //Fixed 1 byte, Encryption algorithm enum
             internal bool IsChunked { get; private set; } //Fixed 1 byte, Whether file is chunked or not
             internal ChunkInformation? ChunkInformation { get; private set; } //Fixed 8 bytes (2 bytes chunk size + 2 bytes total chunks count + 4 bytes final chunk size = 8 bytes)
 
@@ -48,8 +48,6 @@ namespace VaultCrypt
                 if (ChunkInformation is not null) ChunkInformation.Dispose();
                 ChunkInformation = null;
             }
-
-            //V0 = [version][nameLength][fileName][fileSize][encryptionProtocol][chunked][chunkInformation]
         }
 
         internal record ChunkInformation : IDisposable
