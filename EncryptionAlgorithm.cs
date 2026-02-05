@@ -1,4 +1,4 @@
-﻿using Org.BouncyCastle.Crypto.Engines;
+using Org.BouncyCastle.Crypto.Engines;
 using Org.BouncyCastle.Crypto.Modes;
 using Org.BouncyCastle.Crypto.Parameters;
 using System;
@@ -29,16 +29,16 @@ namespace VaultCrypt
 
         internal static readonly Dictionary<EncryptionAlgorithmEnum, IEncryptionAlgorithmProvider> GetEncryptionAlgorithmProvider = new()
         {
-            {EncryptionAlgorithmEnum.AES128GCM, new Aes128GcmProvider() },
-            {EncryptionAlgorithmEnum.AES192GCM, new Aes192GcmProvider() },
-            {EncryptionAlgorithmEnum.AES256GCM, new Aes256GcmProvider() },
-            {EncryptionAlgorithmEnum.AES128CCM, new Aes128CcmProvider() },
-            {EncryptionAlgorithmEnum.AES192CCM, new Aes192CcmProvider() },
-            {EncryptionAlgorithmEnum.AES256CCM, new Aes256CcmProvider() },
-            {EncryptionAlgorithmEnum.ChaCha20Poly1305, new ChaCha20Poly1305Provider() },
-            {EncryptionAlgorithmEnum.AES128EAX, new Aes128EaxProvider() },
-            {EncryptionAlgorithmEnum.AES192EAX, new Aes192EaxProvider() },
-            {EncryptionAlgorithmEnum.AES256EAX, new Aes256EaxProvider() }
+            {EncryptionAlgorithmEnum.AES128GCM, new AesProvider(16, new AesGcm()) },
+            {EncryptionAlgorithmEnum.AES192GCM, new AesProvider(24, new AesGcm()) },
+            {EncryptionAlgorithmEnum.AES256GCM, new AesProvider(32, new AesGcm()) },
+            {EncryptionAlgorithmEnum.AES128CCM, new AesProvider(16, new AesCcm()) },
+            {EncryptionAlgorithmEnum.AES192CCM, new AesProvider(24, new AesCcm()) },
+            {EncryptionAlgorithmEnum.AES256CCM, new AesProvider(32, new AesCcm()) },
+            {EncryptionAlgorithmEnum.ChaCha20Poly1305, new ChaCha20Provider(32, new ChaCha20Poly1305()) },
+            {EncryptionAlgorithmEnum.AES128EAX, new AesProvider(16, new AesEax()) },
+            {EncryptionAlgorithmEnum.AES192EAX, new AesProvider(24, new AesEax()) },
+            {EncryptionAlgorithmEnum.AES256EAX, new AesProvider(32, new AesEax()) }
         };
 
         internal interface IEncryptionAlgorithm
@@ -48,13 +48,12 @@ namespace VaultCrypt
             public byte[] DecryptBytes(ReadOnlySpan<byte> data, ReadOnlySpan<byte> key);
         }
 
-        internal interface IEncryptionAlgorithmProvider
-        {
-            public byte KeySize { get; }
-            public IEncryptionAlgorithm EncryptionAlgorithm { get; }
-        }
+        private interface AESAlgorithm : IEncryptionAlgorithm;
+        private interface ChaCha20Algorithm : IEncryptionAlgorithm;
+        private interface TwoFishAlgorithm : IEncryptionAlgorithm;
 
-        internal class AesGcm : IEncryptionAlgorithm
+
+        internal class AesGcm : AESAlgorithm
         {
             public short ExtraEncryptionDataSize => 28;
             public byte[] EncryptBytes(ReadOnlySpan<byte> data, ReadOnlySpan<byte> key)
@@ -122,28 +121,9 @@ namespace VaultCrypt
             }
         }
 
-        internal class Aes128GcmProvider : IEncryptionAlgorithmProvider
-        {
-            public byte KeySize => 16;
-            public IEncryptionAlgorithm EncryptionAlgorithm => new AesGcm();
-
-        }
-
-        internal class Aes192GcmProvider : IEncryptionAlgorithmProvider
-        {
-            public byte KeySize => 24;
-            public IEncryptionAlgorithm EncryptionAlgorithm => new AesGcm();
-        }
-
-        internal class Aes256GcmProvider : IEncryptionAlgorithmProvider
-        {
-            public byte KeySize => 32;
-            public IEncryptionAlgorithm EncryptionAlgorithm => new AesGcm();
-        }
 
 
-
-        internal class AesCcm : IEncryptionAlgorithm
+        internal class AesCcm : AESAlgorithm
         {
             public short ExtraEncryptionDataSize => 28;
             public byte[] EncryptBytes(ReadOnlySpan<byte> data, ReadOnlySpan<byte> key)
@@ -204,26 +184,7 @@ namespace VaultCrypt
             }
         }
 
-        internal class Aes128CcmProvider : IEncryptionAlgorithmProvider
-        {
-            public byte KeySize => 16;
-            public IEncryptionAlgorithm EncryptionAlgorithm => new AesCcm();
-
-        }
-
-        internal class Aes192CcmProvider : IEncryptionAlgorithmProvider
-        {
-            public byte KeySize => 24;
-            public IEncryptionAlgorithm EncryptionAlgorithm => new AesCcm();
-        }
-
-        internal class Aes256CcmProvider : IEncryptionAlgorithmProvider
-        {
-            public byte KeySize => 32;
-            public IEncryptionAlgorithm EncryptionAlgorithm => new AesCcm();
-        }
-
-        internal class ChaCha20Poly1305 : IEncryptionAlgorithm
+        internal class ChaCha20Poly1305 : ChaCha20Algorithm
         {
             public short ExtraEncryptionDataSize => 28;
             public byte[] EncryptBytes(ReadOnlySpan<byte> data, ReadOnlySpan<byte> key)
@@ -284,13 +245,7 @@ namespace VaultCrypt
             }
         }
 
-        internal class ChaCha20Poly1305Provider : IEncryptionAlgorithmProvider
-        {
-            public byte KeySize => 32;
-            public IEncryptionAlgorithm EncryptionAlgorithm => new ChaCha20Poly1305();
-        }
-
-        internal class AesEax : IEncryptionAlgorithm
+        internal class AesEax : AESAlgorithm
         {
             public short ExtraEncryptionDataSize => 28;
 
@@ -360,22 +315,47 @@ namespace VaultCrypt
         }
 
         internal class Aes128EaxProvider : IEncryptionAlgorithmProvider
-        {
-            public byte KeySize => 16;
-            public IEncryptionAlgorithm EncryptionAlgorithm => new AesEax();
 
+
+
+        internal interface IEncryptionAlgorithmProvider
+        {
+            public byte KeySize { get; }
+            public IEncryptionAlgorithm EncryptionAlgorithm { get; }
         }
 
-        internal class Aes192EaxProvider : IEncryptionAlgorithmProvider
+        private class AesProvider : IEncryptionAlgorithmProvider
         {
-            public byte KeySize => 24;
-            public IEncryptionAlgorithm EncryptionAlgorithm => new AesEax();
+            public byte KeySize { get; }
+
+            public IEncryptionAlgorithm EncryptionAlgorithm { get; }
+
+            internal AesProvider(byte keySize, AESAlgorithm algorithm)
+            {
+                ArgumentNullException.ThrowIfNull(keySize);
+                ArgumentNullException.ThrowIfNull(algorithm);
+                if (keySize is not 16 and not 24 and not 32) throw new ArgumentOutOfRangeException(nameof(keySize));
+
+                KeySize = keySize;
+                EncryptionAlgorithm = algorithm;
+            }
         }
 
-        internal class Aes256EaxProvider : IEncryptionAlgorithmProvider
+        private class ChaCha20Provider : IEncryptionAlgorithmProvider
         {
-            public byte KeySize => 32;
-            public IEncryptionAlgorithm EncryptionAlgorithm => new AesEax();
+            public byte KeySize { get; }
+
+            public IEncryptionAlgorithm EncryptionAlgorithm { get; }
+
+            internal ChaCha20Provider(byte keySize, ChaCha20Algorithm algorithm)
+            {
+                ArgumentNullException.ThrowIfNull(keySize);
+                ArgumentNullException.ThrowIfNull(algorithm);
+                if (keySize is not 32) throw new ArgumentOutOfRangeException(nameof(keySize));
+
+                KeySize = keySize;
+                EncryptionAlgorithm = algorithm;
+            }
         }
 
     }
