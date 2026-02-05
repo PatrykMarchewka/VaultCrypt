@@ -32,6 +32,7 @@ VaultCrypt is a desktop application allowing you to encrypt and store multiple f
 - Supported encryption algorithms:
     - AES-GCM 128/192/256 **(AES-256-GCM used for vault metadata)**
     - AES-CCM 128/192/256
+    - AES-EAX 128/192/256
     - ChaCha20-Poly1305
 - Each vault can contain up to **512 files**
 - Vaults use a custom format `.vlt`
