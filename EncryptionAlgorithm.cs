@@ -1,4 +1,4 @@
-using Org.BouncyCastle.Crypto.Engines;
+﻿using Org.BouncyCastle.Crypto.Engines;
 using Org.BouncyCastle.Crypto.Modes;
 using Org.BouncyCastle.Crypto.Parameters;
 using System;
@@ -24,7 +24,10 @@ namespace VaultCrypt
             ChaCha20Poly1305,
             AES128EAX,
             AES192EAX,
-            AES256EAX
+            AES256EAX,
+            Twofish128CTR,
+            Twofish192CTR,
+            Twofish256CTR
         }
 
         internal static readonly Dictionary<EncryptionAlgorithmEnum, IEncryptionAlgorithmProvider> GetEncryptionAlgorithmProvider = new()
@@ -39,7 +42,28 @@ namespace VaultCrypt
             {EncryptionAlgorithmEnum.AES128EAX, new AesProvider(16, new AesEax()) },
             {EncryptionAlgorithmEnum.AES192EAX, new AesProvider(24, new AesEax()) },
             {EncryptionAlgorithmEnum.AES256EAX, new AesProvider(32, new AesEax()) }
+            {EncryptionAlgorithmEnum.Twofish128CTR, new TwofishProvider(16, new Twofish()) },
+            {EncryptionAlgorithmEnum.Twofish128CTR, new TwofishProvider(24, new Twofish()) },
+            {EncryptionAlgorithmEnum.Twofish128CTR, new TwofishProvider(32, new Twofish()) }
         };
+
+        internal static byte[] CalculateHMAC(ReadOnlySpan<byte> key, params byte[][] bytes)
+        {
+            byte[] hash = new byte[64];
+            try
+            {
+                hash = SHA3_512.HashData(key);
+                using var hmac = IncrementalHash.CreateHMAC(HashAlgorithmName.SHA3_512, hash);
+                foreach (var chunk in bytes) hmac.AppendData(chunk);
+                return hmac.GetHashAndReset();
+            }
+            finally
+            {
+                CryptographicOperations.ZeroMemory(hash);
+                foreach (var chunk in bytes) CryptographicOperations.ZeroMemory(chunk);
+            }
+            
+        }
 
         internal interface IEncryptionAlgorithm
         {
@@ -314,7 +338,77 @@ namespace VaultCrypt
             }
         }
 
-        internal class Aes128EaxProvider : IEncryptionAlgorithmProvider
+        internal class Twofish : TwoFishAlgorithm
+        {
+            public short ExtraEncryptionDataSize => 76;
+
+            public byte[] EncryptBytes(ReadOnlySpan<byte> data, ReadOnlySpan<byte> key)
+            {
+                if (data.Length == 0) throw new VaultException("Failed to encrypt bytes, provided data was empty");
+                if (key.Length == 0) throw new VaultException("Failed to encrypt bytes, provided key was empty");
+
+                byte[] iv = new byte[12];
+                byte[] authentication = new byte[64];
+                byte[] output = new byte[data.Length];
+                byte[] encrypted = new byte[iv.Length + output.Length + authentication.Length];
+                try
+                {
+                    RandomNumberGenerator.Fill(iv);
+                    var cipher = new KCtrBlockCipher(new TwofishEngine());
+                    var parameters = new ParametersWithIV(new KeyParameter(key), iv);
+                    cipher.Init(true, parameters);
+                    cipher.ProcessBytes(data, output);
+                    authentication = CalculateHMAC(key, iv, output);
+                    Buffer.BlockCopy(iv, 0, encrypted, 0, iv.Length);
+                    Buffer.BlockCopy(output, 0, encrypted, iv.Length, output.Length);
+                    Buffer.BlockCopy(authentication, 0, encrypted, iv.Length + output.Length, authentication.Length);
+                    return encrypted;
+                }
+                catch (Exception ex)
+                {
+                    CryptographicOperations.ZeroMemory(encrypted);
+                    throw VaultException.EncryptionFailed(ex);
+                }
+                finally
+                {
+                    CryptographicOperations.ZeroMemory(iv);
+                    CryptographicOperations.ZeroMemory(authentication);
+                    CryptographicOperations.ZeroMemory(output);
+                }
+            }
+
+            public byte[] DecryptBytes(ReadOnlySpan<byte> data, ReadOnlySpan<byte> key)
+            {
+                if (data.Length == 0) throw new VaultException("Failed to decrypt bytes, provided data was empty");
+                if (key.Length == 0) throw new VaultException("Failed to decrypt bytes, provided key was empty");
+
+                ReadOnlySpan<byte> iv = data.Slice(0, 12);
+                ReadOnlySpan<byte> encryptedData = data[12..^64];
+                ReadOnlySpan<byte> tag = data[^64..];
+
+                byte[] decrypted = new byte[encryptedData.Length];
+                byte[] calculatedTag = new byte[64];
+                try
+                {
+                    calculatedTag = CalculateHMAC(key, iv.ToArray(), encryptedData.ToArray());
+                    if (!CryptographicOperations.FixedTimeEquals(tag, calculatedTag)) throw new VaultException("Wrong HMAC authentication tag");
+                    var cipher = new KCtrBlockCipher(new TwofishEngine());
+                    var parameters = new ParametersWithIV(new KeyParameter(key), iv);
+                    cipher.Init(false, parameters);
+                    cipher.ProcessBytes(encryptedData, decrypted);
+                    return decrypted;
+                }
+                catch (Exception ex)
+                {
+                    CryptographicOperations.ZeroMemory(decrypted);
+                    throw VaultException.DecryptionFailed(ex);
+                }
+                finally
+                {
+                    CryptographicOperations.ZeroMemory(calculatedTag);
+                }
+            }
+        }
 
 
 
@@ -358,5 +452,21 @@ namespace VaultCrypt
             }
         }
 
+        private class TwofishProvider : IEncryptionAlgorithmProvider
+        {
+            public byte KeySize { get; }
+
+            public IEncryptionAlgorithm EncryptionAlgorithm { get; }
+
+            internal TwofishProvider(byte keySize, TwoFishAlgorithm algorithm)
+            {
+                ArgumentNullException.ThrowIfNull(keySize);
+                ArgumentNullException.ThrowIfNull(algorithm);
+                if (keySize is not 16 and not 24 and not 32) throw new ArgumentOutOfRangeException(nameof(keySize));
+
+                KeySize = keySize;
+                EncryptionAlgorithm = algorithm;
+            }
+        }
     }
 }
