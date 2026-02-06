@@ -36,7 +36,16 @@ namespace VaultCrypt
             Serpent256GCM,
             Serpent128CTR,
             Serpent192CTR,
-            Serpent256CTR
+            Serpent256CTR,
+            Camelia128GCM,
+            Camelia192GCM,
+            Camelia256GCM,
+            Camelia128OCB,
+            Camelia192OCB,
+            Camelia256OCB,
+            Camelia128CTR,
+            Camelia192CTR,
+            Camelia256CTR
         }
 
         internal static readonly Dictionary<EncryptionAlgorithmEnum, IEncryptionAlgorithmProvider> GetEncryptionAlgorithmProvider = new()
@@ -62,7 +71,16 @@ namespace VaultCrypt
             {EncryptionAlgorithmEnum.Serpent256GCM, new SerpentProvider(32, new SerpentGcm()) },
             {EncryptionAlgorithmEnum.Serpent128CTR, new SerpentProvider(16, new SerpentCtr()) },
             {EncryptionAlgorithmEnum.Serpent192CTR, new SerpentProvider(24, new SerpentCtr()) },
-            {EncryptionAlgorithmEnum.Serpent256CTR, new SerpentProvider(32, new SerpentCtr()) }
+            {EncryptionAlgorithmEnum.Serpent256CTR, new SerpentProvider(32, new SerpentCtr()) },
+            {EncryptionAlgorithmEnum.Camelia128GCM, new CameliaProvider(16, new CameliaGcm()) },
+            {EncryptionAlgorithmEnum.Camelia192GCM, new CameliaProvider(24, new CameliaGcm()) },
+            {EncryptionAlgorithmEnum.Camelia256GCM, new CameliaProvider(32, new CameliaGcm()) },
+            {EncryptionAlgorithmEnum.Camelia128OCB, new CameliaProvider(16, new CameliaOcb()) },
+            {EncryptionAlgorithmEnum.Camelia192OCB, new CameliaProvider(24, new CameliaOcb()) },
+            {EncryptionAlgorithmEnum.Camelia256OCB, new CameliaProvider(32, new CameliaOcb()) },
+            {EncryptionAlgorithmEnum.Camelia128CTR, new CameliaProvider(16, new CameliaCtr()) },
+            {EncryptionAlgorithmEnum.Camelia192CTR, new CameliaProvider(24, new CameliaCtr()) },
+            {EncryptionAlgorithmEnum.Camelia256CTR, new CameliaProvider(32, new CameliaCtr()) }
         };
 
         internal static byte[] CalculateHMAC(ReadOnlySpan<byte> key, params byte[][] bytes)
@@ -94,6 +112,7 @@ namespace VaultCrypt
         private interface TwoFishAlgorithm : IEncryptionAlgorithm;
         private interface ThreeFishAlgorithm : IEncryptionAlgorithm;
         private interface SerpentAlgorithm : IEncryptionAlgorithm;
+        private interface CameliaAlgorithm : IEncryptionAlgorithm;
 
 
         internal class AesGcm : AESAlgorithm
@@ -679,6 +698,226 @@ namespace VaultCrypt
             }
         }
 
+        internal class CameliaGcm : CameliaAlgorithm
+        {
+            public short ExtraEncryptionDataSize => 28;
+
+            public byte[] EncryptBytes(ReadOnlySpan<byte> data, ReadOnlySpan<byte> key)
+            {
+                if (data.Length == 0) throw new VaultException("Failed to encrypt bytes, provided data was empty");
+                if (key.Length == 0) throw new VaultException("Failed to encrypt bytes, provided key was empty");
+
+                byte[] iv = new byte[12];
+                byte authenticationLength = 16;
+                byte[] output = new byte[data.Length + authenticationLength];
+                byte[] encrypted = new byte[iv.Length + output.Length];
+                try
+                {
+                    RandomNumberGenerator.Fill(iv);
+                    var cipher = new GcmBlockCipher(new CamelliaEngine());
+                    var parameters = new AeadParameters(new KeyParameter(key), authenticationLength * 8, iv);
+                    cipher.Init(true, parameters);
+                    int length = cipher.ProcessBytes(data, output);
+                    cipher.DoFinal(output, length);
+                    Buffer.BlockCopy(iv, 0, encrypted, 0, iv.Length);
+                    Buffer.BlockCopy(output, 0, encrypted, iv.Length, output.Length);
+                    return encrypted;
+                }
+                catch (Exception ex)
+                {
+                    CryptographicOperations.ZeroMemory(encrypted);
+                    throw VaultException.EncryptionFailed(ex);
+                }
+                finally
+                {
+                    CryptographicOperations.ZeroMemory(iv);
+                    CryptographicOperations.ZeroMemory(output);
+                }
+            }
+
+            public byte[] DecryptBytes(ReadOnlySpan<byte> data, ReadOnlySpan<byte> key)
+            {
+                if (data.Length == 0) throw new VaultException("Failed to decrypt bytes, provided data was empty");
+                if (key.Length == 0) throw new VaultException("Failed to decrypt bytes, provided key was empty");
+
+                ReadOnlySpan<byte> iv = data.Slice(0, 12);
+                byte authenticationLength = 16;
+                ReadOnlySpan<byte> encryptedData = data[12..];
+
+                byte[] decrypted = new byte[encryptedData.Length];
+                byte[] ivBytes = iv.ToArray();
+                try
+                {
+                    var cipher = new GcmBlockCipher(new CamelliaEngine());
+                    var parameters = new AeadParameters(new KeyParameter(key), authenticationLength * 8, ivBytes);
+                    cipher.Init(false, parameters);
+                    int length = cipher.ProcessBytes(encryptedData, decrypted);
+                    cipher.DoFinal(decrypted, length);
+                    return decrypted[..^authenticationLength];
+                }
+                catch (Exception ex)
+                {
+                    CryptographicOperations.ZeroMemory(decrypted);
+                    throw VaultException.DecryptionFailed(ex);
+                }
+                finally
+                {
+                    CryptographicOperations.ZeroMemory(ivBytes);
+                }
+            }
+        }
+
+        internal class CameliaOcb : CameliaAlgorithm
+        {
+            public short ExtraEncryptionDataSize => 28;
+
+            public byte[] EncryptBytes(ReadOnlySpan<byte> data, ReadOnlySpan<byte> key)
+            {
+                if (data.Length == 0) throw new VaultException("Failed to encrypt bytes, provided data was empty");
+                if (key.Length == 0) throw new VaultException("Failed to encrypt bytes, provided key was empty");
+
+                byte[] iv = new byte[12];
+                byte authenticationLength = 16;
+                byte[] output = new byte[data.Length + authenticationLength];
+                byte[] encrypted = new byte[iv.Length + output.Length];
+                try
+                {
+                    RandomNumberGenerator.Fill(iv);
+                    var cipher = new OcbBlockCipher(new CamelliaEngine(), new CamelliaEngine());
+                    var parameters = new AeadParameters(new KeyParameter(key), authenticationLength * 8, iv);
+                    cipher.Init(true, parameters);
+                    int length = cipher.ProcessBytes(data, output);
+                    cipher.DoFinal(output, length);
+                    Buffer.BlockCopy(iv, 0, encrypted, 0, iv.Length);
+                    Buffer.BlockCopy(output, 0, encrypted, iv.Length, output.Length);
+                    return encrypted;
+                }
+                catch (Exception ex)
+                {
+                    CryptographicOperations.ZeroMemory(encrypted);
+                    throw VaultException.EncryptionFailed(ex);
+                }
+                finally
+                {
+                    CryptographicOperations.ZeroMemory(iv);
+                    CryptographicOperations.ZeroMemory(output);
+                }
+            }
+
+            public byte[] DecryptBytes(ReadOnlySpan<byte> data, ReadOnlySpan<byte> key)
+            {
+                if (data.Length == 0) throw new VaultException("Failed to decrypt bytes, provided data was empty");
+                if (key.Length == 0) throw new VaultException("Failed to decrypt bytes, provided key was empty");
+
+                ReadOnlySpan<byte> iv = data.Slice(0, 12);
+                byte authenticationLength = 16;
+                ReadOnlySpan<byte> encryptedData = data[12..];
+
+                byte[] decrypted = new byte[encryptedData.Length];
+                byte[] ivBytes = iv.ToArray();
+                try
+                {
+                    var cipher = new OcbBlockCipher(new CamelliaEngine(), new CamelliaEngine());
+                    var parameters = new AeadParameters(new KeyParameter(key), authenticationLength * 8, ivBytes);
+                    cipher.Init(false, parameters);
+                    int length = cipher.ProcessBytes(encryptedData, decrypted);
+                    cipher.DoFinal(decrypted, length);
+                    return decrypted[..^authenticationLength];
+                }
+                catch (Exception ex)
+                {
+                    CryptographicOperations.ZeroMemory(decrypted);
+                    throw VaultException.DecryptionFailed(ex);
+                }
+                finally
+                {
+                    CryptographicOperations.ZeroMemory(ivBytes);
+                }
+            }
+        }
+
+        internal class CameliaCtr : CameliaAlgorithm
+        {
+            public short ExtraEncryptionDataSize => 76;
+
+            public byte[] EncryptBytes(ReadOnlySpan<byte> data, ReadOnlySpan<byte> key)
+            {
+                if (data.Length == 0) throw new VaultException("Failed to encrypt bytes, provided data was empty");
+                if (key.Length == 0) throw new VaultException("Failed to encrypt bytes, provided key was empty");
+
+                byte[] iv = new byte[12];
+                byte[] authentication = new byte[64];
+                byte[] output = new byte[data.Length];
+                byte[] encrypted = new byte[iv.Length + output.Length + authentication.Length];
+                try
+                {
+                    RandomNumberGenerator.Fill(iv);
+                    var cipher = new KCtrBlockCipher(new CamelliaEngine());
+                    var parameters = new ParametersWithIV(new KeyParameter(key), iv);
+                    cipher.Init(true, parameters);
+                    cipher.ProcessBytes(data, output);
+                    authentication = CalculateHMAC(key, iv, output);
+                    Buffer.BlockCopy(iv, 0, encrypted, 0, iv.Length);
+                    Buffer.BlockCopy(output, 0, encrypted, iv.Length, output.Length);
+                    Buffer.BlockCopy(authentication, 0, encrypted, iv.Length + output.Length, authentication.Length);
+                    return encrypted;
+                }
+                catch (Exception ex)
+                {
+                    CryptographicOperations.ZeroMemory(encrypted);
+                    throw VaultException.EncryptionFailed(ex);
+                }
+                finally
+                {
+                    CryptographicOperations.ZeroMemory(iv);
+                    CryptographicOperations.ZeroMemory(authentication);
+                    CryptographicOperations.ZeroMemory(output);
+                }
+            }
+
+            public byte[] DecryptBytes(ReadOnlySpan<byte> data, ReadOnlySpan<byte> key)
+            {
+                if (data.Length == 0) throw new VaultException("Failed to decrypt bytes, provided data was empty");
+                if (key.Length == 0) throw new VaultException("Failed to decrypt bytes, provided key was empty");
+
+                ReadOnlySpan<byte> iv = data.Slice(0, 12);
+                ReadOnlySpan<byte> encryptedData = data[12..^64];
+                ReadOnlySpan<byte> tag = data[^64..];
+
+                byte[] decrypted = new byte[encryptedData.Length];
+                byte[] calculatedTag = new byte[64];
+                try
+                {
+                    byte[] ivTemp = iv.ToArray();
+                    byte[] encryptedTemp = encryptedData.ToArray();
+                    try
+                    {
+                        calculatedTag = CalculateHMAC(key, ivTemp, encryptedTemp);
+                    }
+                    finally
+                    {
+                        CryptographicOperations.ZeroMemory(ivTemp);
+                        CryptographicOperations.ZeroMemory(encryptedTemp);
+                    }
+                    if (!CryptographicOperations.FixedTimeEquals(tag, calculatedTag)) throw new VaultException("Wrong HMAC authentication tag");
+                    var cipher = new KCtrBlockCipher(new CamelliaEngine());
+                    var parameters = new ParametersWithIV(new KeyParameter(key), iv);
+                    cipher.Init(false, parameters);
+                    cipher.ProcessBytes(encryptedData, decrypted);
+                    return decrypted;
+                }
+                catch (Exception ex)
+                {
+                    CryptographicOperations.ZeroMemory(decrypted);
+                    throw VaultException.DecryptionFailed(ex);
+                }
+                finally
+                {
+                    CryptographicOperations.ZeroMemory(calculatedTag);
+                }
+            }
+        }
+
 
         internal interface IEncryptionAlgorithmProvider
         {
@@ -761,6 +1000,23 @@ namespace VaultCrypt
             public IEncryptionAlgorithm EncryptionAlgorithm { get; }
 
             internal SerpentProvider(byte keySize, SerpentAlgorithm algorithm)
+            {
+                ArgumentNullException.ThrowIfNull(keySize);
+                ArgumentNullException.ThrowIfNull(algorithm);
+                if (keySize is not 16 and not 24 and not 32) throw new ArgumentOutOfRangeException(nameof(keySize));
+
+                KeySize = keySize;
+                EncryptionAlgorithm = algorithm;
+            }
+        }
+
+        private class CameliaProvider : IEncryptionAlgorithmProvider
+        {
+            public byte KeySize { get; }
+
+            public IEncryptionAlgorithm EncryptionAlgorithm { get; }
+
+            internal CameliaProvider(byte keySize, CameliaAlgorithm algorithm)
             {
                 ArgumentNullException.ThrowIfNull(keySize);
                 ArgumentNullException.ThrowIfNull(algorithm);
