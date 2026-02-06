@@ -409,18 +409,16 @@ namespace VaultCrypt
                 byte[] calculatedTag = new byte[64];
                 try
                 {
-                    byte[] ivTemp = null!;
-                    byte[] encryptedTemp = null!;
+                    byte[] ivTemp = iv.ToArray();
+                    byte[] encryptedTemp = encryptedData.ToArray();
                     try
                     {
-                        ivTemp = iv.ToArray();
-                        encryptedTemp = encryptedData.ToArray();
                         calculatedTag = CalculateHMAC(key, ivTemp, encryptedTemp);
                     }
                     finally
                     {
-                        if (ivTemp is not null) CryptographicOperations.ZeroMemory(ivTemp);
-                        if (encryptedTemp is not null) CryptographicOperations.ZeroMemory(encryptedTemp);
+                        CryptographicOperations.ZeroMemory(ivTemp);
+                        CryptographicOperations.ZeroMemory(encryptedTemp);
                     }
                     if (!CryptographicOperations.FixedTimeEquals(tag, calculatedTag)) throw new VaultException("Wrong HMAC authentication tag");
                     var cipher = new KCtrBlockCipher(new TwofishEngine());
@@ -500,18 +498,16 @@ namespace VaultCrypt
                 byte[] calculatedTag = new byte[64];
                 try
                 {
-                    byte[] ivTemp = null!;
-                    byte[] encryptedTemp = null!;
+                    byte[] ivTemp = iv.ToArray();
+                    byte[] encryptedTemp = encryptedData.ToArray();
                     try
                     {
-                        ivTemp = iv.ToArray();
-                        encryptedTemp = encryptedData.ToArray();
                         calculatedTag = CalculateHMAC(key, ivTemp, encryptedTemp);
                     }
                     finally
                     {
-                        if (ivTemp is not null) CryptographicOperations.ZeroMemory(ivTemp);
-                        if (encryptedTemp is not null) CryptographicOperations.ZeroMemory(encryptedTemp);
+                        CryptographicOperations.ZeroMemory(ivTemp);
+                        CryptographicOperations.ZeroMemory(encryptedTemp);
                     }
                     if (!CryptographicOperations.FixedTimeEquals(tag, calculatedTag)) throw new VaultException("Wrong HMAC authentication tag");
                     var cipher = new KCtrBlockCipher(new ThreefishEngine(blockSizeInBits));
@@ -653,18 +649,16 @@ namespace VaultCrypt
                 byte[] calculatedTag = new byte[64];
                 try
                 {
-                    byte[] ivTemp = null!;
-                    byte[] encryptedTemp = null!;
+                    byte[] ivTemp = iv.ToArray();
+                    byte[] encryptedTemp = encryptedData.ToArray();
                     try
                     {
-                        ivTemp = iv.ToArray();
-                        encryptedTemp = encryptedData.ToArray();
                         calculatedTag = CalculateHMAC(key, ivTemp, encryptedTemp);
                     }
                     finally
                     {
-                        if (ivTemp is not null) CryptographicOperations.ZeroMemory(ivTemp);
-                        if (encryptedTemp is not null) CryptographicOperations.ZeroMemory(encryptedTemp);
+                        CryptographicOperations.ZeroMemory(ivTemp);
+                        CryptographicOperations.ZeroMemory(encryptedTemp);
                     }
                     if (!CryptographicOperations.FixedTimeEquals(tag, calculatedTag)) throw new VaultException("Wrong HMAC authentication tag");
                     var cipher = new KCtrBlockCipher(new SerpentEngine());
