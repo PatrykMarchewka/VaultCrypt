@@ -128,7 +128,7 @@ namespace VaultCrypt.ViewModels
                 }
                 catch(Exception ex)
                 {
-                    throw new VaultException("Failed to decrypt selected file");
+                    throw new VaultException("Failed to decrypt selected file", ex);
                 }
             }
         }
