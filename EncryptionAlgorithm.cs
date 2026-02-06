@@ -1,4 +1,4 @@
-﻿using Org.BouncyCastle.Crypto.Engines;
+using Org.BouncyCastle.Crypto.Engines;
 using Org.BouncyCastle.Crypto.Modes;
 using Org.BouncyCastle.Crypto.Parameters;
 using System;
@@ -41,10 +41,10 @@ namespace VaultCrypt
             {EncryptionAlgorithmEnum.ChaCha20Poly1305, new ChaCha20Provider(32, new ChaCha20Poly1305()) },
             {EncryptionAlgorithmEnum.AES128EAX, new AesProvider(16, new AesEax()) },
             {EncryptionAlgorithmEnum.AES192EAX, new AesProvider(24, new AesEax()) },
-            {EncryptionAlgorithmEnum.AES256EAX, new AesProvider(32, new AesEax()) }
-            {EncryptionAlgorithmEnum.Twofish128CTR, new TwofishProvider(16, new Twofish()) },
-            {EncryptionAlgorithmEnum.Twofish128CTR, new TwofishProvider(24, new Twofish()) },
-            {EncryptionAlgorithmEnum.Twofish128CTR, new TwofishProvider(32, new Twofish()) }
+            {EncryptionAlgorithmEnum.AES256EAX, new AesProvider(32, new AesEax()) },
+            {EncryptionAlgorithmEnum.Twofish128CTR, new TwofishProvider(16, new TwofishCtr()) },
+            {EncryptionAlgorithmEnum.Twofish192CTR, new TwofishProvider(24, new TwofishCtr()) },
+            {EncryptionAlgorithmEnum.Twofish256CTR, new TwofishProvider(32, new TwofishCtr()) }
         };
 
         internal static byte[] CalculateHMAC(ReadOnlySpan<byte> key, params byte[][] bytes)
@@ -338,7 +338,7 @@ namespace VaultCrypt
             }
         }
 
-        internal class Twofish : TwoFishAlgorithm
+        internal class TwofishCtr : TwoFishAlgorithm
         {
             public short ExtraEncryptionDataSize => 76;
 
