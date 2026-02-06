@@ -31,6 +31,12 @@ namespace VaultCrypt
             Threefish256CTR,
             Threefish512CTR,
             Threefish1024CTR,
+            Serpent128GCM,
+            Serpent192GCM,
+            Serpent256GCM,
+            Serpent128CTR,
+            Serpent192CTR,
+            Serpent256CTR
         }
 
         internal static readonly Dictionary<EncryptionAlgorithmEnum, IEncryptionAlgorithmProvider> GetEncryptionAlgorithmProvider = new()
@@ -50,7 +56,13 @@ namespace VaultCrypt
             {EncryptionAlgorithmEnum.Twofish256CTR, new TwofishProvider(32, new TwofishCtr()) },
             {EncryptionAlgorithmEnum.Threefish256CTR, new ThreefishProvider(32, new ThreefishCtr(256)) },
             {EncryptionAlgorithmEnum.Threefish512CTR, new ThreefishProvider(64, new ThreefishCtr(512)) },
-            {EncryptionAlgorithmEnum.Threefish1024CTR, new ThreefishProvider(128, new ThreefishCtr(1024)) }
+            {EncryptionAlgorithmEnum.Threefish1024CTR, new ThreefishProvider(128, new ThreefishCtr(1024)) },
+            {EncryptionAlgorithmEnum.Serpent128GCM, new SerpentProvider(16, new SerpentGcm()) },
+            {EncryptionAlgorithmEnum.Serpent192GCM, new SerpentProvider(24, new SerpentGcm()) },
+            {EncryptionAlgorithmEnum.Serpent256GCM, new SerpentProvider(32, new SerpentGcm()) },
+            {EncryptionAlgorithmEnum.Serpent128CTR, new SerpentProvider(16, new SerpentCtr()) },
+            {EncryptionAlgorithmEnum.Serpent192CTR, new SerpentProvider(24, new SerpentCtr()) },
+            {EncryptionAlgorithmEnum.Serpent256CTR, new SerpentProvider(32, new SerpentCtr()) }
         };
 
         internal static byte[] CalculateHMAC(ReadOnlySpan<byte> key, params byte[][] bytes)
@@ -81,6 +93,7 @@ namespace VaultCrypt
         private interface ChaCha20Algorithm : IEncryptionAlgorithm;
         private interface TwoFishAlgorithm : IEncryptionAlgorithm;
         private interface ThreeFishAlgorithm : IEncryptionAlgorithm;
+        private interface SerpentAlgorithm : IEncryptionAlgorithm;
 
 
         internal class AesGcm : AESAlgorithm
@@ -519,6 +532,158 @@ namespace VaultCrypt
             }
         }
 
+        internal class SerpentGcm : SerpentAlgorithm
+        {
+            public short ExtraEncryptionDataSize => 28;
+
+            public byte[] EncryptBytes(ReadOnlySpan<byte> data, ReadOnlySpan<byte> key)
+            {
+                if (data.Length == 0) throw new VaultException("Failed to encrypt bytes, provided data was empty");
+                if (key.Length == 0) throw new VaultException("Failed to encrypt bytes, provided key was empty");
+
+                byte[] iv = new byte[12];
+                byte authenticationLength = 16;
+                byte[] output = new byte[data.Length + authenticationLength];
+                byte[] encrypted = new byte[iv.Length + output.Length];
+                try
+                {
+                    RandomNumberGenerator.Fill(iv);
+                    var cipher = new GcmBlockCipher(new SerpentEngine());
+                    var parameters = new AeadParameters(new KeyParameter(key), authenticationLength * 8, iv);
+                    cipher.Init(true, parameters);
+                    int length = cipher.ProcessBytes(data, output);
+                    cipher.DoFinal(output, length);
+                    Buffer.BlockCopy(iv, 0, encrypted, 0, iv.Length);
+                    Buffer.BlockCopy(output, 0, encrypted, iv.Length, output.Length);
+                    return encrypted;
+                }
+                catch (Exception ex)
+                {
+                    CryptographicOperations.ZeroMemory(encrypted);
+                    throw VaultException.EncryptionFailed(ex);
+                }
+                finally
+                {
+                    CryptographicOperations.ZeroMemory(iv);
+                    CryptographicOperations.ZeroMemory(output);
+                }
+            }
+
+            public byte[] DecryptBytes(ReadOnlySpan<byte> data, ReadOnlySpan<byte> key)
+            {
+                if (data.Length == 0) throw new VaultException("Failed to decrypt bytes, provided data was empty");
+                if (key.Length == 0) throw new VaultException("Failed to decrypt bytes, provided key was empty");
+
+                ReadOnlySpan<byte> iv = data.Slice(0, 12);
+                byte authenticationLength = 16;
+                ReadOnlySpan<byte> encryptedData = data[12..];
+
+                byte[] decrypted = new byte[encryptedData.Length];
+                byte[] ivBytes = iv.ToArray();
+                try
+                {
+                    var cipher = new GcmBlockCipher(new SerpentEngine());
+                    var parameters = new AeadParameters(new KeyParameter(key), authenticationLength * 8, ivBytes);
+                    cipher.Init(false, parameters);
+                    int length = cipher.ProcessBytes(encryptedData, decrypted);
+                    cipher.DoFinal(decrypted, length);
+                    return decrypted[..^authenticationLength];
+                }
+                catch (Exception ex)
+                {
+                    CryptographicOperations.ZeroMemory(decrypted);
+                    throw VaultException.DecryptionFailed(ex);
+                }
+                finally
+                {
+                    CryptographicOperations.ZeroMemory(ivBytes);
+                }
+            }
+        }
+
+        internal class SerpentCtr : SerpentAlgorithm
+        {
+            public short ExtraEncryptionDataSize => 76;
+
+            public byte[] EncryptBytes(ReadOnlySpan<byte> data, ReadOnlySpan<byte> key)
+            {
+                if (data.Length == 0) throw new VaultException("Failed to encrypt bytes, provided data was empty");
+                if (key.Length == 0) throw new VaultException("Failed to encrypt bytes, provided key was empty");
+
+                byte[] iv = new byte[12];
+                byte[] authentication = new byte[64];
+                byte[] output = new byte[data.Length];
+                byte[] encrypted = new byte[iv.Length + output.Length + authentication.Length];
+                try
+                {
+                    RandomNumberGenerator.Fill(iv);
+                    var cipher = new KCtrBlockCipher(new SerpentEngine());
+                    var parameters = new ParametersWithIV(new KeyParameter(key), iv);
+                    cipher.Init(true, parameters);
+                    cipher.ProcessBytes(data, output);
+                    authentication = CalculateHMAC(key, iv, output);
+                    Buffer.BlockCopy(iv, 0, encrypted, 0, iv.Length);
+                    Buffer.BlockCopy(output, 0, encrypted, iv.Length, output.Length);
+                    Buffer.BlockCopy(authentication, 0, encrypted, iv.Length + output.Length, authentication.Length);
+                    return encrypted;
+                }
+                catch (Exception ex)
+                {
+                    CryptographicOperations.ZeroMemory(encrypted);
+                    throw VaultException.EncryptionFailed(ex);
+                }
+                finally
+                {
+                    CryptographicOperations.ZeroMemory(iv);
+                    CryptographicOperations.ZeroMemory(authentication);
+                    CryptographicOperations.ZeroMemory(output);
+                }
+            }
+
+            public byte[] DecryptBytes(ReadOnlySpan<byte> data, ReadOnlySpan<byte> key)
+            {
+                if (data.Length == 0) throw new VaultException("Failed to decrypt bytes, provided data was empty");
+                if (key.Length == 0) throw new VaultException("Failed to decrypt bytes, provided key was empty");
+
+                ReadOnlySpan<byte> iv = data.Slice(0, 12);
+                ReadOnlySpan<byte> encryptedData = data[12..^64];
+                ReadOnlySpan<byte> tag = data[^64..];
+
+                byte[] decrypted = new byte[encryptedData.Length];
+                byte[] calculatedTag = new byte[64];
+                try
+                {
+                    byte[] ivTemp = null!;
+                    byte[] encryptedTemp = null!;
+                    try
+                    {
+                        ivTemp = iv.ToArray();
+                        encryptedTemp = encryptedData.ToArray();
+                        calculatedTag = CalculateHMAC(key, ivTemp, encryptedTemp);
+                    }
+                    finally
+                    {
+                        if (ivTemp is not null) CryptographicOperations.ZeroMemory(ivTemp);
+                        if (encryptedTemp is not null) CryptographicOperations.ZeroMemory(encryptedTemp);
+                    }
+                    if (!CryptographicOperations.FixedTimeEquals(tag, calculatedTag)) throw new VaultException("Wrong HMAC authentication tag");
+                    var cipher = new KCtrBlockCipher(new SerpentEngine());
+                    var parameters = new ParametersWithIV(new KeyParameter(key), iv);
+                    cipher.Init(false, parameters);
+                    cipher.ProcessBytes(encryptedData, decrypted);
+                    return decrypted;
+                }
+                catch (Exception ex)
+                {
+                    CryptographicOperations.ZeroMemory(decrypted);
+                    throw VaultException.DecryptionFailed(ex);
+                }
+                finally
+                {
+                    CryptographicOperations.ZeroMemory(calculatedTag);
+                }
+            }
+        }
 
 
         internal interface IEncryptionAlgorithmProvider
@@ -589,6 +754,23 @@ namespace VaultCrypt
                 ArgumentNullException.ThrowIfNull(keySize);
                 ArgumentNullException.ThrowIfNull(algorithm);
                 if (keySize is not 32 and not 64 and not 128) throw new ArgumentOutOfRangeException(nameof(keySize));
+
+                KeySize = keySize;
+                EncryptionAlgorithm = algorithm;
+            }
+        }
+
+        private class SerpentProvider : IEncryptionAlgorithmProvider
+        {
+            public byte KeySize { get; }
+
+            public IEncryptionAlgorithm EncryptionAlgorithm { get; }
+
+            internal SerpentProvider(byte keySize, SerpentAlgorithm algorithm)
+            {
+                ArgumentNullException.ThrowIfNull(keySize);
+                ArgumentNullException.ThrowIfNull(algorithm);
+                if (keySize is not 16 and not 24 and not 32) throw new ArgumentOutOfRangeException(nameof(keySize));
 
                 KeySize = keySize;
                 EncryptionAlgorithm = algorithm;
