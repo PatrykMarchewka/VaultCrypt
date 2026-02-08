@@ -33,8 +33,16 @@ VaultCrypt is a desktop application allowing you to encrypt and store multiple f
     - AES-GCM 128/192/256 **(AES-256-GCM used for vault metadata)**
     - AES-CCM 128/192/256
     - AES-EAX 128/192/256
+    - Camelia-GCM 128/192/256
+    - Camelia-OCB 128/192/256
+    - Camelia-CTR 128/192/256
     - ChaCha20-Poly1305
+    - Serpent-GCM 128/192/256
+    - Serpent-CTR 128/192/256
+    - Threefish-CTR 256/512/1024
     - Twofish-CTR 128/192/256
+    - XSalsa20
+    >**Note:** XSalsa20 and all encryption algorithms in CTR mode use SHA3-512 HMAC for authentication
 - Each vault can contain up to **512 files**
 - Vaults use a custom format `.vlt`
 
