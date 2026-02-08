@@ -45,7 +45,8 @@ namespace VaultCrypt
             Camelia256OCB,
             Camelia128CTR,
             Camelia192CTR,
-            Camelia256CTR
+            Camelia256CTR,
+            XSalsa20
         }
 
         internal static readonly Dictionary<EncryptionAlgorithmEnum, IEncryptionAlgorithmProvider> GetEncryptionAlgorithmProvider = new()
@@ -80,7 +81,8 @@ namespace VaultCrypt
             {EncryptionAlgorithmEnum.Camelia256OCB, new CameliaProvider(32, new CameliaOcb()) },
             {EncryptionAlgorithmEnum.Camelia128CTR, new CameliaProvider(16, new CameliaCtr()) },
             {EncryptionAlgorithmEnum.Camelia192CTR, new CameliaProvider(24, new CameliaCtr()) },
-            {EncryptionAlgorithmEnum.Camelia256CTR, new CameliaProvider(32, new CameliaCtr()) }
+            {EncryptionAlgorithmEnum.Camelia256CTR, new CameliaProvider(32, new CameliaCtr()) },
+            {EncryptionAlgorithmEnum.XSalsa20, new XSalsa20Provider(32, new XSalsa20()) }
         };
 
         internal static byte[] CalculateHMAC(ReadOnlySpan<byte> key, params byte[][] bytes)
@@ -113,6 +115,7 @@ namespace VaultCrypt
         private interface ThreeFishAlgorithm : IEncryptionAlgorithm;
         private interface SerpentAlgorithm : IEncryptionAlgorithm;
         private interface CameliaAlgorithm : IEncryptionAlgorithm;
+        private interface XSalsa20Algorithm : IEncryptionAlgorithm;
 
 
         internal class AesGcm : AESAlgorithm
@@ -918,6 +921,88 @@ namespace VaultCrypt
             }
         }
 
+        internal class XSalsa20 : XSalsa20Algorithm
+        {
+            public short ExtraEncryptionDataSize => 88;
+
+            public byte[] EncryptBytes(ReadOnlySpan<byte> data, ReadOnlySpan<byte> key)
+            {
+                if (data.Length == 0) throw new VaultException("Failed to encrypt bytes, provided data was empty");
+                if (key.Length == 0) throw new VaultException("Failed to encrypt bytes, provided key was empty");
+
+                byte[] iv = new byte[24];
+                byte[] authentication = new byte[64];
+                byte[] output = new byte[data.Length];
+                byte[] encrypted = new byte[iv.Length + output.Length + authentication.Length];
+                try
+                {
+                    RandomNumberGenerator.Fill(iv);
+                    var cipher = new XSalsa20Engine();
+                    var parameters = new ParametersWithIV(new KeyParameter(key), iv);
+                    cipher.Init(true, parameters);
+                    cipher.ProcessBytes(data, output);
+                    authentication = CalculateHMAC(key, iv, output);
+                    Buffer.BlockCopy(iv, 0, encrypted, 0, iv.Length);
+                    Buffer.BlockCopy(output, 0, encrypted, iv.Length, output.Length);
+                    Buffer.BlockCopy(authentication, 0, encrypted, iv.Length + output.Length, authentication.Length);
+                    return encrypted;
+                }
+                catch (Exception ex)
+                {
+                    CryptographicOperations.ZeroMemory(encrypted);
+                    throw VaultException.EncryptionFailed(ex);
+                }
+                finally
+                {
+                    CryptographicOperations.ZeroMemory(iv);
+                    CryptographicOperations.ZeroMemory(authentication);
+                    CryptographicOperations.ZeroMemory(output);
+                }
+            }
+
+            public byte[] DecryptBytes(ReadOnlySpan<byte> data, ReadOnlySpan<byte> key)
+            {
+                if (data.Length == 0) throw new VaultException("Failed to decrypt bytes, provided data was empty");
+                if (key.Length == 0) throw new VaultException("Failed to decrypt bytes, provided key was empty");
+
+                ReadOnlySpan<byte> iv = data.Slice(0, 24);
+                ReadOnlySpan<byte> encryptedData = data[24..^64];
+                ReadOnlySpan<byte> tag = data[^64..];
+
+                byte[] decrypted = new byte[encryptedData.Length];
+                byte[] calculatedTag = new byte[64];
+                try
+                {
+                    byte[] ivTemp = iv.ToArray();
+                    byte[] encryptedTemp = encryptedData.ToArray();
+                    try
+                    {
+                        calculatedTag = CalculateHMAC(key, ivTemp, encryptedTemp);
+                    }
+                    finally
+                    {
+                        CryptographicOperations.ZeroMemory(ivTemp);
+                        CryptographicOperations.ZeroMemory(encryptedTemp);
+                    }
+                    if (!CryptographicOperations.FixedTimeEquals(tag, calculatedTag)) throw new VaultException("Wrong HMAC authentication tag");
+                    var cipher = new XSalsa20Engine();
+                    var parameters = new ParametersWithIV(new KeyParameter(key), iv);
+                    cipher.Init(false, parameters);
+                    cipher.ProcessBytes(encryptedData, decrypted);
+                    return decrypted;
+                }
+                catch (Exception ex)
+                {
+                    CryptographicOperations.ZeroMemory(decrypted);
+                    throw VaultException.DecryptionFailed(ex);
+                }
+                finally
+                {
+                    CryptographicOperations.ZeroMemory(calculatedTag);
+                }
+            }
+        }
+
 
         internal interface IEncryptionAlgorithmProvider
         {
@@ -935,7 +1020,7 @@ namespace VaultCrypt
             {
                 ArgumentNullException.ThrowIfNull(keySize);
                 ArgumentNullException.ThrowIfNull(algorithm);
-                if (keySize is not 16 and not 24 and not 32) throw new ArgumentOutOfRangeException(nameof(keySize));
+                if (keySize is not (16 or 24 or 32)) throw new ArgumentOutOfRangeException(nameof(keySize));
 
                 KeySize = keySize;
                 EncryptionAlgorithm = algorithm;
@@ -969,7 +1054,7 @@ namespace VaultCrypt
             {
                 ArgumentNullException.ThrowIfNull(keySize);
                 ArgumentNullException.ThrowIfNull(algorithm);
-                if (keySize is not 16 and not 24 and not 32) throw new ArgumentOutOfRangeException(nameof(keySize));
+                if (keySize is not (16 or 24 or 32)) throw new ArgumentOutOfRangeException(nameof(keySize));
 
                 KeySize = keySize;
                 EncryptionAlgorithm = algorithm;
@@ -986,7 +1071,7 @@ namespace VaultCrypt
             {
                 ArgumentNullException.ThrowIfNull(keySize);
                 ArgumentNullException.ThrowIfNull(algorithm);
-                if (keySize is not 32 and not 64 and not 128) throw new ArgumentOutOfRangeException(nameof(keySize));
+                if (keySize is not (32 or 64 or 128)) throw new ArgumentOutOfRangeException(nameof(keySize));
 
                 KeySize = keySize;
                 EncryptionAlgorithm = algorithm;
@@ -1003,7 +1088,7 @@ namespace VaultCrypt
             {
                 ArgumentNullException.ThrowIfNull(keySize);
                 ArgumentNullException.ThrowIfNull(algorithm);
-                if (keySize is not 16 and not 24 and not 32) throw new ArgumentOutOfRangeException(nameof(keySize));
+                if (keySize is not (16 or 24 or 32)) throw new ArgumentOutOfRangeException(nameof(keySize));
 
                 KeySize = keySize;
                 EncryptionAlgorithm = algorithm;
@@ -1020,7 +1105,24 @@ namespace VaultCrypt
             {
                 ArgumentNullException.ThrowIfNull(keySize);
                 ArgumentNullException.ThrowIfNull(algorithm);
-                if (keySize is not 16 and not 24 and not 32) throw new ArgumentOutOfRangeException(nameof(keySize));
+                if (keySize is not (16 or 24 or 32)) throw new ArgumentOutOfRangeException(nameof(keySize));
+
+                KeySize = keySize;
+                EncryptionAlgorithm = algorithm;
+            }
+        }
+
+        private class XSalsa20Provider : IEncryptionAlgorithmProvider
+        {
+            public byte KeySize { get; }
+
+            public IEncryptionAlgorithm EncryptionAlgorithm { get; }
+
+            internal XSalsa20Provider(byte keySize, XSalsa20Algorithm algorithm)
+            {
+                ArgumentNullException.ThrowIfNull(keySize);
+                ArgumentNullException.ThrowIfNull(algorithm);
+                if (keySize is not 32) throw new ArgumentOutOfRangeException(nameof(keySize));
 
                 KeySize = keySize;
                 EncryptionAlgorithm = algorithm;
