@@ -12,7 +12,7 @@ namespace VaultCrypt.ViewModels
 {
     internal class MainWindowViewModel : INotifyPropertyChanged, IViewModel
     {
-        private IViewModel _currentView;
+        private IViewModel _currentView = null!;
         public IViewModel CurrentView
         {
             get => _currentView;

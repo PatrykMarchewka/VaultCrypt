@@ -14,7 +14,7 @@ namespace VaultCrypt.ViewModels
 {
     internal class CreateVaultViewModel : INotifyPropertyChanged, IViewModel, INavigatingViewModel
     {
-        private string _vaultFolder;
+        private string _vaultFolder = null!;
         public string VaultFolder
         {
             get => _vaultFolder;
@@ -25,7 +25,7 @@ namespace VaultCrypt.ViewModels
                 OnPropertyChanged(nameof(VaultFolder));
             }
         }
-        private string _vaultName;
+        private string _vaultName = null!;
         public string VaultName
         {
             get => _vaultName;
@@ -36,7 +36,7 @@ namespace VaultCrypt.ViewModels
                 OnPropertyChanged(nameof(VaultName));
             }
         }
-        private SecureString _password;
+        private SecureString _password = null!;
         public SecureString Password
         {
             get => _password;
@@ -58,7 +58,7 @@ namespace VaultCrypt.ViewModels
             new(Name: "Ultra Strong", Iterations: 1_500_000)
         ];
 
-        private IterationPreset _selectedPreset;
+        private IterationPreset _selectedPreset = null!;
         public IterationPreset SelectedPreset
         {
             get => _selectedPreset;
@@ -121,7 +121,7 @@ namespace VaultCrypt.ViewModels
 
         private void OnPropertyChanged(string name) { PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(name)); }
         public event PropertyChangedEventHandler? PropertyChanged;
-        public event Action<NavigationRequest> NavigationRequested;
+        public event Action<NavigationRequest> NavigationRequested = null!;
     }
 
     internal record IterationPreset(string Name, int Iterations);

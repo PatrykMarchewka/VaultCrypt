@@ -13,7 +13,7 @@ namespace VaultCrypt.ViewModels
 {
     class ProgressViewModel : INotifyPropertyChanged, INavigated, IViewModel, INavigatingViewModel
     {
-        private ProgressionContext _context;
+        private ProgressionContext _context = null!;
         public ProgressionContext Context
         {
             get => _context;
@@ -73,6 +73,6 @@ namespace VaultCrypt.ViewModels
 
         private void OnPropertyChanged(string name) { PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(name)); }
         public event PropertyChangedEventHandler? PropertyChanged;
-        public event Action<NavigationRequest> NavigationRequested;
+        public event Action<NavigationRequest> NavigationRequested = null!;
     }
 }

@@ -33,6 +33,6 @@ namespace VaultCrypt.ViewModels
 
         private void OnPropertyChanged(string name) { PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(name)); }
         public event PropertyChangedEventHandler? PropertyChanged;
-        public event Action<NavigationRequest> NavigationRequested;
+        public event Action<NavigationRequest> NavigationRequested = null!;
     }
 }

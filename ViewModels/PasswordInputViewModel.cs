@@ -15,7 +15,7 @@ namespace VaultCrypt.ViewModels
     {
         private NormalizedPath? VaultPath;
 
-        private SecureString _password;
+        private SecureString _password = null!;
         public SecureString Password
         {
             get => _password;
@@ -53,6 +53,6 @@ namespace VaultCrypt.ViewModels
 
         private void OnPropertyChanged(string name) { PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(name)); }
         public event PropertyChangedEventHandler? PropertyChanged;
-        public event Action<NavigationRequest> NavigationRequested;
+        public event Action<NavigationRequest> NavigationRequested = null!;
     }
 }

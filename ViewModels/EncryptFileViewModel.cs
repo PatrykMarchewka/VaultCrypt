@@ -14,7 +14,7 @@ namespace VaultCrypt.ViewModels
 {
     internal class EncryptFileViewModel : INotifyPropertyChanged, INavigated, IViewModel, INavigatingViewModel
     {
-        private NormalizedPath filePath;
+        private NormalizedPath filePath = null!;
         public IReadOnlyList<ChunkSizePreset> ChunkSizePresets { get; } = [
             new(Name: "1MB", SizeInMB: 1),
             new(Name: "2MB", SizeInMB: 2),
@@ -30,7 +30,7 @@ namespace VaultCrypt.ViewModels
             new(Name: "2048MB", SizeInMB: 2048)
             ];
 
-        private ChunkSizePreset _selectedPreset;
+        private ChunkSizePreset _selectedPreset = null!;
         public ChunkSizePreset SelectedPreset
         {
             get => _selectedPreset;
@@ -93,7 +93,7 @@ namespace VaultCrypt.ViewModels
 
         private void OnPropertyChanged(string name) { PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(name)); }
         public event PropertyChangedEventHandler? PropertyChanged;
-        public event Action<NavigationRequest> NavigationRequested;
+        public event Action<NavigationRequest> NavigationRequested = null!;
     }
 
     internal record ChunkSizePreset(string Name, ushort SizeInMB);

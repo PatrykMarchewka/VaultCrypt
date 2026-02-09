@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.ComponentModel;
@@ -20,12 +20,12 @@ namespace VaultCrypt.ViewModels
 
         private SecureString? password;
         private NormalizedPath? vaultPath;
-        public static ICollectionView EncryptedFilesCollectionView { get; private set; }
+        public static ICollectionView EncryptedFilesCollectionView { get; private set; } = null!;
 
 
-        public string VaultName { get; private set; }
+        public string VaultName { get; private set; } = null!;
 
-        private string _filteredText;
+        private string _filteredText = null!;
         public string FilteredText
         {
             get => _filteredText;
@@ -107,7 +107,7 @@ namespace VaultCrypt.ViewModels
 
             if (dialog != null)
             {
-                NavigationRequested?.Invoke(new NavigateToEncryptFileRequest(NormalizedPath.From(dialog)));
+                NavigationRequested?.Invoke(new NavigateToEncryptFileRequest(NormalizedPath.From(dialog)!));
             }
         }
 
@@ -195,6 +195,6 @@ namespace VaultCrypt.ViewModels
 
         private void OnPropertyChanged(string name) { PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(name)); }
         public event PropertyChangedEventHandler? PropertyChanged;
-        public event Action<NavigationRequest> NavigationRequested;
+        public event Action<NavigationRequest> NavigationRequested = null!;
     }
 }
