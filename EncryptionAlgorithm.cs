@@ -99,7 +99,21 @@ namespace VaultCrypt
             {
                 CryptographicOperations.ZeroMemory(hash);
             }
-            
+        }
+
+        internal static byte[] CalculateHMAC(ReadOnlySpan<byte> key, ReadOnlySpan<byte> iv, ReadOnlySpan<byte> cipherText)
+        {
+            byte[] ivSeg = iv.ToArray();
+            byte[] cipherSeg = cipherText.ToArray();
+            try
+            {
+                return CalculateHMAC(key, ivSeg, cipherSeg);
+            }
+            finally
+            {
+                CryptographicOperations.ZeroMemory(ivSeg);
+                CryptographicOperations.ZeroMemory(cipherSeg);
+            }
         }
 
         internal interface IEncryptionAlgorithm
@@ -126,10 +140,14 @@ namespace VaultCrypt
                 if (data.Length == 0) throw new VaultException("Failed to encrypt bytes, provided data was empty");
                 if (key.Length == 0) throw new VaultException("Failed to encrypt bytes, provided key was empty");
 
-                byte[] iv = new byte[12];
-                byte[] authentication = new byte[16];
-                byte[] output = new byte[data.Length];
-                byte[] encrypted = new byte[iv.Length + authentication.Length + output.Length];
+
+                byte ivLength = 12;
+                byte authenticationLength = 16;
+                byte[] encrypted = new byte[ivLength + authenticationLength + data.Length];
+
+                Span<byte> iv = encrypted.AsSpan(0, ivLength);
+                Span<byte> authentication = encrypted.AsSpan(ivLength, authenticationLength);
+                Span<byte> output = encrypted.AsSpan(ivLength + authenticationLength);
                 try
                 {
                     RandomNumberGenerator.Fill(iv);
@@ -137,21 +155,12 @@ namespace VaultCrypt
                     {
                         aesGcm.Encrypt(iv, data, output, authentication);
                     }
-                    Buffer.BlockCopy(iv, 0, encrypted, 0, iv.Length);
-                    Buffer.BlockCopy(authentication, 0, encrypted, iv.Length, authentication.Length);
-                    Buffer.BlockCopy(output, 0, encrypted, iv.Length + authentication.Length, output.Length);
                     return encrypted;
                 }
                 catch (Exception ex)
                 {
                     CryptographicOperations.ZeroMemory(encrypted);
                     throw VaultException.EncryptionFailed(ex);
-                }
-                finally
-                {
-                    CryptographicOperations.ZeroMemory(iv);
-                    CryptographicOperations.ZeroMemory(authentication);
-                    CryptographicOperations.ZeroMemory(output);
                 }
             }
 
@@ -196,10 +205,13 @@ namespace VaultCrypt
                 if (data.Length == 0) throw new VaultException("Failed to encrypt bytes, provided data was empty");
                 if (key.Length == 0) throw new VaultException("Failed to encrypt bytes, provided key was empty");
 
-                byte[] iv = new byte[12];
-                byte[] authentication = new byte[16];
-                byte[] output = new byte[data.Length];
-                byte[] encrypted = new byte[iv.Length + authentication.Length + output.Length];
+                byte ivLength = 12;
+                byte authenticationLength = 16;
+                byte[] encrypted = new byte[ivLength + authenticationLength + data.Length];
+
+                Span<byte> iv = encrypted.AsSpan(0, ivLength);
+                Span<byte> authentication = encrypted.AsSpan(ivLength, authenticationLength);
+                Span<byte> output = encrypted.AsSpan(ivLength + authenticationLength);
                 try
                 {
                     RandomNumberGenerator.Fill(iv);
@@ -207,21 +219,12 @@ namespace VaultCrypt
                     {
                         aesCcm.Encrypt(iv, data, output, authentication);
                     }
-                    Buffer.BlockCopy(iv, 0, encrypted, 0, iv.Length);
-                    Buffer.BlockCopy(authentication, 0, encrypted, iv.Length, authentication.Length);
-                    Buffer.BlockCopy(output, 0, encrypted, iv.Length + authentication.Length, output.Length);
                     return encrypted;
                 }
                 catch (Exception ex)
                 {
                     CryptographicOperations.ZeroMemory(encrypted);
                     throw VaultException.EncryptionFailed(ex);
-                }
-                finally
-                {
-                    CryptographicOperations.ZeroMemory(iv);
-                    CryptographicOperations.ZeroMemory(authentication);
-                    CryptographicOperations.ZeroMemory(output);
                 }
             }
 
@@ -257,10 +260,13 @@ namespace VaultCrypt
                 if (data.Length == 0) throw new VaultException("Failed to encrypt bytes, provided data was empty");
                 if (key.Length == 0) throw new VaultException("Failed to encrypt bytes, provided key was empty");
 
-                byte[] iv = new byte[12];
-                byte[] authentication = new byte[16];
-                byte[] output = new byte[data.Length];
-                byte[] encrypted = new byte[iv.Length + authentication.Length + output.Length];
+                byte ivLength = 12;
+                byte authenticationLength = 16;
+                byte[] encrypted = new byte[ivLength + authenticationLength + data.Length];
+
+                Span<byte> iv = encrypted.AsSpan(0, ivLength);
+                Span<byte> authentication = encrypted.AsSpan(ivLength, authenticationLength);
+                Span<byte> output = encrypted.AsSpan(ivLength + authenticationLength);
                 try
                 {
                     RandomNumberGenerator.Fill(iv);
@@ -268,21 +274,12 @@ namespace VaultCrypt
                     {
                         chaCha20.Encrypt(iv, data, output, authentication);
                     }
-                    Buffer.BlockCopy(iv, 0, encrypted, 0, iv.Length);
-                    Buffer.BlockCopy(authentication, 0, encrypted, iv.Length, authentication.Length);
-                    Buffer.BlockCopy(output, 0, encrypted, iv.Length + authentication.Length, output.Length);
                     return encrypted;
                 }
                 catch (Exception ex)
                 {
                     CryptographicOperations.ZeroMemory(encrypted);
                     throw VaultException.EncryptionFailed(ex);
-                }
-                finally
-                {
-                    CryptographicOperations.ZeroMemory(iv);
-                    CryptographicOperations.ZeroMemory(authentication);
-                    CryptographicOperations.ZeroMemory(output);
                 }
             }
 
@@ -321,8 +318,9 @@ namespace VaultCrypt
 
                 byte[] iv = new byte[12];
                 byte authenticationLength = 16;
-                byte[] output = new byte[data.Length + authenticationLength];
-                byte[] encrypted = new byte[iv.Length + output.Length];
+                byte[] encrypted = new byte[iv.Length + data.Length + authenticationLength];
+
+                Span<byte> output = encrypted.AsSpan(iv.Length, data.Length + authenticationLength);
                 try
                 {
                     RandomNumberGenerator.Fill(iv);
@@ -330,9 +328,8 @@ namespace VaultCrypt
                     var parameters = new AeadParameters(new KeyParameter(key), authenticationLength * 8, iv);
                     cipher.Init(true, parameters);
                     int length = cipher.ProcessBytes(data, output);
-                    cipher.DoFinal(output, length);
+                    cipher.DoFinal(output.Slice(length));
                     Buffer.BlockCopy(iv, 0, encrypted, 0, iv.Length);
-                    Buffer.BlockCopy(output, 0, encrypted, iv.Length, output.Length);
                     return encrypted;
                 }
                 catch (Exception ex)
@@ -343,7 +340,6 @@ namespace VaultCrypt
                 finally
                 {
                     CryptographicOperations.ZeroMemory(iv);
-                    CryptographicOperations.ZeroMemory(output);
                 }
             }
 
@@ -388,10 +384,13 @@ namespace VaultCrypt
                 if (data.Length == 0) throw new VaultException("Failed to encrypt bytes, provided data was empty");
                 if (key.Length == 0) throw new VaultException("Failed to encrypt bytes, provided key was empty");
 
-                byte[] iv = new byte[12];
-                byte[] authentication = new byte[64];
-                byte[] output = new byte[data.Length];
-                byte[] encrypted = new byte[iv.Length + output.Length + authentication.Length];
+                byte ivLength = 12;
+                byte authenticationLength = 64;
+                byte[] encrypted = new byte[ivLength + authenticationLength + data.Length];
+
+                Span<byte> iv = encrypted.AsSpan(0, ivLength);
+                Span<byte> authentication = encrypted.AsSpan(ivLength + data.Length, authenticationLength);
+                Span<byte> output = encrypted.AsSpan(ivLength, data.Length);
                 try
                 {
                     RandomNumberGenerator.Fill(iv);
@@ -399,22 +398,23 @@ namespace VaultCrypt
                     var parameters = new ParametersWithIV(new KeyParameter(key), iv);
                     cipher.Init(true, parameters);
                     cipher.ProcessBytes(data, output);
-                    authentication = CalculateHMAC(key, iv, output);
-                    Buffer.BlockCopy(iv, 0, encrypted, 0, iv.Length);
-                    Buffer.BlockCopy(output, 0, encrypted, iv.Length, output.Length);
-                    Buffer.BlockCopy(authentication, 0, encrypted, iv.Length + output.Length, authentication.Length);
+
+                    byte[] hmac = new byte[64];
+                    try
+                    {
+                        hmac = CalculateHMAC(key, iv, output);
+                        hmac.AsSpan().CopyTo(authentication);
+                    }
+                    finally
+                    {
+                        CryptographicOperations.ZeroMemory(hmac);
+                    }
                     return encrypted;
                 }
                 catch (Exception ex)
                 {
                     CryptographicOperations.ZeroMemory(encrypted);
                     throw VaultException.EncryptionFailed(ex);
-                }
-                finally
-                {
-                    CryptographicOperations.ZeroMemory(iv);
-                    CryptographicOperations.ZeroMemory(authentication);
-                    CryptographicOperations.ZeroMemory(output);
                 }
             }
 
@@ -431,17 +431,7 @@ namespace VaultCrypt
                 byte[] calculatedTag = new byte[64];
                 try
                 {
-                    byte[] ivTemp = iv.ToArray();
-                    byte[] encryptedTemp = encryptedData.ToArray();
-                    try
-                    {
-                        calculatedTag = CalculateHMAC(key, ivTemp, encryptedTemp);
-                    }
-                    finally
-                    {
-                        CryptographicOperations.ZeroMemory(ivTemp);
-                        CryptographicOperations.ZeroMemory(encryptedTemp);
-                    }
+                    calculatedTag = CalculateHMAC(key, iv, encryptedData);
                     if (!CryptographicOperations.FixedTimeEquals(tag, calculatedTag)) throw new VaultException("Wrong HMAC authentication tag");
                     var cipher = new KCtrBlockCipher(new TwofishEngine());
                     var parameters = new ParametersWithIV(new KeyParameter(key), iv);
@@ -477,10 +467,13 @@ namespace VaultCrypt
                 if (data.Length == 0) throw new VaultException("Failed to encrypt bytes, provided data was empty");
                 if (key.Length == 0) throw new VaultException("Failed to encrypt bytes, provided key was empty");
 
-                byte[] iv = new byte[12];
-                byte[] authentication = new byte[64];
-                byte[] output = new byte[data.Length];
-                byte[] encrypted = new byte[iv.Length + output.Length + authentication.Length];
+                byte ivLength = 12;
+                byte authenticationLength = 64;
+                byte[] encrypted = new byte[ivLength + authenticationLength + data.Length];
+
+                Span<byte> iv = encrypted.AsSpan(0, ivLength);
+                Span<byte> authentication = encrypted.AsSpan(ivLength + data.Length, authenticationLength);
+                Span<byte> output = encrypted.AsSpan(ivLength, data.Length);
                 try
                 {
                     RandomNumberGenerator.Fill(iv);
@@ -488,22 +481,22 @@ namespace VaultCrypt
                     var parameters = new ParametersWithIV(new KeyParameter(key), iv);
                     cipher.Init(true, parameters);
                     cipher.ProcessBytes(data, output);
-                    authentication = CalculateHMAC(key, iv, output);
-                    Buffer.BlockCopy(iv, 0, encrypted, 0, iv.Length);
-                    Buffer.BlockCopy(output, 0, encrypted, iv.Length, output.Length);
-                    Buffer.BlockCopy(authentication, 0, encrypted, iv.Length + output.Length, authentication.Length);
+                    byte[] hmac = new byte[64];
+                    try
+                    {
+                        hmac = CalculateHMAC(key, iv, output);
+                        hmac.AsSpan().CopyTo(authentication);
+                    }
+                    finally
+                    {
+                        CryptographicOperations.ZeroMemory(hmac);
+                    }
                     return encrypted;
                 }
                 catch (Exception ex)
                 {
                     CryptographicOperations.ZeroMemory(encrypted);
                     throw VaultException.EncryptionFailed(ex);
-                }
-                finally
-                {
-                    CryptographicOperations.ZeroMemory(iv);
-                    CryptographicOperations.ZeroMemory(authentication);
-                    CryptographicOperations.ZeroMemory(output);
                 }
             }
 
@@ -520,17 +513,7 @@ namespace VaultCrypt
                 byte[] calculatedTag = new byte[64];
                 try
                 {
-                    byte[] ivTemp = iv.ToArray();
-                    byte[] encryptedTemp = encryptedData.ToArray();
-                    try
-                    {
-                        calculatedTag = CalculateHMAC(key, ivTemp, encryptedTemp);
-                    }
-                    finally
-                    {
-                        CryptographicOperations.ZeroMemory(ivTemp);
-                        CryptographicOperations.ZeroMemory(encryptedTemp);
-                    }
+                    calculatedTag = CalculateHMAC(key, iv, encryptedData);
                     if (!CryptographicOperations.FixedTimeEquals(tag, calculatedTag)) throw new VaultException("Wrong HMAC authentication tag");
                     var cipher = new KCtrBlockCipher(new ThreefishEngine(blockSizeInBits));
                     var parameters = new ParametersWithIV(new KeyParameter(key), iv);
@@ -561,8 +544,9 @@ namespace VaultCrypt
 
                 byte[] iv = new byte[12];
                 byte authenticationLength = 16;
-                byte[] output = new byte[data.Length + authenticationLength];
-                byte[] encrypted = new byte[iv.Length + output.Length];
+                byte[] encrypted = new byte[iv.Length + data.Length + authenticationLength];
+
+                Span<byte> output = encrypted.AsSpan(iv.Length, data.Length + authenticationLength);
                 try
                 {
                     RandomNumberGenerator.Fill(iv);
@@ -570,9 +554,8 @@ namespace VaultCrypt
                     var parameters = new AeadParameters(new KeyParameter(key), authenticationLength * 8, iv);
                     cipher.Init(true, parameters);
                     int length = cipher.ProcessBytes(data, output);
-                    cipher.DoFinal(output, length);
+                    cipher.DoFinal(output.Slice(length));
                     Buffer.BlockCopy(iv, 0, encrypted, 0, iv.Length);
-                    Buffer.BlockCopy(output, 0, encrypted, iv.Length, output.Length);
                     return encrypted;
                 }
                 catch (Exception ex)
@@ -583,7 +566,6 @@ namespace VaultCrypt
                 finally
                 {
                     CryptographicOperations.ZeroMemory(iv);
-                    CryptographicOperations.ZeroMemory(output);
                 }
             }
 
@@ -628,10 +610,13 @@ namespace VaultCrypt
                 if (data.Length == 0) throw new VaultException("Failed to encrypt bytes, provided data was empty");
                 if (key.Length == 0) throw new VaultException("Failed to encrypt bytes, provided key was empty");
 
-                byte[] iv = new byte[12];
-                byte[] authentication = new byte[64];
-                byte[] output = new byte[data.Length];
-                byte[] encrypted = new byte[iv.Length + output.Length + authentication.Length];
+                byte ivLength = 12;
+                byte authenticationLength = 64;
+                byte[] encrypted = new byte[ivLength + authenticationLength + data.Length];
+
+                Span<byte> iv = encrypted.AsSpan(0, ivLength);
+                Span<byte> authentication = encrypted.AsSpan(ivLength + data.Length, authenticationLength);
+                Span<byte> output = encrypted.AsSpan(ivLength, data.Length);
                 try
                 {
                     RandomNumberGenerator.Fill(iv);
@@ -639,22 +624,22 @@ namespace VaultCrypt
                     var parameters = new ParametersWithIV(new KeyParameter(key), iv);
                     cipher.Init(true, parameters);
                     cipher.ProcessBytes(data, output);
-                    authentication = CalculateHMAC(key, iv, output);
-                    Buffer.BlockCopy(iv, 0, encrypted, 0, iv.Length);
-                    Buffer.BlockCopy(output, 0, encrypted, iv.Length, output.Length);
-                    Buffer.BlockCopy(authentication, 0, encrypted, iv.Length + output.Length, authentication.Length);
+                    byte[] hmac = new byte[64];
+                    try
+                    {
+                        hmac = CalculateHMAC(key, iv, output);
+                        hmac.AsSpan().CopyTo(authentication);
+                    }
+                    finally
+                    {
+                        CryptographicOperations.ZeroMemory(hmac);
+                    }
                     return encrypted;
                 }
                 catch (Exception ex)
                 {
                     CryptographicOperations.ZeroMemory(encrypted);
                     throw VaultException.EncryptionFailed(ex);
-                }
-                finally
-                {
-                    CryptographicOperations.ZeroMemory(iv);
-                    CryptographicOperations.ZeroMemory(authentication);
-                    CryptographicOperations.ZeroMemory(output);
                 }
             }
 
@@ -671,17 +656,7 @@ namespace VaultCrypt
                 byte[] calculatedTag = new byte[64];
                 try
                 {
-                    byte[] ivTemp = iv.ToArray();
-                    byte[] encryptedTemp = encryptedData.ToArray();
-                    try
-                    {
-                        calculatedTag = CalculateHMAC(key, ivTemp, encryptedTemp);
-                    }
-                    finally
-                    {
-                        CryptographicOperations.ZeroMemory(ivTemp);
-                        CryptographicOperations.ZeroMemory(encryptedTemp);
-                    }
+                    calculatedTag = CalculateHMAC(key, iv, encryptedData);
                     if (!CryptographicOperations.FixedTimeEquals(tag, calculatedTag)) throw new VaultException("Wrong HMAC authentication tag");
                     var cipher = new KCtrBlockCipher(new SerpentEngine());
                     var parameters = new ParametersWithIV(new KeyParameter(key), iv);
@@ -712,8 +687,9 @@ namespace VaultCrypt
 
                 byte[] iv = new byte[12];
                 byte authenticationLength = 16;
-                byte[] output = new byte[data.Length + authenticationLength];
-                byte[] encrypted = new byte[iv.Length + output.Length];
+                byte[] encrypted = new byte[iv.Length + data.Length + authenticationLength];
+
+                Span<byte> output = encrypted.AsSpan(iv.Length, data.Length + authenticationLength);
                 try
                 {
                     RandomNumberGenerator.Fill(iv);
@@ -721,9 +697,8 @@ namespace VaultCrypt
                     var parameters = new AeadParameters(new KeyParameter(key), authenticationLength * 8, iv);
                     cipher.Init(true, parameters);
                     int length = cipher.ProcessBytes(data, output);
-                    cipher.DoFinal(output, length);
+                    cipher.DoFinal(output.Slice(length));
                     Buffer.BlockCopy(iv, 0, encrypted, 0, iv.Length);
-                    Buffer.BlockCopy(output, 0, encrypted, iv.Length, output.Length);
                     return encrypted;
                 }
                 catch (Exception ex)
@@ -734,7 +709,6 @@ namespace VaultCrypt
                 finally
                 {
                     CryptographicOperations.ZeroMemory(iv);
-                    CryptographicOperations.ZeroMemory(output);
                 }
             }
 
@@ -781,8 +755,9 @@ namespace VaultCrypt
 
                 byte[] iv = new byte[12];
                 byte authenticationLength = 16;
-                byte[] output = new byte[data.Length + authenticationLength];
-                byte[] encrypted = new byte[iv.Length + output.Length];
+                byte[] encrypted = new byte[iv.Length + data.Length + authenticationLength];
+
+                Span<byte> output = encrypted.AsSpan(iv.Length, data.Length + authenticationLength);
                 try
                 {
                     RandomNumberGenerator.Fill(iv);
@@ -790,9 +765,8 @@ namespace VaultCrypt
                     var parameters = new AeadParameters(new KeyParameter(key), authenticationLength * 8, iv);
                     cipher.Init(true, parameters);
                     int length = cipher.ProcessBytes(data, output);
-                    cipher.DoFinal(output, length);
+                    cipher.DoFinal(output.Slice(length));
                     Buffer.BlockCopy(iv, 0, encrypted, 0, iv.Length);
-                    Buffer.BlockCopy(output, 0, encrypted, iv.Length, output.Length);
                     return encrypted;
                 }
                 catch (Exception ex)
@@ -803,7 +777,6 @@ namespace VaultCrypt
                 finally
                 {
                     CryptographicOperations.ZeroMemory(iv);
-                    CryptographicOperations.ZeroMemory(output);
                 }
             }
 
@@ -848,10 +821,13 @@ namespace VaultCrypt
                 if (data.Length == 0) throw new VaultException("Failed to encrypt bytes, provided data was empty");
                 if (key.Length == 0) throw new VaultException("Failed to encrypt bytes, provided key was empty");
 
-                byte[] iv = new byte[12];
-                byte[] authentication = new byte[64];
-                byte[] output = new byte[data.Length];
-                byte[] encrypted = new byte[iv.Length + output.Length + authentication.Length];
+                byte ivLength = 12;
+                byte authenticationLength = 64;
+                byte[] encrypted = new byte[ivLength + authenticationLength + data.Length];
+
+                Span<byte> iv = encrypted.AsSpan(0, ivLength);
+                Span<byte> authentication = encrypted.AsSpan(ivLength + data.Length, authenticationLength);
+                Span<byte> output = encrypted.AsSpan(ivLength, data.Length);
                 try
                 {
                     RandomNumberGenerator.Fill(iv);
@@ -859,22 +835,22 @@ namespace VaultCrypt
                     var parameters = new ParametersWithIV(new KeyParameter(key), iv);
                     cipher.Init(true, parameters);
                     cipher.ProcessBytes(data, output);
-                    authentication = CalculateHMAC(key, iv, output);
-                    Buffer.BlockCopy(iv, 0, encrypted, 0, iv.Length);
-                    Buffer.BlockCopy(output, 0, encrypted, iv.Length, output.Length);
-                    Buffer.BlockCopy(authentication, 0, encrypted, iv.Length + output.Length, authentication.Length);
+                    byte[] hmac = new byte[64];
+                    try
+                    {
+                        hmac = CalculateHMAC(key, iv, output);
+                        hmac.AsSpan().CopyTo(authentication);
+                    }
+                    finally
+                    {
+                        CryptographicOperations.ZeroMemory(hmac);
+                    }
                     return encrypted;
                 }
                 catch (Exception ex)
                 {
                     CryptographicOperations.ZeroMemory(encrypted);
                     throw VaultException.EncryptionFailed(ex);
-                }
-                finally
-                {
-                    CryptographicOperations.ZeroMemory(iv);
-                    CryptographicOperations.ZeroMemory(authentication);
-                    CryptographicOperations.ZeroMemory(output);
                 }
             }
 
@@ -891,17 +867,7 @@ namespace VaultCrypt
                 byte[] calculatedTag = new byte[64];
                 try
                 {
-                    byte[] ivTemp = iv.ToArray();
-                    byte[] encryptedTemp = encryptedData.ToArray();
-                    try
-                    {
-                        calculatedTag = CalculateHMAC(key, ivTemp, encryptedTemp);
-                    }
-                    finally
-                    {
-                        CryptographicOperations.ZeroMemory(ivTemp);
-                        CryptographicOperations.ZeroMemory(encryptedTemp);
-                    }
+                    calculatedTag = CalculateHMAC(key, iv, encryptedData);
                     if (!CryptographicOperations.FixedTimeEquals(tag, calculatedTag)) throw new VaultException("Wrong HMAC authentication tag");
                     var cipher = new KCtrBlockCipher(new CamelliaEngine());
                     var parameters = new ParametersWithIV(new KeyParameter(key), iv);
@@ -930,10 +896,13 @@ namespace VaultCrypt
                 if (data.Length == 0) throw new VaultException("Failed to encrypt bytes, provided data was empty");
                 if (key.Length == 0) throw new VaultException("Failed to encrypt bytes, provided key was empty");
 
-                byte[] iv = new byte[24];
-                byte[] authentication = new byte[64];
-                byte[] output = new byte[data.Length];
-                byte[] encrypted = new byte[iv.Length + output.Length + authentication.Length];
+                byte ivLength = 24;
+                byte authenticationLength = 64;
+                byte[] encrypted = new byte[ivLength + authenticationLength + data.Length];
+
+                Span<byte> iv = encrypted.AsSpan(0, ivLength);
+                Span<byte> authentication = encrypted.AsSpan(ivLength + data.Length, authenticationLength);
+                Span<byte> output = encrypted.AsSpan(ivLength, data.Length);
                 try
                 {
                     RandomNumberGenerator.Fill(iv);
@@ -941,22 +910,22 @@ namespace VaultCrypt
                     var parameters = new ParametersWithIV(new KeyParameter(key), iv);
                     cipher.Init(true, parameters);
                     cipher.ProcessBytes(data, output);
-                    authentication = CalculateHMAC(key, iv, output);
-                    Buffer.BlockCopy(iv, 0, encrypted, 0, iv.Length);
-                    Buffer.BlockCopy(output, 0, encrypted, iv.Length, output.Length);
-                    Buffer.BlockCopy(authentication, 0, encrypted, iv.Length + output.Length, authentication.Length);
+                    byte[] hmac = new byte[64];
+                    try
+                    {
+                        hmac = CalculateHMAC(key, iv, output);
+                        hmac.AsSpan().CopyTo(authentication);
+                    }
+                    finally
+                    {
+                        CryptographicOperations.ZeroMemory(hmac);
+                    }
                     return encrypted;
                 }
                 catch (Exception ex)
                 {
                     CryptographicOperations.ZeroMemory(encrypted);
                     throw VaultException.EncryptionFailed(ex);
-                }
-                finally
-                {
-                    CryptographicOperations.ZeroMemory(iv);
-                    CryptographicOperations.ZeroMemory(authentication);
-                    CryptographicOperations.ZeroMemory(output);
                 }
             }
 
@@ -973,17 +942,7 @@ namespace VaultCrypt
                 byte[] calculatedTag = new byte[64];
                 try
                 {
-                    byte[] ivTemp = iv.ToArray();
-                    byte[] encryptedTemp = encryptedData.ToArray();
-                    try
-                    {
-                        calculatedTag = CalculateHMAC(key, ivTemp, encryptedTemp);
-                    }
-                    finally
-                    {
-                        CryptographicOperations.ZeroMemory(ivTemp);
-                        CryptographicOperations.ZeroMemory(encryptedTemp);
-                    }
+                    calculatedTag = CalculateHMAC(key, iv, encryptedData);
                     if (!CryptographicOperations.FixedTimeEquals(tag, calculatedTag)) throw new VaultException("Wrong HMAC authentication tag");
                     var cipher = new XSalsa20Engine();
                     var parameters = new ParametersWithIV(new KeyParameter(key), iv);
