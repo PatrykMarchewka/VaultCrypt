@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.ComponentModel;
@@ -113,14 +113,14 @@ namespace VaultCrypt.ViewModels
 
         private async Task DecryptFile()
         {
-            var folder = FileDialogHelper.OpenFolder("Select folder to save file");
-            if (folder != null)
+            var file = FileDialogHelper.SaveFile(SelectedFile!.Value.Value);
+            if (file != null)
             {
                 try
                 {
                     var context = new ProgressionContext();
                     NavigationRequested?.Invoke(new NavigateToProgressRequest(context));
-                    await Decryption.Decrypt(SelectedFile!.Value.Key, NormalizedPath.From(folder), context);
+                    await Decryption.Decrypt(SelectedFile!.Value.Key, NormalizedPath.From(file)!, context);
                 }
                 catch(OperationCanceledException ex)
                 {

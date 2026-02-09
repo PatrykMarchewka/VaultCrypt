@@ -12,10 +12,10 @@ namespace VaultCrypt
 {
     internal class Decryption
     {
-        internal static async Task Decrypt(long metadataOffset, NormalizedPath folderPath, ProgressionContext context)
+        internal static async Task Decrypt(long metadataOffset, NormalizedPath filePath, ProgressionContext context)
         {
             ArgumentOutOfRangeException.ThrowIfNegative(metadataOffset);
-            ArgumentNullException.ThrowIfNull(folderPath);
+            ArgumentNullException.ThrowIfNull(filePath);
             ArgumentNullException.ThrowIfNull(context);
 
             await using FileStream vaultFS = new FileStream(VaultSession.CurrentSession.VAULTPATH!, FileMode.Open, FileAccess.Read);
@@ -23,7 +23,6 @@ namespace VaultCrypt
 
             try
             {
-                NormalizedPath filePath = NormalizedPath.From(folderPath + "\\" + Encoding.UTF8.GetString(encryptionOptions.FileName))!;
                 var encryptionAlgorithmProvider = EncryptionAlgorithm.GetEncryptionAlgorithmProvider[encryptionOptions.EncryptionAlgorithm];
                 ReadOnlyMemory<byte> key = PasswordHelper.GetSlicedKey(encryptionAlgorithmProvider.KeySize);
                 if (!encryptionOptions.IsChunked)

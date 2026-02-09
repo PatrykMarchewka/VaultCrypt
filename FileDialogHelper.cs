@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.IO;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
@@ -37,12 +38,18 @@ namespace VaultCrypt
             return null;
         }
 
-        internal static string? SaveFile(string title)
+        internal static string? SaveFile(string fileName)
         {
+
+            string name = Path.GetFileNameWithoutExtension(fileName);
+            string extension = Path.GetExtension(fileName).TrimStart('.');
+
             var dialog = new Microsoft.Win32.SaveFileDialog
             {
-                Title = title,
-                Filter = "Vault files (*.vlt)|*.vlt|All files (*.*)|*.*",
+                Title = "Choose where to save the file",
+                FileName = name,
+                DefaultExt = extension,
+                Filter = $"{extension.ToUpper()} files|*.{extension}|All files (*.*)|*.*",
                 OverwritePrompt = true
             };
 
