@@ -4,6 +4,7 @@ using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
+using System.Runtime.InteropServices;
 using System.Security.Cryptography;
 using System.Text;
 using System.Threading.Tasks;
@@ -169,40 +170,53 @@ namespace VaultCrypt
             int fileListCount = fileList.Count;
 
             long[] newVaultOffsets = new long[fileListCount];
-            for (int i = 0; i < fileListCount; i++)
+            long[] trimmedOffsets = null!;
+            try
             {
-                context.CancellationToken.ThrowIfCancellationRequested();
-                long currentOffset = fileList[i].Key;
-                long nextOffset = long.MaxValue;
-                if (i + 1 < fileListCount)
+                for (int i = 0; i < fileListCount; i++)
                 {
-                    nextOffset = fileList[i + 1].Key;
-                }
+                    context.CancellationToken.ThrowIfCancellationRequested();
+                    long currentOffset = fileList[i].Key;
+                    long nextOffset = long.MaxValue;
+                    if (i + 1 < fileListCount)
+                    {
+                        nextOffset = fileList[i + 1].Key;
+                    }
 
-                ulong fileSize = 0;
-                EncryptionOptions.FileEncryptionOptions encryptionOptions = null;
-                try
-                {
-                    encryptionOptions = EncryptionOptions.GetDecryptedFileEncryptionOptions(vaultfs, currentOffset);
-                    fileSize = encryptionOptions.FileSize;
+                    ulong fileSize = 0;
+                    EncryptionOptions.FileEncryptionOptions encryptionOptions = null;
+                    try
+                    {
+                        encryptionOptions = EncryptionOptions.GetDecryptedFileEncryptionOptions(vaultfs, currentOffset);
+                        fileSize = encryptionOptions.FileSize;
+                    }
+                    catch
+                    {
+                        //Encryption options cant be read due to corruption, skip that offset
+                        continue;
+                    }
+                    finally
+                    {
+                        if (encryptionOptions is not null) encryptionOptions.Dispose();
+                    }
+
+                    //Calculating toread to allow copying of partially encrypted files
+                    ulong toread = Math.Min((ulong)(nextOffset - currentOffset), (ulong)reader.EncryptionOptionsSize + fileSize);
+                    newVaultOffsets[i] = newVaultfs.Seek(0, SeekOrigin.End);
+                    CopyPartOfFile(vaultfs, currentOffset, toread, newVaultfs, newVaultOffsets[i]);
+                    //Reporting current index + 1 because i is zero based while user gets to see 1 based indexing, total is filelList.Count + 1 because last action is saving new header
+                    context.Progress.Report(new ProgressStatus(i + 1, fileList.Count + 1));
                 }
-                catch
-                {
-                    continue;
-                }
-                finally
-                {
-                    if(encryptionOptions is not null) encryptionOptions.Dispose();
-                }
-                
-                //Calculating toread to allow copying of partially encrypted files
-                ulong toread = Math.Min((ulong)(nextOffset - currentOffset), (ulong)reader.EncryptionOptionsSize + fileSize);
-                newVaultOffsets[i] = newVaultfs.Seek(0, SeekOrigin.End);
-                CopyPartOfFile(vaultfs, currentOffset, toread, newVaultfs, newVaultOffsets[i]);
-                //Reporting current index + 1 because i is zero based while user gets to see 1 based indexing, total is filelList.Count + 1 because last action is saving new header
-                context.Progress.Report(new ProgressStatus(i + 1, fileList.Count + 1));
+                //Delete offsets pointing to 0 (empty data from options that werent properly added) and duplicates
+                trimmedOffsets = newVaultOffsets.Where((offset, index) => offset != 0).Distinct().ToArray();
+                reader.SaveMetadataOffsets(newVaultfs, trimmedOffsets);
             }
-            reader.SaveMetadataOffsets(newVaultfs, newVaultOffsets);
+            finally
+            {
+                CryptographicOperations.ZeroMemory(MemoryMarshal.AsBytes(newVaultOffsets.AsSpan()));
+                if (trimmedOffsets is not null) CryptographicOperations.ZeroMemory(MemoryMarshal.AsBytes(trimmedOffsets.AsSpan()));
+            }
+            
             context.Progress.Report(new ProgressStatus(fileListCount + 1, fileListCount + 1));
         }
 
