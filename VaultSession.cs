@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Buffers.Binary;
 using System.Collections.Generic;
 using System.ComponentModel;
@@ -272,10 +272,14 @@ namespace VaultCrypt
                         fileEncryptionOptions = EncryptionOptions.GetDecryptedFileEncryptionOptions(stream, offset);
                         VaultSession.CurrentSession.ENCRYPTED_FILES.Add(offset, Encoding.UTF8.GetString(fileEncryptionOptions.FileName));
                     }
+                    catch(ArgumentException ex)
+                    {
+                        //Dictionary entry with the same key already exists, replace it
+                        VaultSession.CurrentSession.ENCRYPTED_FILES[offset] = Encoding.UTF8.GetString(fileEncryptionOptions.FileName);
+                    }
                     catch
                     {
                         VaultSession.CurrentSession.ENCRYPTED_FILES.Add(offset, "Unknown file (Corrupted data!)");
-                        continue;
                     }
                     finally
                     {
