@@ -35,7 +35,7 @@ namespace VaultCrypt
             VAULT_READER = null!;
         }
 
-        internal static void CreateSession(NormalizedPath vaultPath, VaultReader vaultReader, byte[] password, byte[] salt, int iterations)
+        internal static void CreateSession(NormalizedPath vaultPath, VaultReader vaultReader, ReadOnlySpan<byte> password, ReadOnlySpan<byte> salt, int iterations)
         {
             CurrentSession.KEY = PasswordHelper.DeriveKey(password, salt, iterations);
             CurrentSession.VAULTPATH = vaultPath;

@@ -22,12 +22,9 @@ namespace VaultCrypt
             return salt;
         }
 
-        internal static byte[] DeriveKey(byte[] password, byte[] salt, int iterations)
+        internal static byte[] DeriveKey(ReadOnlySpan<byte> password, ReadOnlySpan<byte> salt, int iterations)
         {
-            using (Rfc2898DeriveBytes pbkdf2 = new Rfc2898DeriveBytes(password, salt, iterations, HashAlgorithmName.SHA512))
-            {
-                return pbkdf2.GetBytes(128);
-            }
+            return Rfc2898DeriveBytes.Pbkdf2(password, salt, iterations, HashAlgorithmName.SHA512, 128);
         }
 
         internal static ReadOnlyMemory<byte> GetSlicedKey(byte keySize)
