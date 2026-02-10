@@ -432,7 +432,7 @@ namespace VaultCrypt
                 try
                 {
                     calculatedTag = CalculateHMAC(key, iv, encryptedData);
-                    if (!CryptographicOperations.FixedTimeEquals(tag, calculatedTag)) throw new VaultException("Wrong HMAC authentication tag");
+                    if (!CryptographicOperations.FixedTimeEquals(tag, calculatedTag)) throw new VaultException(VaultException.ErrorContext.Decrypt, VaultException.ErrorReason.WrongHMAC);
                     var cipher = new KCtrBlockCipher(new TwofishEngine());
                     var parameters = new ParametersWithIV(new KeyParameter(key), iv);
                     cipher.Init(false, parameters);
@@ -514,7 +514,7 @@ namespace VaultCrypt
                 try
                 {
                     calculatedTag = CalculateHMAC(key, iv, encryptedData);
-                    if (!CryptographicOperations.FixedTimeEquals(tag, calculatedTag)) throw new VaultException("Wrong HMAC authentication tag");
+                    if (!CryptographicOperations.FixedTimeEquals(tag, calculatedTag)) throw new VaultException(VaultException.ErrorContext.Decrypt, VaultException.ErrorReason.WrongHMAC);
                     var cipher = new KCtrBlockCipher(new ThreefishEngine(blockSizeInBits));
                     var parameters = new ParametersWithIV(new KeyParameter(key), iv);
                     cipher.Init(false, parameters);
@@ -657,7 +657,7 @@ namespace VaultCrypt
                 try
                 {
                     calculatedTag = CalculateHMAC(key, iv, encryptedData);
-                    if (!CryptographicOperations.FixedTimeEquals(tag, calculatedTag)) throw new VaultException("Wrong HMAC authentication tag");
+                    if (!CryptographicOperations.FixedTimeEquals(tag, calculatedTag)) throw new VaultException(VaultException.ErrorContext.Decrypt, VaultException.ErrorReason.WrongHMAC);
                     var cipher = new KCtrBlockCipher(new SerpentEngine());
                     var parameters = new ParametersWithIV(new KeyParameter(key), iv);
                     cipher.Init(false, parameters);
@@ -868,7 +868,7 @@ namespace VaultCrypt
                 try
                 {
                     calculatedTag = CalculateHMAC(key, iv, encryptedData);
-                    if (!CryptographicOperations.FixedTimeEquals(tag, calculatedTag)) throw new VaultException("Wrong HMAC authentication tag");
+                    if (!CryptographicOperations.FixedTimeEquals(tag, calculatedTag)) throw new VaultException(VaultException.ErrorContext.Decrypt, VaultException.ErrorReason.WrongHMAC);
                     var cipher = new KCtrBlockCipher(new CamelliaEngine());
                     var parameters = new ParametersWithIV(new KeyParameter(key), iv);
                     cipher.Init(false, parameters);
@@ -943,7 +943,7 @@ namespace VaultCrypt
                 try
                 {
                     calculatedTag = CalculateHMAC(key, iv, encryptedData);
-                    if (!CryptographicOperations.FixedTimeEquals(tag, calculatedTag)) throw new VaultException("Wrong HMAC authentication tag");
+                    if (!CryptographicOperations.FixedTimeEquals(tag, calculatedTag)) throw new VaultException(VaultException.ErrorContext.Decrypt, VaultException.ErrorReason.WrongHMAC);
                     var cipher = new XSalsa20Engine();
                     var parameters = new ParametersWithIV(new KeyParameter(key), iv);
                     cipher.Init(false, parameters);
