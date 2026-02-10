@@ -127,7 +127,7 @@ namespace VaultCrypt
                         }
 
                         //End of file throw
-                        if (bytesRead == 0) throw VaultException.EndOfFileException();
+                        if (bytesRead == 0) throw new VaultException(VaultException.ErrorContext.Decrypt, VaultException.ErrorReason.EndOfFile);
 
                         currentChunk = new byte[bytesRead];
                         Buffer.BlockCopy(buffer, 0, currentChunk, 0, bytesRead);
@@ -137,8 +137,7 @@ namespace VaultCrypt
                         CryptographicOperations.ZeroMemory(buffer);
                     }
 
-
-                    if (tasks.Any(task => task.IsFaulted)) throw new VaultException("One or more tasks failed while decrypting");
+                    if (tasks.Any(task => task.IsFaulted)) throw new VaultException(VaultException.ErrorContext.Decrypt, VaultException.ErrorReason.TaskFaulted);
                     if (tasks.Count >= concurrentChunkCount)
                     {
                         await Task.WhenAny(tasks);
