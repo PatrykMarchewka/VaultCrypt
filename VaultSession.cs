@@ -483,7 +483,7 @@ namespace VaultCrypt
 
         internal virtual byte[] VaultEncryption(ReadOnlyMemory<byte> data)
         {
-            if (data.Length == 0) throw new VaultException("Failed to encrypt vault metadata, provided data was empty");
+            if (data.IsEmpty) throw new ArgumentException("Provided empty data", nameof(data));
 
             byte[] slicedKey = new byte[EncryptionAlgorithm.GetEncryptionAlgorithmProvider[VaultEncryptionAlgorithm].KeySize];
             try
@@ -501,7 +501,7 @@ namespace VaultCrypt
 
         internal virtual byte[] VaultDecryption(ReadOnlyMemory<byte> data)
         {
-            if (data.Length == 0) throw new VaultException("Failed to decrypt vault metadata, provided data was empty");
+            if (data.IsEmpty) throw new ArgumentException("Provided empty data", nameof(data));
 
             byte[] slicedKey = new byte[EncryptionAlgorithm.GetEncryptionAlgorithmProvider[VaultEncryptionAlgorithm].KeySize];
             try

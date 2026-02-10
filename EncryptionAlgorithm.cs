@@ -137,8 +137,8 @@ namespace VaultCrypt
             public short ExtraEncryptionDataSize => 28;
             public byte[] EncryptBytes(ReadOnlySpan<byte> data, ReadOnlySpan<byte> key)
             {
-                if (data.Length == 0) throw new VaultException("Failed to encrypt bytes, provided data was empty");
-                if (key.Length == 0) throw new VaultException("Failed to encrypt bytes, provided key was empty");
+                if (data.IsEmpty) throw new ArgumentException("Provided empty data", nameof(data));
+                if (key.IsEmpty) throw new ArgumentException("Provided empty key", nameof(key));
 
 
                 byte ivLength = 12;
@@ -173,8 +173,8 @@ namespace VaultCrypt
             /// <exception cref="VaultException">Thrown when decryption failed</exception>
             public byte[] DecryptBytes(ReadOnlySpan<byte> data, ReadOnlySpan<byte> key)
             {
-                if (data.Length == 0) throw new VaultException("Failed to decrypt bytes, provided data was empty");
-                if (key.Length == 0) throw new VaultException("Failed to decrypt bytes, provided key was empty");
+                if (data.IsEmpty) throw new ArgumentException("Provided empty data", nameof(data));
+                if (key.IsEmpty) throw new ArgumentException("Provided empty key", nameof(key));
 
                 ReadOnlySpan<byte> iv = data.Slice(0, 12);
                 ReadOnlySpan<byte> tag = data.Slice(12, 16);
@@ -202,8 +202,8 @@ namespace VaultCrypt
             public short ExtraEncryptionDataSize => 28;
             public byte[] EncryptBytes(ReadOnlySpan<byte> data, ReadOnlySpan<byte> key)
             {
-                if (data.Length == 0) throw new VaultException("Failed to encrypt bytes, provided data was empty");
-                if (key.Length == 0) throw new VaultException("Failed to encrypt bytes, provided key was empty");
+                if (data.IsEmpty) throw new ArgumentException("Provided empty data", nameof(data));
+                if (key.IsEmpty) throw new ArgumentException("Provided empty key", nameof(key));
 
                 byte ivLength = 12;
                 byte authenticationLength = 16;
@@ -230,8 +230,8 @@ namespace VaultCrypt
 
             public byte[] DecryptBytes(ReadOnlySpan<byte> data, ReadOnlySpan<byte> key)
             {
-                if (data.Length == 0) throw new VaultException("Failed to decrypt bytes, provided data was empty");
-                if (key.Length == 0) throw new VaultException("Failed to decrypt bytes, provided key was empty");
+                if (data.IsEmpty) throw new ArgumentException("Provided empty data", nameof(data));
+                if (key.IsEmpty) throw new ArgumentException("Provided empty key", nameof(key));
 
                 ReadOnlySpan<byte> iv = data.Slice(0, 12);
                 ReadOnlySpan<byte> tag = data.Slice(12, 16);
@@ -257,8 +257,8 @@ namespace VaultCrypt
             public short ExtraEncryptionDataSize => 28;
             public byte[] EncryptBytes(ReadOnlySpan<byte> data, ReadOnlySpan<byte> key)
             {
-                if (data.Length == 0) throw new VaultException("Failed to encrypt bytes, provided data was empty");
-                if (key.Length == 0) throw new VaultException("Failed to encrypt bytes, provided key was empty");
+                if (data.IsEmpty) throw new ArgumentException("Provided empty data", nameof(data));
+                if (key.IsEmpty) throw new ArgumentException("Provided empty key", nameof(key));
 
                 byte ivLength = 12;
                 byte authenticationLength = 16;
@@ -285,8 +285,8 @@ namespace VaultCrypt
 
             public byte[] DecryptBytes(ReadOnlySpan<byte> data, ReadOnlySpan<byte> key)
             {
-                if (data.Length == 0) throw new VaultException("Failed to decrypt bytes, provided data was empty");
-                if (key.Length == 0) throw new VaultException("Failed to decrypt bytes, provided key was empty");
+                if (data.IsEmpty) throw new ArgumentException("Provided empty data", nameof(data));
+                if (key.IsEmpty) throw new ArgumentException("Provided empty key", nameof(key));
 
                 ReadOnlySpan<byte> iv = data.Slice(0, 12);
                 ReadOnlySpan<byte> tag = data.Slice(12, 16);
@@ -313,8 +313,8 @@ namespace VaultCrypt
 
             public byte[] EncryptBytes(ReadOnlySpan<byte> data, ReadOnlySpan<byte> key)
             {
-                if (data.Length == 0) throw new VaultException("Failed to encrypt bytes, provided data was empty");
-                if (key.Length == 0) throw new VaultException("Failed to encrypt bytes, provided key was empty");
+                if (data.IsEmpty) throw new ArgumentException("Provided empty data", nameof(data));
+                if (key.IsEmpty) throw new ArgumentException("Provided empty key", nameof(key));
 
                 byte[] iv = new byte[12];
                 byte authenticationLength = 16;
@@ -345,8 +345,8 @@ namespace VaultCrypt
 
             public byte[] DecryptBytes(ReadOnlySpan<byte> data, ReadOnlySpan<byte> key)
             {
-                if (data.Length == 0) throw new VaultException("Failed to decrypt bytes, provided data was empty");
-                if (key.Length == 0) throw new VaultException("Failed to decrypt bytes, provided key was empty");
+                if (data.IsEmpty) throw new ArgumentException("Provided empty data", nameof(data));
+                if (key.IsEmpty) throw new ArgumentException("Provided empty key", nameof(key));
 
                 ReadOnlySpan<byte> iv = data.Slice(0, 12);
                 byte authenticationLength = 16;
@@ -381,8 +381,8 @@ namespace VaultCrypt
 
             public byte[] EncryptBytes(ReadOnlySpan<byte> data, ReadOnlySpan<byte> key)
             {
-                if (data.Length == 0) throw new VaultException("Failed to encrypt bytes, provided data was empty");
-                if (key.Length == 0) throw new VaultException("Failed to encrypt bytes, provided key was empty");
+                if (data.IsEmpty) throw new ArgumentException("Provided empty data", nameof(data));
+                if (key.IsEmpty) throw new ArgumentException("Provided empty key", nameof(key));
 
                 byte ivLength = 12;
                 byte authenticationLength = 64;
@@ -420,8 +420,8 @@ namespace VaultCrypt
 
             public byte[] DecryptBytes(ReadOnlySpan<byte> data, ReadOnlySpan<byte> key)
             {
-                if (data.Length == 0) throw new VaultException("Failed to decrypt bytes, provided data was empty");
-                if (key.Length == 0) throw new VaultException("Failed to decrypt bytes, provided key was empty");
+                if (data.IsEmpty) throw new ArgumentException("Provided empty data", nameof(data));
+                if (key.IsEmpty) throw new ArgumentException("Provided empty key", nameof(key));
 
                 ReadOnlySpan<byte> iv = data.Slice(0, 12);
                 ReadOnlySpan<byte> encryptedData = data[12..^64];
@@ -464,8 +464,8 @@ namespace VaultCrypt
 
             public byte[] EncryptBytes(ReadOnlySpan<byte> data, ReadOnlySpan<byte> key)
             {
-                if (data.Length == 0) throw new VaultException("Failed to encrypt bytes, provided data was empty");
-                if (key.Length == 0) throw new VaultException("Failed to encrypt bytes, provided key was empty");
+                if (data.IsEmpty) throw new ArgumentException("Provided empty data", nameof(data));
+                if (key.IsEmpty) throw new ArgumentException("Provided empty key", nameof(key));
 
                 byte ivLength = 12;
                 byte authenticationLength = 64;
@@ -502,8 +502,8 @@ namespace VaultCrypt
 
             public byte[] DecryptBytes(ReadOnlySpan<byte> data, ReadOnlySpan<byte> key)
             {
-                if (data.Length == 0) throw new VaultException("Failed to decrypt bytes, provided data was empty");
-                if (key.Length == 0) throw new VaultException("Failed to decrypt bytes, provided key was empty");
+                if (data.IsEmpty) throw new ArgumentException("Provided empty data", nameof(data));
+                if (key.IsEmpty) throw new ArgumentException("Provided empty key", nameof(key));
 
                 ReadOnlySpan<byte> iv = data.Slice(0, 12);
                 ReadOnlySpan<byte> encryptedData = data[12..^64];
@@ -539,8 +539,8 @@ namespace VaultCrypt
 
             public byte[] EncryptBytes(ReadOnlySpan<byte> data, ReadOnlySpan<byte> key)
             {
-                if (data.Length == 0) throw new VaultException("Failed to encrypt bytes, provided data was empty");
-                if (key.Length == 0) throw new VaultException("Failed to encrypt bytes, provided key was empty");
+                if (data.IsEmpty) throw new ArgumentException("Provided empty data", nameof(data));
+                if (key.IsEmpty) throw new ArgumentException("Provided empty key", nameof(key));
 
                 byte[] iv = new byte[12];
                 byte authenticationLength = 16;
@@ -571,8 +571,8 @@ namespace VaultCrypt
 
             public byte[] DecryptBytes(ReadOnlySpan<byte> data, ReadOnlySpan<byte> key)
             {
-                if (data.Length == 0) throw new VaultException("Failed to decrypt bytes, provided data was empty");
-                if (key.Length == 0) throw new VaultException("Failed to decrypt bytes, provided key was empty");
+                if (data.IsEmpty) throw new ArgumentException("Provided empty data", nameof(data));
+                if (key.IsEmpty) throw new ArgumentException("Provided empty key", nameof(key));
 
                 ReadOnlySpan<byte> iv = data.Slice(0, 12);
                 byte authenticationLength = 16;
@@ -607,8 +607,8 @@ namespace VaultCrypt
 
             public byte[] EncryptBytes(ReadOnlySpan<byte> data, ReadOnlySpan<byte> key)
             {
-                if (data.Length == 0) throw new VaultException("Failed to encrypt bytes, provided data was empty");
-                if (key.Length == 0) throw new VaultException("Failed to encrypt bytes, provided key was empty");
+                if (data.IsEmpty) throw new ArgumentException("Provided empty data", nameof(data));
+                if (key.IsEmpty) throw new ArgumentException("Provided empty key", nameof(key));
 
                 byte ivLength = 12;
                 byte authenticationLength = 64;
@@ -645,8 +645,8 @@ namespace VaultCrypt
 
             public byte[] DecryptBytes(ReadOnlySpan<byte> data, ReadOnlySpan<byte> key)
             {
-                if (data.Length == 0) throw new VaultException("Failed to decrypt bytes, provided data was empty");
-                if (key.Length == 0) throw new VaultException("Failed to decrypt bytes, provided key was empty");
+                if (data.IsEmpty) throw new ArgumentException("Provided empty data", nameof(data));
+                if (key.IsEmpty) throw new ArgumentException("Provided empty key", nameof(key));
 
                 ReadOnlySpan<byte> iv = data.Slice(0, 12);
                 ReadOnlySpan<byte> encryptedData = data[12..^64];
@@ -682,8 +682,8 @@ namespace VaultCrypt
 
             public byte[] EncryptBytes(ReadOnlySpan<byte> data, ReadOnlySpan<byte> key)
             {
-                if (data.Length == 0) throw new VaultException("Failed to encrypt bytes, provided data was empty");
-                if (key.Length == 0) throw new VaultException("Failed to encrypt bytes, provided key was empty");
+                if (data.IsEmpty) throw new ArgumentException("Provided empty data", nameof(data));
+                if (key.IsEmpty) throw new ArgumentException("Provided empty key", nameof(key));
 
                 byte[] iv = new byte[12];
                 byte authenticationLength = 16;
@@ -714,8 +714,8 @@ namespace VaultCrypt
 
             public byte[] DecryptBytes(ReadOnlySpan<byte> data, ReadOnlySpan<byte> key)
             {
-                if (data.Length == 0) throw new VaultException("Failed to decrypt bytes, provided data was empty");
-                if (key.Length == 0) throw new VaultException("Failed to decrypt bytes, provided key was empty");
+                if (data.IsEmpty) throw new ArgumentException("Provided empty data", nameof(data));
+                if (key.IsEmpty) throw new ArgumentException("Provided empty key", nameof(key));
 
                 ReadOnlySpan<byte> iv = data.Slice(0, 12);
                 byte authenticationLength = 16;
@@ -750,8 +750,8 @@ namespace VaultCrypt
 
             public byte[] EncryptBytes(ReadOnlySpan<byte> data, ReadOnlySpan<byte> key)
             {
-                if (data.Length == 0) throw new VaultException("Failed to encrypt bytes, provided data was empty");
-                if (key.Length == 0) throw new VaultException("Failed to encrypt bytes, provided key was empty");
+                if (data.IsEmpty) throw new ArgumentException("Provided empty data", nameof(data));
+                if (key.IsEmpty) throw new ArgumentException("Provided empty key", nameof(key));
 
                 byte[] iv = new byte[12];
                 byte authenticationLength = 16;
@@ -782,8 +782,8 @@ namespace VaultCrypt
 
             public byte[] DecryptBytes(ReadOnlySpan<byte> data, ReadOnlySpan<byte> key)
             {
-                if (data.Length == 0) throw new VaultException("Failed to decrypt bytes, provided data was empty");
-                if (key.Length == 0) throw new VaultException("Failed to decrypt bytes, provided key was empty");
+                if (data.IsEmpty) throw new ArgumentException("Provided empty data", nameof(data));
+                if (key.IsEmpty) throw new ArgumentException("Provided empty key", nameof(key));
 
                 ReadOnlySpan<byte> iv = data.Slice(0, 12);
                 byte authenticationLength = 16;
@@ -818,8 +818,8 @@ namespace VaultCrypt
 
             public byte[] EncryptBytes(ReadOnlySpan<byte> data, ReadOnlySpan<byte> key)
             {
-                if (data.Length == 0) throw new VaultException("Failed to encrypt bytes, provided data was empty");
-                if (key.Length == 0) throw new VaultException("Failed to encrypt bytes, provided key was empty");
+                if (data.IsEmpty) throw new ArgumentException("Provided empty data", nameof(data));
+                if (key.IsEmpty) throw new ArgumentException("Provided empty key", nameof(key));
 
                 byte ivLength = 12;
                 byte authenticationLength = 64;
@@ -856,8 +856,8 @@ namespace VaultCrypt
 
             public byte[] DecryptBytes(ReadOnlySpan<byte> data, ReadOnlySpan<byte> key)
             {
-                if (data.Length == 0) throw new VaultException("Failed to decrypt bytes, provided data was empty");
-                if (key.Length == 0) throw new VaultException("Failed to decrypt bytes, provided key was empty");
+                if (data.IsEmpty) throw new ArgumentException("Provided empty data", nameof(data));
+                if (key.IsEmpty) throw new ArgumentException("Provided empty key", nameof(key));
 
                 ReadOnlySpan<byte> iv = data.Slice(0, 12);
                 ReadOnlySpan<byte> encryptedData = data[12..^64];
@@ -893,8 +893,8 @@ namespace VaultCrypt
 
             public byte[] EncryptBytes(ReadOnlySpan<byte> data, ReadOnlySpan<byte> key)
             {
-                if (data.Length == 0) throw new VaultException("Failed to encrypt bytes, provided data was empty");
-                if (key.Length == 0) throw new VaultException("Failed to encrypt bytes, provided key was empty");
+                if (data.IsEmpty) throw new ArgumentException("Provided empty data", nameof(data));
+                if (key.IsEmpty) throw new ArgumentException("Provided empty key", nameof(key));
 
                 byte ivLength = 24;
                 byte authenticationLength = 64;
@@ -931,8 +931,8 @@ namespace VaultCrypt
 
             public byte[] DecryptBytes(ReadOnlySpan<byte> data, ReadOnlySpan<byte> key)
             {
-                if (data.Length == 0) throw new VaultException("Failed to decrypt bytes, provided data was empty");
-                if (key.Length == 0) throw new VaultException("Failed to decrypt bytes, provided key was empty");
+                if (data.IsEmpty) throw new ArgumentException("Provided empty data", nameof(data));
+                if (key.IsEmpty) throw new ArgumentException("Provided empty key", nameof(key));
 
                 ReadOnlySpan<byte> iv = data.Slice(0, 24);
                 ReadOnlySpan<byte> encryptedData = data[24..^64];

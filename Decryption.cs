@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.IO;
@@ -55,7 +55,7 @@ namespace VaultCrypt
         {
             ArgumentNullException.ThrowIfNull(vaultFS);
             ArgumentOutOfRangeException.ThrowIfNegativeOrZero(fileSize);
-            if (key.Length == 0) throw new VaultException("Failed to decrypt data, provided key was empty");
+            if (key.IsEmpty) throw new ArgumentException("Provided empty key", nameof(key));
             ArgumentNullException.ThrowIfNull(encryptionAlgorithm);
 
             byte[] buffer = new byte[fileSize];
@@ -94,7 +94,7 @@ namespace VaultCrypt
             ArgumentNullException.ThrowIfNull(vaultFS);
             ArgumentNullException.ThrowIfNull(fileFS);
             ArgumentOutOfRangeException.ThrowIfNegative(extraData);
-            if (key.Length == 0) throw new VaultException("Failed to decrypt data, provided key was empty");
+            if (key.IsEmpty) throw new ArgumentException("Provided empty key", nameof(key));
             ArgumentNullException.ThrowIfNull(encryptionAlgorithm);
             ArgumentNullException.ThrowIfNull(context);
 

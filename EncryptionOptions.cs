@@ -222,7 +222,7 @@ namespace VaultCrypt
 
         private static FileEncryptionOptions Deserialize(ReadOnlySpan<byte> data)
         {
-            if (data.Length < 1) throw new VaultException($"Failed to deserialize data, got empty field");
+            if (data.IsEmpty) throw new ArgumentException("Provided empty data", nameof(data));
             byte version = data[0];
 
             return version switch

@@ -68,7 +68,7 @@ namespace VaultCrypt
             ArgumentOutOfRangeException.ThrowIfNegativeOrZero(totalChunks);
             ArgumentOutOfRangeException.ThrowIfNegativeOrZero(concurrentChunkCount);
             ArgumentOutOfRangeException.ThrowIfZero(chunkSizeInMB);
-            if (key.Length == 0) throw new VaultException("Failed to encrypt chunk, provided empty key");
+            if (key.IsEmpty) throw new ArgumentException("Provided empty key", nameof(key));
             ArgumentNullException.ThrowIfNull(context);
 
             var tasks = new List<Task>();
