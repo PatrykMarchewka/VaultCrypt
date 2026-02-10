@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
@@ -15,5 +15,34 @@ namespace VaultCrypt.Exceptions
         internal static VaultException DecryptionFailed(Exception inner) => new VaultException("Decryption failed", inner);
         internal static VaultException EndOfFileException(Exception? inner = null) => new VaultException("Unexpected end of file!", inner);
         internal static VaultException OperationCancelledException(OperationCanceledException inner) => new VaultException("Operation cancelled by user", inner);
+
+        internal ErrorContext ExceptionContext { get; }
+        internal ErrorReason ExceptionReason { get; }
+        
+        internal VaultException(ErrorContext context, ErrorReason reason, Exception? innerException = null) : base($"{GetContext(context)}: {GetReason(reason)}", innerException) {
+            ExceptionContext = context;
+            ExceptionReason = reason;
+        }
+
+        internal enum ErrorContext
+        {
+            Decrypt
+        }
+
+        internal static string GetContext(ErrorContext context) => context switch
+        {
+            ErrorContext.Decrypt => "Decryption failed",
+            _ => "Unknown error context"
+        };
+
+        internal enum ErrorReason
+        {
+            WrongHMAC
+        }
+        internal static string GetReason(ErrorReason reason) => reason switch
+        {
+            ErrorReason.WrongHMAC => "Wrong HMAC authentication tag",
+            _ => "Unknown error reason"
+        };
     }
 }
