@@ -30,7 +30,8 @@ namespace VaultCrypt.Exceptions
             Decrypt,
             EncryptionOptions,
             SystemCheck,
-            VaultSession
+            VaultSession,
+            WriteToFile
         }
 
         internal static string GetContext(ErrorContext context) => context switch
@@ -40,6 +41,7 @@ namespace VaultCrypt.Exceptions
             ErrorContext.EncryptionOptions => "Encryption options operation failed",
             ErrorContext.SystemCheck => "System check failed",
             ErrorContext.VaultSession => "Vault operation failed",
+            ErrorContext.WriteToFile => "Writing to file failed",
             _ => "Unknown error context"
         };
 
@@ -48,6 +50,7 @@ namespace VaultCrypt.Exceptions
             EndOfFile,
             FileNameTooLong,
             FullVault,
+            MissingChunk,
             NoFreeSpace,
             NoReader,
             TaskFaulted,
@@ -58,6 +61,7 @@ namespace VaultCrypt.Exceptions
             ErrorReason.EndOfFile => "Unexpected end of file",
             ErrorReason.FileNameTooLong => "File name is too long",
             ErrorReason.FullVault => "Vault is full",
+            ErrorReason.MissingChunk => "Missing chunk",
             ErrorReason.NoFreeSpace => "Not enough free space on disk",
             ErrorReason.NoReader => "Failed to find reader",
             ErrorReason.TaskFaulted => "One or more tasks failed",

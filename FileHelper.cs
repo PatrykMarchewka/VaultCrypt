@@ -81,7 +81,7 @@ namespace VaultCrypt
                     Monitor.Wait(lockObject);
                 }
 
-                if (!results.TryRemove(nextToWrite, out ready!)) throw new VaultException("Missing chunk");
+                if (!results.TryRemove(nextToWrite, out ready!)) throw new VaultException(VaultException.ErrorContext.WriteToFile, VaultException.ErrorReason.MissingChunk);
                 try
                 {
                     fileFS.Write(ready, 0, ready.Length);
