@@ -47,6 +47,7 @@ namespace VaultCrypt.Exceptions
         {
             EndOfFile,
             FileNameTooLong,
+            FullVault,
             NoFreeSpace,
             NoReader,
             TaskFaulted,
@@ -56,6 +57,7 @@ namespace VaultCrypt.Exceptions
         {
             ErrorReason.EndOfFile => "Unexpected end of file",
             ErrorReason.FileNameTooLong => "File name is too long",
+            ErrorReason.FullVault => "Vault is full",
             ErrorReason.NoFreeSpace => "Not enough free space on disk",
             ErrorReason.NoReader => "Failed to find reader",
             ErrorReason.TaskFaulted => "One or more tasks failed",

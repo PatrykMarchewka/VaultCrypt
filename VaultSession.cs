@@ -351,7 +351,7 @@ namespace VaultCrypt
                 oldOffsets = ReadMetadataOffsets(stream);
                 if (oldOffsets.Length + 1 > (sizeof(ushort) + MetadataOffsetsSize))
                 {
-                    throw new VaultException("Cannot add any more files to this vault");
+                    throw new VaultException(VaultException.ErrorContext.VaultSession, VaultException.ErrorReason.FullVault);
                 }
                 newOffsets = new long[oldOffsets.Length + 1];
                 oldOffsets.AsSpan().CopyTo(newOffsets);
