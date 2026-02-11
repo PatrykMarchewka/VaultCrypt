@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Buffers.Binary;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
@@ -30,7 +30,7 @@ namespace VaultCrypt
             long availableBytes = new DriveInfo(Path.GetPathRoot(VaultSession.CurrentSession.VAULTPATH)!).AvailableFreeSpace;
             if (availableBytes < (GetTotalBytes(filePath) * 1.05))
             {
-                throw new VaultException("Not enough free space");
+                throw new VaultException(VaultException.ErrorContext.SystemCheck, VaultException.ErrorReason.NoFreeSpace);
             }
         }
 

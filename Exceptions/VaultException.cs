@@ -29,6 +29,7 @@ namespace VaultCrypt.Exceptions
             Encrypt,
             Decrypt,
             EncryptionOptions,
+            SystemCheck,
             VaultSession
         }
 
@@ -37,6 +38,7 @@ namespace VaultCrypt.Exceptions
             ErrorContext.Encrypt => "Encryption failed",
             ErrorContext.Decrypt => "Decryption failed",
             ErrorContext.EncryptionOptions => "Encryption options operation failed",
+            ErrorContext.SystemCheck => "System check failed",
             ErrorContext.VaultSession => "Vault operation failed",
             _ => "Unknown error context"
         };
@@ -44,6 +46,7 @@ namespace VaultCrypt.Exceptions
         internal enum ErrorReason
         {
             EndOfFile,
+            NoFreeSpace,
             NoReader,
             TaskFaulted,
             WrongHMAC
@@ -51,6 +54,7 @@ namespace VaultCrypt.Exceptions
         internal static string GetReason(ErrorReason reason) => reason switch
         {
             ErrorReason.EndOfFile => "Unexpected end of file",
+            ErrorReason.NoFreeSpace => "Not enough free space on disk",
             ErrorReason.NoReader => "Failed to find reader",
             ErrorReason.TaskFaulted => "One or more tasks failed",
             ErrorReason.WrongHMAC => "Wrong HMAC authentication tag",
