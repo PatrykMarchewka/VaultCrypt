@@ -27,25 +27,31 @@ namespace VaultCrypt.Exceptions
         internal enum ErrorContext
         {
             Encrypt,
-            Decrypt
+            Decrypt,
+            EncryptionOptions,
+            VaultSession
         }
 
         internal static string GetContext(ErrorContext context) => context switch
         {
             ErrorContext.Encrypt => "Encryption failed",
             ErrorContext.Decrypt => "Decryption failed",
+            ErrorContext.EncryptionOptions => "Encryption options operation failed",
+            ErrorContext.VaultSession => "Vault operation failed",
             _ => "Unknown error context"
         };
 
         internal enum ErrorReason
         {
             EndOfFile,
+            NoReader,
             TaskFaulted,
             WrongHMAC
         }
         internal static string GetReason(ErrorReason reason) => reason switch
         {
             ErrorReason.EndOfFile => "Unexpected end of file",
+            ErrorReason.NoReader => "Failed to find reader",
             ErrorReason.TaskFaulted => "One or more tasks failed",
             ErrorReason.WrongHMAC => "Wrong HMAC authentication tag",
             _ => "Unknown error reason"

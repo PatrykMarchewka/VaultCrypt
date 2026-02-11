@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Buffers.Binary;
 using System.Collections.Generic;
 using System.IO;
@@ -228,7 +228,7 @@ namespace VaultCrypt
             return version switch
             {
                 0 => DeserializeV0(data),
-                _ => throw new VaultException($"Failed to deserialize data, no parser for version {version}")
+                _ => throw new VaultException(VaultException.ErrorContext.EncryptionOptions, VaultException.ErrorReason.NoReader)
             };
         }
 

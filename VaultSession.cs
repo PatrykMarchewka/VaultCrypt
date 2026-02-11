@@ -174,11 +174,7 @@ namespace VaultCrypt
 
         internal static VaultReader GetVaultReader(byte version)
         {
-            if (!registry.TryGetValue(version, out Lazy<VaultReader> reader))
-            {
-                throw new VaultException($"Unknown vault version ({version})");
-            }
-            return reader.Value;
+            return registry.TryGetValue(version, out var reader) ? reader.Value : throw new VaultException(VaultException.ErrorContext.VaultSession, VaultException.ErrorReason.NoReader);
         }
     }
 
