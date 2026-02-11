@@ -53,6 +53,7 @@ namespace VaultCrypt.Exceptions
             MissingChunk,
             NoFreeSpace,
             NoReader,
+            Other,
             TaskFaulted,
             WrongHMAC
         }
@@ -64,6 +65,7 @@ namespace VaultCrypt.Exceptions
             ErrorReason.MissingChunk => "Missing chunk",
             ErrorReason.NoFreeSpace => "Not enough free space on disk",
             ErrorReason.NoReader => "Failed to find reader",
+            ErrorReason.Other => "The operation could not be completed",
             ErrorReason.TaskFaulted => "One or more tasks failed",
             ErrorReason.WrongHMAC => "Wrong HMAC authentication tag",
             _ => "Unknown error reason"
