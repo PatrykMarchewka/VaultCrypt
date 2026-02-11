@@ -68,21 +68,9 @@ namespace VaultCrypt.ViewModels
 
         private async Task Encrypt(NormalizedPath filePath)
         {
-            try
-            {
-                var context = new ProgressionContext();
-                NavigationRequested?.Invoke(new NavigateToProgressRequest(context));
-                await Encryption.Encrypt(SelectedAlgorithm, SelectedPreset.SizeInMB, filePath, context);
-            }
-            catch (OperationCanceledException ex)
-            {
-                throw VaultException.OperationCancelledException(ex);
-            }
-            catch(Exception ex)
-            {
-                throw new VaultException("Failed to encrypt file", ex);
-            }
-            
+            var context = new ProgressionContext();
+            NavigationRequested?.Invoke(new NavigateToProgressRequest(context));
+            await Encryption.Encrypt(SelectedAlgorithm, SelectedPreset.SizeInMB, filePath, context);
         }
 
         public void OnNavigatedTo(object? parameters)

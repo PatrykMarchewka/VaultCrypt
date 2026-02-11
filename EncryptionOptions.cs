@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Buffers.Binary;
 using System.Collections.Generic;
 using System.IO;
@@ -135,10 +135,10 @@ namespace VaultCrypt
                 encryptedFileOptions = vaultReader.VaultEncryption(paddedFileOptions);
                 return encryptedFileOptions;
             }
-            catch(Exception ex)
+            catch(Exception)
             {
                 if (encryptedFileOptions is not null) CryptographicOperations.ZeroMemory(encryptedFileOptions);
-                throw new VaultException("Failed to encrypt padded file options", ex);
+                throw;
             }
             finally
             {
@@ -182,10 +182,10 @@ namespace VaultCrypt
                 }
                 return buffer;
             }
-            catch(Exception ex)
+            catch(Exception)
             {
                 CryptographicOperations.ZeroMemory(buffer);
-                throw new VaultException("Failed to serialize encryption options", ex);
+                throw;
             }
         }
 
@@ -208,10 +208,10 @@ namespace VaultCrypt
                 decryptedMetadata = vaultReader.ReadAndDecryptData(vaultFS, metadataOffset, vaultReader.EncryptionOptionsSize);
                 fileEncryptionOptions = Deserialize(decryptedMetadata);
             }
-            catch(Exception ex)
+            catch(Exception)
             {
                 if (fileEncryptionOptions is not null) fileEncryptionOptions.Dispose();
-                throw new VaultException("Failed to get decrypted file encryption options", ex);
+                throw;
             }
             finally
             {
@@ -262,7 +262,7 @@ namespace VaultCrypt
 
         private static ChunkInformation DeserializeChunkInformation(ReadOnlySpan<byte> chunkData)
         {
-            if (chunkData.Length < (sizeof(ushort) + sizeof(ushort) + sizeof(uint))) throw new VaultException("Provided wrong chunk information length");
+            if (chunkData.Length != (sizeof(ushort) + sizeof(ushort) + sizeof(uint))) throw new ArgumentOutOfRangeException("Provided wrong chunk information length");
 
             ushort chunkSize = BinaryPrimitives.ReadUInt16LittleEndian(chunkData.Slice(0, sizeof(ushort)));
             ushort totalChunks = BinaryPrimitives.ReadUInt16LittleEndian(chunkData.Slice(sizeof(ushort), sizeof(ushort)));

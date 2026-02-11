@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Buffers.Binary;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
@@ -14,10 +14,6 @@ namespace VaultCrypt
 {
     internal class FileHelper
     {
-
-
-
-
         /// <summary>
         /// Checks whether there is enough free space to perform operation
         /// </summary>
@@ -42,16 +38,9 @@ namespace VaultCrypt
         private static long GetTotalBytes(NormalizedPath filePath)
         {
             ArgumentNullException.ThrowIfNull(filePath);
+            if (!File.Exists(filePath)) throw new ArgumentException($"Cant find the file at {filePath}");
 
-            if (File.Exists(filePath))
-            {
-                return new FileInfo(filePath!).Length;
-
-            }
-            else
-            {
-                throw new VaultException($"Cant find the file at {filePath}");
-            }
+            return new FileInfo(filePath!).Length;
         }
 
         internal static int CalculateConcurrency(bool chunked, ushort chunkSizeInMB)
@@ -85,10 +74,6 @@ namespace VaultCrypt
                 try
                 {
                     fileFS.Write(ready, 0, ready.Length);
-                }
-                catch(Exception ex)
-                {
-                    throw new VaultException("Couldnt write to file", ex);
                 }
                 finally
                 {
@@ -141,14 +126,6 @@ namespace VaultCrypt
                     length -= (ulong)chunkSize;
                 }
             }
-            catch(EndOfStreamException ex)
-            {
-                throw VaultException.EndOfFileException(ex);
-            }
-            catch(Exception ex)
-            {
-                throw new VaultException("Failed to copy file", ex);
-            }
             finally
             {
                 CryptographicOperations.ZeroMemory(buffer);
@@ -184,7 +161,7 @@ namespace VaultCrypt
                     }
 
                     ulong fileSize = 0;
-                    EncryptionOptions.FileEncryptionOptions encryptionOptions = null;
+                    EncryptionOptions.FileEncryptionOptions encryptionOptions = null!;
                     try
                     {
                         encryptionOptions = EncryptionOptions.GetDecryptedFileEncryptionOptions(vaultfs, currentOffset);

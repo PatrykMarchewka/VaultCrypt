@@ -157,10 +157,10 @@ namespace VaultCrypt
                     }
                     return encrypted;
                 }
-                catch (Exception ex)
+                catch (Exception)
                 {
                     CryptographicOperations.ZeroMemory(encrypted);
-                    throw VaultException.EncryptionFailed(ex);
+                    throw;
                 }
             }
 
@@ -187,10 +187,10 @@ namespace VaultCrypt
                     aesGcm.Decrypt(iv, encryptedData, tag, decrypted);
                     return decrypted;
                 }
-                catch (Exception ex)
+                catch (Exception)
                 {
                     CryptographicOperations.ZeroMemory(decrypted);
-                    throw VaultException.DecryptionFailed(ex);
+                    throw;
                 }
             }
         }
@@ -221,10 +221,10 @@ namespace VaultCrypt
                     }
                     return encrypted;
                 }
-                catch (Exception ex)
+                catch (Exception)
                 {
                     CryptographicOperations.ZeroMemory(encrypted);
-                    throw VaultException.EncryptionFailed(ex);
+                    throw;
                 }
             }
 
@@ -244,10 +244,10 @@ namespace VaultCrypt
                     aesCcm.Decrypt(iv, encryptedData, tag, decrypted);
                     return decrypted;
                 }
-                catch (Exception ex)
+                catch (Exception)
                 {
                     CryptographicOperations.ZeroMemory(decrypted);
-                    throw VaultException.DecryptionFailed(ex);
+                    throw;
                 }
             }
         }
@@ -276,10 +276,10 @@ namespace VaultCrypt
                     }
                     return encrypted;
                 }
-                catch (Exception ex)
+                catch (Exception)
                 {
                     CryptographicOperations.ZeroMemory(encrypted);
-                    throw VaultException.EncryptionFailed(ex);
+                    throw;
                 }
             }
 
@@ -299,10 +299,10 @@ namespace VaultCrypt
                     chaCha20.Decrypt(iv, encryptedData, tag, decrypted);
                     return decrypted;
                 }
-                catch (Exception ex)
+                catch (Exception)
                 {
                     CryptographicOperations.ZeroMemory(decrypted);
-                    throw VaultException.DecryptionFailed(ex);
+                    throw;
                 }
             }
         }
@@ -332,10 +332,10 @@ namespace VaultCrypt
                     Buffer.BlockCopy(iv, 0, encrypted, 0, iv.Length);
                     return encrypted;
                 }
-                catch (Exception ex)
+                catch (Exception)
                 {
                     CryptographicOperations.ZeroMemory(encrypted);
-                    throw VaultException.EncryptionFailed(ex);
+                    throw;
                 }
                 finally
                 {
@@ -363,10 +363,10 @@ namespace VaultCrypt
                     cipher.DoFinal(decrypted, length);
                     return decrypted[..^authenticationLength];
                 }
-                catch (Exception ex)
+                catch (Exception)
                 {
                     CryptographicOperations.ZeroMemory(decrypted);
-                    throw VaultException.DecryptionFailed(ex);
+                    throw;
                 }
                 finally
                 {
@@ -411,10 +411,10 @@ namespace VaultCrypt
                     }
                     return encrypted;
                 }
-                catch (Exception ex)
+                catch (Exception)
                 {
                     CryptographicOperations.ZeroMemory(encrypted);
-                    throw VaultException.EncryptionFailed(ex);
+                    throw;
                 }
             }
 
@@ -439,10 +439,10 @@ namespace VaultCrypt
                     cipher.ProcessBytes(encryptedData, decrypted);
                     return decrypted;
                 }
-                catch (Exception ex)
+                catch (Exception)
                 {
                     CryptographicOperations.ZeroMemory(decrypted);
-                    throw VaultException.DecryptionFailed(ex);
+                    throw;
                 }
                 finally
                 {
@@ -493,10 +493,10 @@ namespace VaultCrypt
                     }
                     return encrypted;
                 }
-                catch (Exception ex)
+                catch (Exception)
                 {
                     CryptographicOperations.ZeroMemory(encrypted);
-                    throw VaultException.EncryptionFailed(ex);
+                    throw;
                 }
             }
 
@@ -521,10 +521,10 @@ namespace VaultCrypt
                     cipher.ProcessBytes(encryptedData, decrypted);
                     return decrypted;
                 }
-                catch (Exception ex)
+                catch (Exception)
                 {
                     CryptographicOperations.ZeroMemory(decrypted);
-                    throw VaultException.DecryptionFailed(ex);
+                    throw;
                 }
                 finally
                 {
@@ -558,10 +558,10 @@ namespace VaultCrypt
                     Buffer.BlockCopy(iv, 0, encrypted, 0, iv.Length);
                     return encrypted;
                 }
-                catch (Exception ex)
+                catch (Exception)
                 {
                     CryptographicOperations.ZeroMemory(encrypted);
-                    throw VaultException.EncryptionFailed(ex);
+                    throw;
                 }
                 finally
                 {
@@ -589,10 +589,10 @@ namespace VaultCrypt
                     cipher.DoFinal(decrypted, length);
                     return decrypted[..^authenticationLength];
                 }
-                catch (Exception ex)
+                catch (Exception)
                 {
                     CryptographicOperations.ZeroMemory(decrypted);
-                    throw VaultException.DecryptionFailed(ex);
+                    throw;
                 }
                 finally
                 {
@@ -636,10 +636,10 @@ namespace VaultCrypt
                     }
                     return encrypted;
                 }
-                catch (Exception ex)
+                catch (Exception)
                 {
                     CryptographicOperations.ZeroMemory(encrypted);
-                    throw VaultException.EncryptionFailed(ex);
+                    throw;
                 }
             }
 
@@ -664,10 +664,10 @@ namespace VaultCrypt
                     cipher.ProcessBytes(encryptedData, decrypted);
                     return decrypted;
                 }
-                catch (Exception ex)
+                catch (Exception)
                 {
                     CryptographicOperations.ZeroMemory(decrypted);
-                    throw VaultException.DecryptionFailed(ex);
+                    throw;
                 }
                 finally
                 {
@@ -701,10 +701,10 @@ namespace VaultCrypt
                     Buffer.BlockCopy(iv, 0, encrypted, 0, iv.Length);
                     return encrypted;
                 }
-                catch (Exception ex)
+                catch (Exception)
                 {
                     CryptographicOperations.ZeroMemory(encrypted);
-                    throw VaultException.EncryptionFailed(ex);
+                    throw;
                 }
                 finally
                 {
@@ -732,10 +732,10 @@ namespace VaultCrypt
                     cipher.DoFinal(decrypted, length);
                     return decrypted[..^authenticationLength];
                 }
-                catch (Exception ex)
+                catch (Exception)
                 {
                     CryptographicOperations.ZeroMemory(decrypted);
-                    throw VaultException.DecryptionFailed(ex);
+                    throw;
                 }
                 finally
                 {
@@ -769,10 +769,10 @@ namespace VaultCrypt
                     Buffer.BlockCopy(iv, 0, encrypted, 0, iv.Length);
                     return encrypted;
                 }
-                catch (Exception ex)
+                catch (Exception)
                 {
                     CryptographicOperations.ZeroMemory(encrypted);
-                    throw VaultException.EncryptionFailed(ex);
+                    throw;
                 }
                 finally
                 {
@@ -800,10 +800,10 @@ namespace VaultCrypt
                     cipher.DoFinal(decrypted, length);
                     return decrypted[..^authenticationLength];
                 }
-                catch (Exception ex)
+                catch (Exception)
                 {
                     CryptographicOperations.ZeroMemory(decrypted);
-                    throw VaultException.DecryptionFailed(ex);
+                    throw;
                 }
                 finally
                 {
@@ -847,10 +847,10 @@ namespace VaultCrypt
                     }
                     return encrypted;
                 }
-                catch (Exception ex)
+                catch (Exception)
                 {
                     CryptographicOperations.ZeroMemory(encrypted);
-                    throw VaultException.EncryptionFailed(ex);
+                    throw;
                 }
             }
 
@@ -875,10 +875,10 @@ namespace VaultCrypt
                     cipher.ProcessBytes(encryptedData, decrypted);
                     return decrypted;
                 }
-                catch (Exception ex)
+                catch (Exception)
                 {
                     CryptographicOperations.ZeroMemory(decrypted);
-                    throw VaultException.DecryptionFailed(ex);
+                    throw;
                 }
                 finally
                 {
@@ -922,10 +922,10 @@ namespace VaultCrypt
                     }
                     return encrypted;
                 }
-                catch (Exception ex)
+                catch (Exception)
                 {
                     CryptographicOperations.ZeroMemory(encrypted);
-                    throw VaultException.EncryptionFailed(ex);
+                    throw;
                 }
             }
 
@@ -950,10 +950,10 @@ namespace VaultCrypt
                     cipher.ProcessBytes(encryptedData, decrypted);
                     return decrypted;
                 }
-                catch (Exception ex)
+                catch (Exception)
                 {
                     CryptographicOperations.ZeroMemory(decrypted);
-                    throw VaultException.DecryptionFailed(ex);
+                    throw;
                 }
                 finally
                 {

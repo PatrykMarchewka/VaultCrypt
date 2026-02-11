@@ -64,14 +64,6 @@ namespace VaultCrypt
                 vaultFS.ReadExactly(buffer);
                 return encryptionAlgorithm.DecryptBytes(buffer, key);
             }
-            catch(EndOfStreamException ex)
-            {
-                throw VaultException.EndOfFileException(ex);
-            }
-            catch(Exception ex)
-            {
-                throw new VaultException("Couldn't decrypt single chunked file", ex);
-            }
             finally
             {
                 CryptographicOperations.ZeroMemory(buffer);

@@ -8,7 +8,6 @@ using System.Text;
 using System.Threading.Tasks;
 using System.Windows;
 using System.Windows.Input;
-using VaultCrypt.Exceptions;
 
 namespace VaultCrypt.ViewModels
 {
@@ -106,10 +105,6 @@ namespace VaultCrypt.ViewModels
             {
                 passwordBytes = PasswordHelper.SecureStringToBytes(Password);
                 VaultSession.CreateVault(folderPath, VaultName, passwordBytes, SelectedPreset.Iterations);
-            }
-            catch(Exception ex)
-            {
-                throw new VaultException("Failed to create vault", ex);
             }
             finally
             {
