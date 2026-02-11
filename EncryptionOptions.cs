@@ -121,7 +121,7 @@ namespace VaultCrypt
                 encryptionOptionsBytes = SerializeEncryptionOptions(options);
                 if ((encryptionOptionsBytes.Length + EncryptionAlgorithm.GetEncryptionAlgorithmProvider[vaultReader.VaultEncryptionAlgorithm].EncryptionAlgorithm.ExtraEncryptionDataSize) > vaultReader.EncryptionOptionsSize)
                 {
-                    throw new VaultException("File name is too long");
+                    throw new VaultException(VaultException.ErrorContext.EncryptionOptions, VaultException.ErrorReason.FileNameTooLong);
                 }
                 Buffer.BlockCopy(encryptionOptionsBytes, 0, paddedFileOptions, 0, encryptionOptionsBytes.Length);
             }

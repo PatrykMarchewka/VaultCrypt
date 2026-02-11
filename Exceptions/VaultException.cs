@@ -46,6 +46,7 @@ namespace VaultCrypt.Exceptions
         internal enum ErrorReason
         {
             EndOfFile,
+            FileNameTooLong,
             NoFreeSpace,
             NoReader,
             TaskFaulted,
@@ -54,6 +55,7 @@ namespace VaultCrypt.Exceptions
         internal static string GetReason(ErrorReason reason) => reason switch
         {
             ErrorReason.EndOfFile => "Unexpected end of file",
+            ErrorReason.FileNameTooLong => "File name is too long",
             ErrorReason.NoFreeSpace => "Not enough free space on disk",
             ErrorReason.NoReader => "Failed to find reader",
             ErrorReason.TaskFaulted => "One or more tasks failed",
