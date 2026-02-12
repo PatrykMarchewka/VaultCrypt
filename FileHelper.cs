@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Buffers.Binary;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
@@ -204,7 +204,7 @@ namespace VaultCrypt
 
 
             using FileStream vaultFS = new FileStream(VaultSession.CurrentSession.VAULTPATH!, FileMode.Open, FileAccess.ReadWrite);
-            
+            var fileList = VaultSession.CurrentSession.ENCRYPTED_FILES.ToList();
             //If the file is at the end, just trim the entire file, otherwise zero out the block
             if (VaultSession.CurrentSession.ENCRYPTED_FILES.Last().Equals(FileMetadataEntry))
             {
@@ -214,7 +214,6 @@ namespace VaultCrypt
             {
                 //Calculate length incase of partially written file
                 var encryptionMetadataSize = VaultSession.CurrentSession.VAULT_READER.EncryptionOptionsSize;
-                var fileList = VaultSession.CurrentSession.ENCRYPTED_FILES.ToList();
                 int currentKey = fileList.FindIndex(file => file.Key == FileMetadataEntry.Key);
                 EncryptionOptions.FileEncryptionOptions encryptionOptions = null!;
                 ulong length = 0;
@@ -223,6 +222,11 @@ namespace VaultCrypt
                     encryptionOptions = EncryptionOptions.GetDecryptedFileEncryptionOptions(vaultFS, FileMetadataEntry.Key);
                     length = Math.Min(encryptionOptions.FileSize + (ulong)encryptionMetadataSize, (ulong)(fileList[currentKey + 1].Key - fileList[currentKey].Key));
                 }
+                catch (Exception)
+                {
+                    //Encryption options are corrupted, zero out the part until next key
+                    length = (ulong)(fileList[currentKey + 1].Key - fileList[currentKey].Key);
+                }
                 finally
                 {
                     if (encryptionOptions is not null) encryptionOptions.Dispose();
@@ -230,7 +234,7 @@ namespace VaultCrypt
                 
                 ZeroOutPartOfFile(vaultFS, FileMetadataEntry.Key, length);
             }
-            VaultSession.CurrentSession.VAULT_READER.RemoveAndSaveMetadataOffsets(vaultFS, checked((ushort)VaultSession.CurrentSession.ENCRYPTED_FILES.ToList().FindIndex(file => file.Equals(FileMetadataEntry))));
+            VaultSession.CurrentSession.VAULT_READER.RemoveAndSaveMetadataOffsets(vaultFS, checked((ushort)fileList.FindIndex(file => file.Equals(FileMetadataEntry))));
             context.Progress.Report(new ProgressStatus(1, 1));
         }
 
