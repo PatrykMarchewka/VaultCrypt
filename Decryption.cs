@@ -54,7 +54,7 @@ namespace VaultCrypt
         static byte[] DecryptInOneChunk(Stream vaultFS, ulong fileSize, ReadOnlySpan<byte> key, EncryptionAlgorithm.IEncryptionAlgorithm encryptionAlgorithm)
         {
             ArgumentNullException.ThrowIfNull(vaultFS);
-            ArgumentOutOfRangeException.ThrowIfNegativeOrZero(fileSize);
+            ArgumentOutOfRangeException.ThrowIfZero(fileSize);
             if (key.IsEmpty) throw new ArgumentException("Provided empty key", nameof(key));
             ArgumentNullException.ThrowIfNull(encryptionAlgorithm);
 
