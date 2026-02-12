@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Buffers.Binary;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
@@ -197,7 +197,7 @@ namespace VaultCrypt
             context.Progress.Report(new ProgressStatus(fileListCount + 1, fileListCount + 1));
         }
 
-        internal static void DeleteFileFromVault(KeyValuePair<long, string> FileMetadataEntry, ProgressionContext context)
+        internal static void DeleteFileFromVault(KeyValuePair<long, EncryptedFileInfo> FileMetadataEntry, ProgressionContext context)
         {
             ArgumentOutOfRangeException.ThrowIfNegative(FileMetadataEntry.Key);
             ArgumentNullException.ThrowIfNull(context);

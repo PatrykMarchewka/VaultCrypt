@@ -24,7 +24,7 @@ namespace VaultCrypt
         
         internal byte[] KEY { get; private set; }
         internal NormalizedPath VAULTPATH { get; private set; }
-        internal Dictionary<long, string> ENCRYPTED_FILES { get; private set; }
+        internal Dictionary<long, EncryptedFileInfo> ENCRYPTED_FILES { get; private set; }
         internal VaultReader VAULT_READER { get; private set; }
 
         internal static VaultSession CurrentSession = new();
@@ -254,16 +254,20 @@ namespace VaultCrypt
                     try
                     {
                         fileEncryptionOptions = EncryptionOptions.GetDecryptedFileEncryptionOptions(stream, offset);
-                        VaultSession.CurrentSession.ENCRYPTED_FILES.Add(offset, Encoding.UTF8.GetString(fileEncryptionOptions.FileName));
-                    }
-                    catch(ArgumentException)
-                    {
-                        //Dictionary entry with the same key already exists, replace it
-                        VaultSession.CurrentSession.ENCRYPTED_FILES[offset] = Encoding.UTF8.GetString(fileEncryptionOptions.FileName);
+                        try
+                        {
+                            VaultSession.CurrentSession.ENCRYPTED_FILES.Add(offset, new EncryptedFileInfo(Encoding.UTF8.GetString(fileEncryptionOptions.FileName), fileEncryptionOptions.FileSize, fileEncryptionOptions.EncryptionAlgorithm));
+                        }
+                        catch (ArgumentException)
+                        {
+                            //Dictionary entry with the same key already exists, replace it
+                            VaultSession.CurrentSession.ENCRYPTED_FILES[offset] = new EncryptedFileInfo(Encoding.UTF8.GetString(fileEncryptionOptions.FileName), fileEncryptionOptions.FileSize, fileEncryptionOptions.EncryptionAlgorithm);
+                        }
+                        
                     }
                     catch(Exception)
                     {
-                        VaultSession.CurrentSession.ENCRYPTED_FILES.Add(offset, "Unknown file (Corrupted data!)");
+                        VaultSession.CurrentSession.ENCRYPTED_FILES.Add(offset, new EncryptedFileInfo("Unknown file (Corrupted data!)", 0, null));
                     }
                     finally
                     {

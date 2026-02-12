@@ -38,8 +38,8 @@ namespace VaultCrypt.ViewModels
             }
         }
 
-        private KeyValuePair<long, string>? _selectedFile;
-        public KeyValuePair<long, string>? SelectedFile
+        private KeyValuePair<long, EncryptedFileInfo>? _selectedFile;
+        public KeyValuePair<long, EncryptedFileInfo>? SelectedFile
         {
             get => _selectedFile;
             set
@@ -106,7 +106,7 @@ namespace VaultCrypt.ViewModels
 
         private async Task DecryptFile()
         {
-            var file = FileDialogHelper.SaveFile(SelectedFile!.Value.Value);
+            var file = FileDialogHelper.SaveFile(SelectedFile!.Value.Value.FileName);
             if (file != null)
             {
                 var context = new ProgressionContext();
@@ -131,7 +131,7 @@ namespace VaultCrypt.ViewModels
 
         private void Filter(string text)
         {
-            EncryptedFilesCollectionView.Filter = file => { var kvp = (KeyValuePair<long, string>)file; return kvp.Value.Contains(text, StringComparison.OrdinalIgnoreCase); };
+            EncryptedFilesCollectionView.Filter = file => { var kvp = (KeyValuePair<long, EncryptedFileInfo>)file; return kvp.Value.FileName.Contains(text, StringComparison.OrdinalIgnoreCase); };
             EncryptedFilesCollectionView.Refresh();
         }
 

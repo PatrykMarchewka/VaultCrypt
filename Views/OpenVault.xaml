@@ -29,14 +29,23 @@
 
         <DataGrid Grid.Row="2" Grid.ColumnSpan="3" d:ItemsSource="{d:SampleData ItemCount=10}" ItemsSource="{Binding EncryptedFilesCollectionView}" SelectedItem="{Binding SelectedFile, Mode=OneWayToSource}" AutoGenerateColumns="False" MaxHeight="800" CanUserResizeColumns="False" CanUserResizeRows="False" SelectionMode="Single">
             <DataGrid.Columns>
-                <DataGridTextColumn Width="{Binding ActualWidth, ElementName=Grid}" Header="File" Binding="{Binding Value}" CanUserResize="False" IsReadOnly="True">
-                    <DataGridTextColumn.HeaderTemplate>
-                        <DataTemplate>
-                            <TextBlock Text="File" Foreground="Black" FontWeight="Bold"/>
-                        </DataTemplate>
-                    </DataGridTextColumn.HeaderTemplate>
-                </DataGridTextColumn>
+                <DataGridTextColumn Header="File" Binding="{Binding Value.FileName}" IsReadOnly="True"/>
+                <DataGridTextColumn Header="Size" Binding="{Binding Value.FileSize}" IsReadOnly="True"/>
+                <DataGridTextColumn Header="Algorithm" Binding="{Binding Value.EncryptionAlgorithm}" IsReadOnly="True"/>
             </DataGrid.Columns>
+
+            <DataGrid.ColumnHeaderStyle>
+                <Style TargetType="DataGridColumnHeader">
+                    <Setter Property="ContentTemplate">
+                        <Setter.Value>
+                            <DataTemplate>
+                                <TextBlock Text="{Binding}" Foreground="Black" FontWeight="Bold"/>
+                            </DataTemplate>
+                        </Setter.Value>
+                    </Setter>
+                </Style>
+            </DataGrid.ColumnHeaderStyle>
+
         </DataGrid>
 
         
