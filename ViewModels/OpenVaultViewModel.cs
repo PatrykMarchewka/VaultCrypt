@@ -74,25 +74,18 @@ namespace VaultCrypt.ViewModels
 
         private void CreateSession()
         {
+            byte[] password = null!;
             try
             {
-                byte[] password = null!;
-                try
-                {
-                    password = PasswordHelper.SecureStringToBytes(this.password!);
-                    this.password!.Clear();
-                    VaultSession.CreateSessionFromFile(password, vaultPath!);
-                }
-                finally
-                {
-                    if (password is not null) CryptographicOperations.ZeroMemory(password);
-                }
-                this.VaultName = Path.GetFileName(vaultPath!);
+                password = PasswordHelper.SecureStringToBytes(this.password!);
+                this.password!.Clear();
+                VaultSession.CreateSessionFromFile(password, vaultPath!);
             }
-            catch(Exception ex)
+            finally
             {
-                throw new VaultException("Failed to open vault", ex);
+                if (password is not null) CryptographicOperations.ZeroMemory(password);
             }
+            this.VaultName = Path.GetFileName(vaultPath!);
         }
 
         private void GoBack()
@@ -116,58 +109,24 @@ namespace VaultCrypt.ViewModels
             var file = FileDialogHelper.SaveFile(SelectedFile!.Value.Value);
             if (file != null)
             {
-                try
-                {
-                    var context = new ProgressionContext();
-                    NavigationRequested?.Invoke(new NavigateToProgressRequest(context));
-                    await Decryption.Decrypt(SelectedFile!.Value.Key, NormalizedPath.From(file)!, context);
-                }
-                catch(OperationCanceledException ex)
-                {
-                    throw VaultException.OperationCancelledException(ex);
-                }
-                catch(Exception ex)
-                {
-                    throw new VaultException("Failed to decrypt selected file", ex);
-                }
+                var context = new ProgressionContext();
+                NavigationRequested?.Invoke(new NavigateToProgressRequest(context));
+                await Decryption.Decrypt(SelectedFile!.Value.Key, NormalizedPath.From(file)!, context);
             }
         }
 
         private async Task DeleteFile()
         {
-            try
-            {
-                var context = new ProgressionContext();
-                NavigationRequested?.Invoke(new NavigateToProgressRequest(context));
-                await Task.Run(() => FileHelper.DeleteFileFromVault(SelectedFile!.Value, context));
-            }
-            catch (OperationCanceledException ex)
-            {
-                throw VaultException.OperationCancelledException(ex);
-            }
-            catch (Exception ex)
-            {
-                throw new VaultException("Failed to delete selected file from vault", ex);
-            }
+            var context = new ProgressionContext();
+            NavigationRequested?.Invoke(new NavigateToProgressRequest(context));
+            await Task.Run(() => FileHelper.DeleteFileFromVault(SelectedFile!.Value, context));
         }
 
         private async Task Trim()
         {
-            try
-            {
-                var context = new ProgressionContext();
-                NavigationRequested?.Invoke(new NavigateToProgressRequest(context));
-                await Task.Run(() => FileHelper.TrimVault(context));
-            }
-            catch (OperationCanceledException ex)
-            {
-                throw VaultException.OperationCancelledException(ex);
-            }
-            catch (Exception ex)
-            {
-                throw new VaultException("Failed to trim vault", ex);
-            }
-            
+            var context = new ProgressionContext();
+            NavigationRequested?.Invoke(new NavigateToProgressRequest(context));
+            await Task.Run(() => FileHelper.TrimVault(context));
         }
 
         private void Filter(string text)

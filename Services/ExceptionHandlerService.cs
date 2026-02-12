@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
@@ -32,11 +32,8 @@ namespace VaultCrypt.Services
                 case VaultException vEx:
                     navigationService.NavigateToExceptionThrown(vEx);
                     break;
-                case OperationCanceledException ocEx:
-                    navigationService.NavigateToExceptionThrown(VaultException.OperationCancelledException(ocEx));
-                    break;
                 default:
-                    navigationService.NavigateToExceptionThrown(ex);
+                    navigationService.NavigateToExceptionThrown(new VaultException(VaultException.ErrorContext.VaultSession, VaultException.ErrorReason.Other, ex));
                     break;
             }
         }

@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
@@ -8,12 +8,59 @@ namespace VaultCrypt.Exceptions
 {
     internal class VaultException : Exception
     {
-        internal VaultException(string message, Exception? innerException = null) : base(message, innerException) { }
+        internal ErrorContext ExceptionContext { get; }
+        internal ErrorReason ExceptionReason { get; }
+        
+        internal VaultException(ErrorContext context, ErrorReason reason, Exception? innerException = null) : base($"{GetContext(context)}: {GetReason(reason)}", innerException) {
+            ExceptionContext = context;
+            ExceptionReason = reason;
+        }
 
+        internal enum ErrorContext
+        {
+            Encrypt,
+            Decrypt,
+            EncryptionOptions,
+            SystemCheck,
+            VaultSession,
+            WriteToFile
+        }
 
-        internal static VaultException EncryptionFailed(Exception inner) => new VaultException("Encryption failed", inner);
-        internal static VaultException DecryptionFailed(Exception inner) => new VaultException("Decryption failed", inner);
-        internal static VaultException EndOfFileException(Exception? inner = null) => new VaultException("Unexpected end of file!", inner);
-        internal static VaultException OperationCancelledException(OperationCanceledException inner) => new VaultException("Operation cancelled by user", inner);
+        internal static string GetContext(ErrorContext context) => context switch
+        {
+            ErrorContext.Encrypt => "Encryption failed",
+            ErrorContext.Decrypt => "Decryption failed",
+            ErrorContext.EncryptionOptions => "Encryption options operation failed",
+            ErrorContext.SystemCheck => "System check failed",
+            ErrorContext.VaultSession => "Vault operation failed",
+            ErrorContext.WriteToFile => "Writing to file failed",
+            _ => "Unknown error context"
+        };
+
+        internal enum ErrorReason
+        {
+            EndOfFile,
+            FileNameTooLong,
+            FullVault,
+            MissingChunk,
+            NoFreeSpace,
+            NoReader,
+            Other,
+            TaskFaulted,
+            WrongHMAC
+        }
+        internal static string GetReason(ErrorReason reason) => reason switch
+        {
+            ErrorReason.EndOfFile => "Unexpected end of file",
+            ErrorReason.FileNameTooLong => "File name is too long",
+            ErrorReason.FullVault => "Vault is full",
+            ErrorReason.MissingChunk => "Missing chunk",
+            ErrorReason.NoFreeSpace => "Not enough free space on disk",
+            ErrorReason.NoReader => "Failed to find reader",
+            ErrorReason.Other => "The operation could not be completed",
+            ErrorReason.TaskFaulted => "One or more tasks failed",
+            ErrorReason.WrongHMAC => "Wrong HMAC authentication tag",
+            _ => "Unknown error reason"
+        };
     }
 }

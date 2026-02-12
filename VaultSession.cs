@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Buffers.Binary;
 using System.Collections.Generic;
 using System.ComponentModel;
@@ -9,6 +9,13 @@ using System.Security.Cryptography;
 using System.Text;
 using System.Threading.Tasks;
 using VaultCrypt.Exceptions;
+
+
+
+//TODO: Stop using byte[], Span<byte> or ref struct, Span best for temporary buffer, try to avoid toarray
+//Add method to check provided vault location, if not available throw ui exception
+//Add tests, like new project in solution VaultCrypt.Tests and do them there
+//TODO: Optimize DecryptInMultipleChunks and others to use Span
 
 namespace VaultCrypt
 {
@@ -95,10 +102,6 @@ namespace VaultCrypt
                 VaultSession.CurrentSession.ENCRYPTED_FILES.Clear();
                 VaultSession.CurrentSession.VAULT_READER.PopulateEncryptedFilesList(vaultFS);
             }
-            catch(Exception ex)
-            {
-                throw new VaultException("Failed to refresh file list", ex);
-            }
             finally
             {
                 EncryptedFilesListUpdated?.Invoke();
@@ -115,39 +118,24 @@ namespace VaultCrypt
             ArgumentNullException.ThrowIfNull(password);
             ArgumentNullException.ThrowIfNullOrWhiteSpace(path);
 
+            using FileStream fs = new FileStream(path!, FileMode.Open, FileAccess.Read);
+            Span<byte> buffer = stackalloc byte[1];
+            fs.ReadExactly(buffer);
+            byte version = buffer[0];
+
+            VaultReader reader = VaultRegistry.GetVaultReader(version);
+            int iterations = reader.ReadIterationsNumber(fs);
+            byte[] salt = null!;
             try
             {
-                using FileStream fs = new FileStream(path!, FileMode.Open, FileAccess.Read);
-                Span<byte> buffer = stackalloc byte[1];
-                fs.ReadExactly(buffer);
-                byte version = buffer[0];
-
-                VaultReader reader = VaultRegistry.GetVaultReader(version);
-                int iterations = reader.ReadIterationsNumber(fs);
-                byte[] salt = null!;
-                try
-                {
-                    salt = reader.ReadSalt(fs);
-                    CreateSession(path, reader, password, salt, iterations);
-                }
-                finally
-                {
-                    if(salt is not null) CryptographicOperations.ZeroMemory(salt);
-                }
-                RefreshEncryptedFilesList(fs);
-
+                salt = reader.ReadSalt(fs);
+                CreateSession(path, reader, password, salt, iterations);
             }
-            catch(EndOfStreamException ex)
+            finally
             {
-                throw VaultException.EndOfFileException(ex);
+                if (salt is not null) CryptographicOperations.ZeroMemory(salt);
             }
-            catch(Exception ex)
-            {
-                throw new VaultException("Failed to create session", ex);
-            }
-
-            
-
+            RefreshEncryptedFilesList(fs);
         }
 
         /// <summary>
@@ -174,11 +162,7 @@ namespace VaultCrypt
 
         internal static VaultReader GetVaultReader(byte version)
         {
-            if (!registry.TryGetValue(version, out Lazy<VaultReader> reader))
-            {
-                throw new VaultException($"Unknown vault version ({version})");
-            }
-            return reader.Value;
+            return registry.TryGetValue(version, out var reader) ? reader.Value : throw new VaultException(VaultException.ErrorContext.VaultSession, VaultException.ErrorReason.NoReader);
         }
     }
 
@@ -211,10 +195,10 @@ namespace VaultCrypt
                 stream.ReadExactly(salt);
                 return salt;
             }
-            catch (Exception ex)
+            catch (Exception)
             {
                 CryptographicOperations.ZeroMemory(salt);
-                throw new VaultException("Failed to get salt", ex);
+                throw;
             }
         }
 
@@ -248,10 +232,10 @@ namespace VaultCrypt
                 BinaryPrimitives.WriteInt32LittleEndian(buffer.AsSpan().Slice(1 + SaltSize, sizeof(uint)), iterations);
                 return buffer;
             }
-            catch(Exception ex)
+            catch(Exception)
             {
                 CryptographicOperations.ZeroMemory(buffer);
-                throw new VaultException("Failed to create vault header", ex);
+                throw;
             }
         }
 
@@ -272,12 +256,12 @@ namespace VaultCrypt
                         fileEncryptionOptions = EncryptionOptions.GetDecryptedFileEncryptionOptions(stream, offset);
                         VaultSession.CurrentSession.ENCRYPTED_FILES.Add(offset, Encoding.UTF8.GetString(fileEncryptionOptions.FileName));
                     }
-                    catch(ArgumentException ex)
+                    catch(ArgumentException)
                     {
                         //Dictionary entry with the same key already exists, replace it
                         VaultSession.CurrentSession.ENCRYPTED_FILES[offset] = Encoding.UTF8.GetString(fileEncryptionOptions.FileName);
                     }
-                    catch
+                    catch(Exception)
                     {
                         VaultSession.CurrentSession.ENCRYPTED_FILES.Add(offset, "Unknown file (Corrupted data!)");
                     }
@@ -313,10 +297,10 @@ namespace VaultCrypt
                 }
                 return offsets;
             }
-            catch (Exception ex)
+            catch (Exception)
             {
                 if (offsets is not null) CryptographicOperations.ZeroMemory(MemoryMarshal.AsBytes(offsets.AsSpan()));
-                throw new VaultException("Failed to read metadata offsets", ex);
+                throw;
             }
             finally
             {
@@ -355,16 +339,12 @@ namespace VaultCrypt
                 oldOffsets = ReadMetadataOffsets(stream);
                 if (oldOffsets.Length + 1 > (sizeof(ushort) + MetadataOffsetsSize))
                 {
-                    throw new VaultException("Cannot add any more files to this vault");
+                    throw new VaultException(VaultException.ErrorContext.VaultSession, VaultException.ErrorReason.FullVault);
                 }
                 newOffsets = new long[oldOffsets.Length + 1];
                 oldOffsets.AsSpan().CopyTo(newOffsets);
                 newOffsets[oldOffsets.Length] = newOffset;
                 SaveMetadataOffsets(stream, newOffsets);
-            }
-            catch (Exception ex)
-            {
-                throw new VaultException("Failed to add new metadata offset", ex);
             }
             finally
             {
@@ -389,10 +369,6 @@ namespace VaultCrypt
                 newOffsets = oldOffsets.Where((offset, index) => index != itemIndex).ToArray();
                 CryptographicOperations.ZeroMemory(MemoryMarshal.AsBytes(oldOffsets.AsSpan()));
                 SaveMetadataOffsets(stream, newOffsets);
-            }
-            catch (Exception ex)
-            {
-                throw new VaultException($"Failed to remove metadata offset for item {itemIndex + 1}", ex);
             }
             finally
             {
@@ -441,10 +417,10 @@ namespace VaultCrypt
                 encryptedMetadataOffsets = VaultEncryption(paddedMetadataOffsets);
                 return encryptedMetadataOffsets;
             }
-            catch (Exception ex)
+            catch (Exception)
             {
                 if (encryptedMetadataOffsets is not null) CryptographicOperations.ZeroMemory(encryptedMetadataOffsets);
-                throw new VaultException("Failed to pad and encrypt metadata offsets", ex);
+                throw;
             }
             finally
             {
@@ -483,7 +459,7 @@ namespace VaultCrypt
 
         internal virtual byte[] VaultEncryption(ReadOnlyMemory<byte> data)
         {
-            if (data.Length == 0) throw new VaultException("Failed to encrypt vault metadata, provided data was empty");
+            if (data.IsEmpty) throw new ArgumentException("Provided empty data", nameof(data));
 
             byte[] slicedKey = new byte[EncryptionAlgorithm.GetEncryptionAlgorithmProvider[VaultEncryptionAlgorithm].KeySize];
             try
@@ -491,17 +467,17 @@ namespace VaultCrypt
                 Buffer.BlockCopy(VaultSession.CurrentSession.KEY, 0, slicedKey, 0, slicedKey.Length);
                 return EncryptionAlgorithm.GetEncryptionAlgorithmProvider[VaultEncryptionAlgorithm].EncryptionAlgorithm.EncryptBytes(data.Span, slicedKey);
             }
-            catch(Exception ex)
+            catch(Exception)
             {
                 CryptographicOperations.ZeroMemory(slicedKey);
-                throw new VaultException("Failed to encrypt vault metadata", ex);
+                throw;
             }
             
         }
 
         internal virtual byte[] VaultDecryption(ReadOnlyMemory<byte> data)
         {
-            if (data.Length == 0) throw new VaultException("Failed to decrypt vault metadata, provided data was empty");
+            if (data.IsEmpty) throw new ArgumentException("Provided empty data", nameof(data));
 
             byte[] slicedKey = new byte[EncryptionAlgorithm.GetEncryptionAlgorithmProvider[VaultEncryptionAlgorithm].KeySize];
             try
@@ -509,10 +485,10 @@ namespace VaultCrypt
                 Buffer.BlockCopy(VaultSession.CurrentSession.KEY, 0, slicedKey, 0, slicedKey.Length);
                 return EncryptionAlgorithm.GetEncryptionAlgorithmProvider[VaultEncryptionAlgorithm].EncryptionAlgorithm.DecryptBytes(data.Span, slicedKey);
             }
-            catch(Exception ex)
+            catch(Exception)
             {
                 CryptographicOperations.ZeroMemory(slicedKey);
-                throw new VaultException("Failed to decrypt vault metadata", ex);
+                throw;
             }
             
         }

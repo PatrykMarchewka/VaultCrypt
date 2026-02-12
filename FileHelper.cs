@@ -14,10 +14,6 @@ namespace VaultCrypt
 {
     internal class FileHelper
     {
-
-
-
-
         /// <summary>
         /// Checks whether there is enough free space to perform operation
         /// </summary>
@@ -30,7 +26,7 @@ namespace VaultCrypt
             long availableBytes = new DriveInfo(Path.GetPathRoot(VaultSession.CurrentSession.VAULTPATH)!).AvailableFreeSpace;
             if (availableBytes < (GetTotalBytes(filePath) * 1.05))
             {
-                throw new VaultException("Not enough free space");
+                throw new VaultException(VaultException.ErrorContext.SystemCheck, VaultException.ErrorReason.NoFreeSpace);
             }
         }
 
@@ -42,16 +38,9 @@ namespace VaultCrypt
         private static long GetTotalBytes(NormalizedPath filePath)
         {
             ArgumentNullException.ThrowIfNull(filePath);
+            if (!File.Exists(filePath)) throw new ArgumentException($"Cant find the file at {filePath}");
 
-            if (File.Exists(filePath))
-            {
-                return new FileInfo(filePath!).Length;
-
-            }
-            else
-            {
-                throw new VaultException($"Cant find the file at {filePath}");
-            }
+            return new FileInfo(filePath!).Length;
         }
 
         internal static int CalculateConcurrency(bool chunked, ushort chunkSizeInMB)
@@ -81,14 +70,10 @@ namespace VaultCrypt
                     Monitor.Wait(lockObject);
                 }
 
-                if (!results.TryRemove(nextToWrite, out ready!)) throw new VaultException("Missing chunk");
+                if (!results.TryRemove(nextToWrite, out ready!)) throw new VaultException(VaultException.ErrorContext.WriteToFile, VaultException.ErrorReason.MissingChunk);
                 try
                 {
                     fileFS.Write(ready, 0, ready.Length);
-                }
-                catch(Exception ex)
-                {
-                    throw new VaultException("Couldnt write to file", ex);
                 }
                 finally
                 {
@@ -141,14 +126,6 @@ namespace VaultCrypt
                     length -= (ulong)chunkSize;
                 }
             }
-            catch(EndOfStreamException ex)
-            {
-                throw VaultException.EndOfFileException(ex);
-            }
-            catch(Exception ex)
-            {
-                throw new VaultException("Failed to copy file", ex);
-            }
             finally
             {
                 CryptographicOperations.ZeroMemory(buffer);
@@ -184,7 +161,7 @@ namespace VaultCrypt
                     }
 
                     ulong fileSize = 0;
-                    EncryptionOptions.FileEncryptionOptions encryptionOptions = null;
+                    EncryptionOptions.FileEncryptionOptions encryptionOptions = null!;
                     try
                     {
                         encryptionOptions = EncryptionOptions.GetDecryptedFileEncryptionOptions(vaultfs, currentOffset);

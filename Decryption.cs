@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.IO;
@@ -54,8 +54,8 @@ namespace VaultCrypt
         static byte[] DecryptInOneChunk(Stream vaultFS, ulong fileSize, ReadOnlySpan<byte> key, EncryptionAlgorithm.IEncryptionAlgorithm encryptionAlgorithm)
         {
             ArgumentNullException.ThrowIfNull(vaultFS);
-            ArgumentOutOfRangeException.ThrowIfNegativeOrZero(fileSize);
-            if (key.Length == 0) throw new VaultException("Failed to decrypt data, provided key was empty");
+            ArgumentOutOfRangeException.ThrowIfZero(fileSize);
+            if (key.IsEmpty) throw new ArgumentException("Provided empty key", nameof(key));
             ArgumentNullException.ThrowIfNull(encryptionAlgorithm);
 
             byte[] buffer = new byte[fileSize];
@@ -63,14 +63,6 @@ namespace VaultCrypt
             {
                 vaultFS.ReadExactly(buffer);
                 return encryptionAlgorithm.DecryptBytes(buffer, key);
-            }
-            catch(EndOfStreamException ex)
-            {
-                throw VaultException.EndOfFileException(ex);
-            }
-            catch(Exception ex)
-            {
-                throw new VaultException("Couldn't decrypt single chunked file", ex);
             }
             finally
             {
@@ -94,7 +86,7 @@ namespace VaultCrypt
             ArgumentNullException.ThrowIfNull(vaultFS);
             ArgumentNullException.ThrowIfNull(fileFS);
             ArgumentOutOfRangeException.ThrowIfNegative(extraData);
-            if (key.Length == 0) throw new VaultException("Failed to decrypt data, provided key was empty");
+            if (key.IsEmpty) throw new ArgumentException("Provided empty key", nameof(key));
             ArgumentNullException.ThrowIfNull(encryptionAlgorithm);
             ArgumentNullException.ThrowIfNull(context);
 
@@ -127,7 +119,7 @@ namespace VaultCrypt
                         }
 
                         //End of file throw
-                        if (bytesRead == 0) throw VaultException.EndOfFileException();
+                        if (bytesRead == 0) throw new VaultException(VaultException.ErrorContext.Decrypt, VaultException.ErrorReason.EndOfFile);
 
                         currentChunk = new byte[bytesRead];
                         Buffer.BlockCopy(buffer, 0, currentChunk, 0, bytesRead);
@@ -137,8 +129,7 @@ namespace VaultCrypt
                         CryptographicOperations.ZeroMemory(buffer);
                     }
 
-
-                    if (tasks.Any(task => task.IsFaulted)) throw new VaultException("One or more tasks failed while decrypting");
+                    if (tasks.Any(task => task.IsFaulted)) throw new VaultException(VaultException.ErrorContext.Decrypt, VaultException.ErrorReason.TaskFaulted);
                     if (tasks.Count >= concurrentChunkCount)
                     {
                         await Task.WhenAny(tasks);

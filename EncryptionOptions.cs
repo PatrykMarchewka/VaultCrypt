@@ -121,7 +121,7 @@ namespace VaultCrypt
                 encryptionOptionsBytes = SerializeEncryptionOptions(options);
                 if ((encryptionOptionsBytes.Length + EncryptionAlgorithm.GetEncryptionAlgorithmProvider[vaultReader.VaultEncryptionAlgorithm].EncryptionAlgorithm.ExtraEncryptionDataSize) > vaultReader.EncryptionOptionsSize)
                 {
-                    throw new VaultException("File name is too long");
+                    throw new VaultException(VaultException.ErrorContext.EncryptionOptions, VaultException.ErrorReason.FileNameTooLong);
                 }
                 Buffer.BlockCopy(encryptionOptionsBytes, 0, paddedFileOptions, 0, encryptionOptionsBytes.Length);
             }
@@ -135,10 +135,10 @@ namespace VaultCrypt
                 encryptedFileOptions = vaultReader.VaultEncryption(paddedFileOptions);
                 return encryptedFileOptions;
             }
-            catch(Exception ex)
+            catch(Exception)
             {
                 if (encryptedFileOptions is not null) CryptographicOperations.ZeroMemory(encryptedFileOptions);
-                throw new VaultException("Failed to encrypt padded file options", ex);
+                throw;
             }
             finally
             {
@@ -182,10 +182,10 @@ namespace VaultCrypt
                 }
                 return buffer;
             }
-            catch(Exception ex)
+            catch(Exception)
             {
                 CryptographicOperations.ZeroMemory(buffer);
-                throw new VaultException("Failed to serialize encryption options", ex);
+                throw;
             }
         }
 
@@ -208,10 +208,10 @@ namespace VaultCrypt
                 decryptedMetadata = vaultReader.ReadAndDecryptData(vaultFS, metadataOffset, vaultReader.EncryptionOptionsSize);
                 fileEncryptionOptions = Deserialize(decryptedMetadata);
             }
-            catch(Exception ex)
+            catch(Exception)
             {
                 if (fileEncryptionOptions is not null) fileEncryptionOptions.Dispose();
-                throw new VaultException("Failed to get decrypted file encryption options", ex);
+                throw;
             }
             finally
             {
@@ -222,13 +222,13 @@ namespace VaultCrypt
 
         private static FileEncryptionOptions Deserialize(ReadOnlySpan<byte> data)
         {
-            if (data.Length < 1) throw new VaultException($"Failed to deserialize data, got empty field");
+            if (data.IsEmpty) throw new ArgumentException("Provided empty data", nameof(data));
             byte version = data[0];
 
             return version switch
             {
                 0 => DeserializeV0(data),
-                _ => throw new VaultException($"Failed to deserialize data, no parser for version {version}")
+                _ => throw new VaultException(VaultException.ErrorContext.EncryptionOptions, VaultException.ErrorReason.NoReader)
             };
         }
 
@@ -262,7 +262,7 @@ namespace VaultCrypt
 
         private static ChunkInformation DeserializeChunkInformation(ReadOnlySpan<byte> chunkData)
         {
-            if (chunkData.Length < (sizeof(ushort) + sizeof(ushort) + sizeof(uint))) throw new VaultException("Provided wrong chunk information length");
+            if (chunkData.Length != (sizeof(ushort) + sizeof(ushort) + sizeof(uint))) throw new ArgumentOutOfRangeException("Provided wrong chunk information length");
 
             ushort chunkSize = BinaryPrimitives.ReadUInt16LittleEndian(chunkData.Slice(0, sizeof(ushort)));
             ushort totalChunks = BinaryPrimitives.ReadUInt16LittleEndian(chunkData.Slice(sizeof(ushort), sizeof(ushort)));

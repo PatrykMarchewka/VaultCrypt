@@ -68,7 +68,7 @@ namespace VaultCrypt
             ArgumentOutOfRangeException.ThrowIfNegativeOrZero(totalChunks);
             ArgumentOutOfRangeException.ThrowIfNegativeOrZero(concurrentChunkCount);
             ArgumentOutOfRangeException.ThrowIfZero(chunkSizeInMB);
-            if (key.Length == 0) throw new VaultException("Failed to encrypt chunk, provided empty key");
+            if (key.IsEmpty) throw new ArgumentException("Provided empty key", nameof(key));
             ArgumentNullException.ThrowIfNull(context);
 
             var tasks = new List<Task>();
@@ -100,7 +100,7 @@ namespace VaultCrypt
 
                     int currentIndex = chunkIndex++;
 
-                    if (tasks.Any(task => task.IsFaulted)) throw new VaultException("One or more tasks failed while encrypting");
+                    if (tasks.Any(task => task.IsFaulted)) throw new VaultException(VaultException.ErrorContext.Encrypt, VaultException.ErrorReason.TaskFaulted);
                     if (tasks.Count >= concurrentChunkCount)
                     {
                         await Task.WhenAny(tasks);
