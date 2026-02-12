@@ -262,7 +262,7 @@ namespace VaultCrypt
 
         private static ChunkInformation DeserializeChunkInformation(ReadOnlySpan<byte> chunkData)
         {
-            if (chunkData.Length != (sizeof(ushort) + sizeof(ushort) + sizeof(uint))) throw new ArgumentOutOfRangeException("Provided wrong chunk information length");
+            if (chunkData.Length < (sizeof(ushort) + sizeof(ushort) + sizeof(uint))) throw new ArgumentOutOfRangeException("Provided wrong chunk information length");
 
             ushort chunkSize = BinaryPrimitives.ReadUInt16LittleEndian(chunkData.Slice(0, sizeof(ushort)));
             ushort totalChunks = BinaryPrimitives.ReadUInt16LittleEndian(chunkData.Slice(sizeof(ushort), sizeof(ushort)));
