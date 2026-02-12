@@ -102,7 +102,7 @@ namespace VaultCrypt.Services
         {
             Navigate(viewModels.ExceptionThrown, ex);
         }
-        public event Action<IViewModel> ChangeView;
+        public event Action<IViewModel> ChangeView = null!;
     }
 
     interface INavigated

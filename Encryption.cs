@@ -27,17 +27,17 @@ namespace VaultCrypt
 
             FileHelper.CheckFreeSpace(filePath);
 
-            EncryptionOptions.FileEncryptionOptions options = default;
+            EncryptionOptions.FileEncryptionOptions options = null!;
             var provider = EncryptionAlgorithm.GetEncryptionAlgorithmProvider[algorithm];
             try
             {
-                FileInfo fileInfo = new FileInfo(filePath);
+                FileInfo fileInfo = new FileInfo(filePath!);
                 options = EncryptionOptions.PrepareEncryptionOptions(fileInfo, algorithm, chunkSizeInMB);
                 int totalChunks = options.ChunkInformation != null ? options.ChunkInformation!.TotalChunks : 1;
                 int concurrentChunkCount = FileHelper.CalculateConcurrency(options.IsChunked, chunkSizeInMB);
                 ReadOnlyMemory<byte> key = PasswordHelper.GetSlicedKey(provider.KeySize);
-                await using FileStream vaultFS = new FileStream(VaultSession.CurrentSession.VAULTPATH, FileMode.Open, FileAccess.ReadWrite);
-                await using FileStream fileFS = new FileStream(filePath, FileMode.Open, FileAccess.Read);
+                await using FileStream vaultFS = new FileStream(VaultSession.CurrentSession.VAULTPATH!, FileMode.Open, FileAccess.ReadWrite);
+                await using FileStream fileFS = new FileStream(filePath!, FileMode.Open, FileAccess.Read);
                 VaultSession.CurrentSession.VAULT_READER.AddAndSaveMetadataOffsets(vaultFS, vaultFS.Seek(0, SeekOrigin.End));
 
                 byte[] paddedFileOptions = null!;
