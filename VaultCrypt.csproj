@@ -9,9 +9,9 @@
     <ApplicationIcon>Properties\VaultCryptLogo.ico</ApplicationIcon>
 	<AssemblyName>VaultCrypt</AssemblyName>
 	<RootNamespace>VaultCrypt</RootNamespace>
-	<Version>1.1.0</Version>
-	<FileVersion>1.1.0</FileVersion>
-	<AssemblyVersion>1.1.0</AssemblyVersion>
+	<Version>1.2.0</Version>
+	<FileVersion>1.2.0</FileVersion>
+	<AssemblyVersion>1.2.0</AssemblyVersion>
 	<Product>VaultCrypt</Product>
 	<Description>VaultCrypt is a desktop application allowing you to encrypt and store multiple files inside a single portable vault.</Description>
   </PropertyGroup>
