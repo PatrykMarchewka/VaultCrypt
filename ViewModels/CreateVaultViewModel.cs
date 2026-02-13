@@ -76,7 +76,7 @@ namespace VaultCrypt.ViewModels
         internal CreateVaultViewModel()
         {
             SelectedPreset = IterationPresets[0];
-
+            VaultFolder = AppContext.BaseDirectory;
             GoBackCommand = new RelayCommand(_ => NavigationRequested?.Invoke(new NavigateToMainRequest()));
             SelectFolderCommand = new RelayCommand(_ => SelectFolder());
             CreateVaultCommand = new RelayCommand(_ => CreateVault());
