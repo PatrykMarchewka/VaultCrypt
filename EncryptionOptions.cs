@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Buffers.Binary;
 using System.Collections.Generic;
 using System.IO;
@@ -23,11 +23,11 @@ namespace VaultCrypt
             internal ushort NameLength => checked((ushort)FileName.Length); //Fixed 2 bytes, length of fileName text
             internal byte[] FileName { get; private set; } //Varying length (read from nameLength), file name with extension!
             internal ulong FileSize { get; private set; } //Fixed 8 bytes, Size in bytes of encrypted file, with extra encryption metadata
-            internal EncryptionAlgorithm.EncryptionAlgorithmEnum EncryptionAlgorithm { get; private set; } //Fixed 1 byte, Encryption algorithm enum
+            internal byte EncryptionAlgorithm { get; private set; } //Fixed 1 byte, Encryption algorithm ID
             internal bool IsChunked { get; private set; } //Fixed 1 byte, Whether file is chunked or not
             internal ChunkInformation? ChunkInformation { get; private set; } //Fixed 8 bytes (2 bytes chunk size + 2 bytes total chunks count + 4 bytes final chunk size = 8 bytes)
 
-            internal FileEncryptionOptions(byte version, byte[] fileName, ulong fileSize, EncryptionAlgorithm.EncryptionAlgorithmEnum algorithm, bool chunked, ChunkInformation? chunkInformation)
+            internal FileEncryptionOptions(byte version, byte[] fileName, ulong fileSize, byte algorithm, bool chunked, ChunkInformation? chunkInformation)
             {
                 Version = version;
                 FileName = fileName;
@@ -74,7 +74,7 @@ namespace VaultCrypt
 
         
 
-        internal static FileEncryptionOptions PrepareEncryptionOptions(FileInfo fileInfo, EncryptionAlgorithm.EncryptionAlgorithmEnum algorithm, ushort chunkSizeInMB)
+        internal static FileEncryptionOptions PrepareEncryptionOptions(FileInfo fileInfo, EncryptionAlgorithm.EncryptionAlgorithmInfo algorithm, ushort chunkSizeInMB)
         {
             ArgumentNullException.ThrowIfNull(fileInfo);
             ArgumentOutOfRangeException.ThrowIfZero(chunkSizeInMB);
@@ -100,10 +100,10 @@ namespace VaultCrypt
                 }
                 chunkInformation = new ChunkInformation(chunkSizeInMB, checked((ushort)chunkNumber), checked((uint)lastChunk));
             }
-            short extraBytes = EncryptionAlgorithm.GetEncryptionAlgorithmProvider[algorithm].EncryptionAlgorithm.ExtraEncryptionDataSize;
+            short extraBytes = algorithm.provider().EncryptionAlgorithm.ExtraEncryptionDataSize;
 
             ulong fileSize = chunkInformation is null ? (ulong)(fileInfo.Length + extraBytes) : (ulong)(fileInfo.Length + (extraBytes * chunkInformation.TotalChunks));
-            return new FileEncryptionOptions(0, fileName, fileSize, algorithm, chunked, chunkInformation);
+            return new FileEncryptionOptions(0, fileName, fileSize, algorithm.ID, chunked, chunkInformation);
         }
 
 
@@ -114,12 +114,13 @@ namespace VaultCrypt
 
 
             VaultReader vaultReader = VaultSession.CurrentSession.VAULT_READER;
+            short extraEncryptionDataSize = EncryptionAlgorithm.GetEncryptionAlgorithmInfo[vaultReader.VaultEncryptionAlgorithm].provider().EncryptionAlgorithm.ExtraEncryptionDataSize;
             byte[] encryptionOptionsBytes = null!;
-            byte[] paddedFileOptions = new byte[vaultReader.EncryptionOptionsSize - EncryptionAlgorithm.GetEncryptionAlgorithmProvider[vaultReader.VaultEncryptionAlgorithm].EncryptionAlgorithm.ExtraEncryptionDataSize];
+            byte[] paddedFileOptions = new byte[vaultReader.EncryptionOptionsSize - extraEncryptionDataSize];
             try
             {
                 encryptionOptionsBytes = SerializeEncryptionOptions(options);
-                if ((encryptionOptionsBytes.Length + EncryptionAlgorithm.GetEncryptionAlgorithmProvider[vaultReader.VaultEncryptionAlgorithm].EncryptionAlgorithm.ExtraEncryptionDataSize) > vaultReader.EncryptionOptionsSize)
+                if ((encryptionOptionsBytes.Length + extraEncryptionDataSize) > vaultReader.EncryptionOptionsSize)
                 {
                     throw new VaultException(VaultException.ErrorContext.EncryptionOptions, VaultException.ErrorReason.FileNameTooLong);
                 }
@@ -245,7 +246,7 @@ namespace VaultCrypt
                 currentIndex += nameLength;
                 ulong fileSize = BinaryPrimitives.ReadUInt64LittleEndian(data.Slice(currentIndex, sizeof(ulong)));
                 currentIndex += sizeof(ulong);
-                EncryptionAlgorithm.EncryptionAlgorithmEnum encryptionAlgorithm = (EncryptionAlgorithm.EncryptionAlgorithmEnum)data[currentIndex++];
+                byte encryptionAlgorithm = data[currentIndex++];
                 bool chunked = data[currentIndex++] == 1 ? true : false;
                 ChunkInformation? chunkInformation = null;
                 if (chunked)

@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Buffers.Binary;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
@@ -19,7 +19,7 @@ namespace VaultCrypt
     internal class Encryption
     {
 
-        internal static async Task Encrypt(EncryptionAlgorithm.EncryptionAlgorithmEnum algorithm, ushort chunkSizeInMB, NormalizedPath filePath, ProgressionContext context)
+        internal static async Task Encrypt(EncryptionAlgorithm.EncryptionAlgorithmInfo algorithm, ushort chunkSizeInMB, NormalizedPath filePath, ProgressionContext context)
         {
             ArgumentOutOfRangeException.ThrowIfZero(chunkSizeInMB);
             ArgumentNullException.ThrowIfNull(filePath);
@@ -28,7 +28,7 @@ namespace VaultCrypt
             FileHelper.CheckFreeSpace(filePath);
 
             EncryptionOptions.FileEncryptionOptions options = null!;
-            var provider = EncryptionAlgorithm.GetEncryptionAlgorithmProvider[algorithm];
+            var provider = algorithm.provider();
             try
             {
                 FileInfo fileInfo = new FileInfo(filePath!);

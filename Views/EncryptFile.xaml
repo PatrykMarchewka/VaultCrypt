@@ -1,4 +1,4 @@
-﻿<UserControl x:Class="VaultCrypt.Views.EncryptFile"
+<UserControl x:Class="VaultCrypt.Views.EncryptFile"
              xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006" 
@@ -14,7 +14,7 @@
         
         <StackPanel Grid.Row="0" Orientation="Horizontal" HorizontalAlignment="Center">
             <TextBlock Text="Encryption algorithm"/>
-            <ComboBox ItemsSource="{Binding EncryptionAlgorithmEnumValues}" SelectedItem="{Binding SelectedAlgorithm}"/>
+            <ComboBox ItemsSource="{Binding EncryptionAlgorithms}" SelectedItem="{Binding SelectedAlgorithm}"/>
             <TextBlock Text="Chunk size"/>
             <ComboBox ItemsSource="{Binding ChunkSizePresets}" SelectedItem="{Binding SelectedPreset}">
                 <ComboBox.ItemTemplate>

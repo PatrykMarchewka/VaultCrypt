@@ -23,7 +23,7 @@ namespace VaultCrypt
 
             try
             {
-                var encryptionAlgorithmProvider = EncryptionAlgorithm.GetEncryptionAlgorithmProvider[encryptionOptions.EncryptionAlgorithm];
+                var encryptionAlgorithmProvider = EncryptionAlgorithm.GetEncryptionAlgorithmInfo[encryptionOptions.EncryptionAlgorithm].provider();
                 ReadOnlyMemory<byte> key = PasswordHelper.GetSlicedKey(encryptionAlgorithmProvider.KeySize);
                 if (!encryptionOptions.IsChunked)
                 {
@@ -78,9 +78,10 @@ namespace VaultCrypt
         /// <param name="chunkInformation"></param>
         /// <param name="extraData"></param>
         /// <param name="key"></param>
-        /// <param name="decryptMethod"></param>
+        /// <param name="encryptionAlgorithm"></param>
         /// <param name="context"></param>
         /// <returns></returns>
+        /// <exception cref="VaultException"></exception>
         static async Task DecryptInMultipleChunks(Stream vaultFS, Stream fileFS, EncryptionOptions.ChunkInformation chunkInformation, short extraData, ReadOnlyMemory<byte> key, EncryptionAlgorithm.IEncryptionAlgorithm encryptionAlgorithm, ProgressionContext context)
         {
             ArgumentNullException.ThrowIfNull(vaultFS);

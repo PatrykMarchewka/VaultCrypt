@@ -32,11 +32,6 @@ namespace VaultCrypt
             return VaultSession.CurrentSession.KEY.AsMemory(0, keySize);
         }
 
-        internal static ReadOnlyMemory<byte> GetSlicedKey(EncryptionAlgorithm.EncryptionAlgorithmEnum encryptionAlgorithmEnum)
-        {
-            return GetSlicedKey(EncryptionAlgorithm.GetEncryptionAlgorithmProvider[encryptionAlgorithmEnum].KeySize);
-        }
-
         internal static byte[] SecureStringToBytes(SecureString secureString)
         {
             //Null Pointer

@@ -13,77 +13,53 @@ namespace VaultCrypt
 {
     internal class EncryptionAlgorithm
     {
-        internal enum EncryptionAlgorithmEnum : byte
+        internal sealed record EncryptionAlgorithmInfo(byte ID, string Name, Func<IEncryptionAlgorithmProvider> provider)
         {
-            AES128GCM,
-            AES192GCM,
-            AES256GCM,
-            AES128CCM,
-            AES192CCM,
-            AES256CCM,
-            ChaCha20Poly1305,
-            AES128EAX,
-            AES192EAX,
-            AES256EAX,
-            Twofish128CTR,
-            Twofish192CTR,
-            Twofish256CTR,
-            Threefish256CTR,
-            Threefish512CTR,
-            Threefish1024CTR,
-            Serpent128GCM,
-            Serpent192GCM,
-            Serpent256GCM,
-            Serpent128CTR,
-            Serpent192CTR,
-            Serpent256CTR,
-            Camelia128GCM,
-            Camelia192GCM,
-            Camelia256GCM,
-            Camelia128OCB,
-            Camelia192OCB,
-            Camelia256OCB,
-            Camelia128CTR,
-            Camelia192CTR,
-            Camelia256CTR,
-            XSalsa20
+            internal static readonly EncryptionAlgorithmInfo AES128GCM = new(0, "AES-128-GCM", () => new AesProvider(16, new AesGcm()));
+            internal static readonly EncryptionAlgorithmInfo AES192GCM = new(1, "AES-192-GCM", () => new AesProvider(24, new AesGcm()));
+            internal static readonly EncryptionAlgorithmInfo AES256GCM = new(2, "AES-256-GCM", () => new AesProvider(32, new AesGcm()));
+            internal static readonly EncryptionAlgorithmInfo AES128CCM = new(3, "AES-128-CCM", () => new AesProvider(16, new AesCcm()));
+            internal static readonly EncryptionAlgorithmInfo AES192CCM = new(4, "AES-192-CCM", () => new AesProvider(24, new AesCcm()));
+            internal static readonly EncryptionAlgorithmInfo AES256CCM = new(5, "AES-256-CCM", () => new AesProvider(32, new AesCcm()));
+            internal static readonly EncryptionAlgorithmInfo ChaCha20Poly1305 = new(6, "ChaCha20-Poly1305", () => new ChaCha20Provider(32, new ChaCha20Poly1305()));
+            internal static readonly EncryptionAlgorithmInfo AES128EAX = new(7, "AES-128-EAX", () => new AesProvider(16, new AesEax()));
+            internal static readonly EncryptionAlgorithmInfo AES192EAX = new(8, "AES-192-EAX", () => new AesProvider(24, new AesEax()));
+            internal static readonly EncryptionAlgorithmInfo AES256EAX = new(9, "AES-256-EAX", () => new AesProvider(32, new AesEax()));
+            internal static readonly EncryptionAlgorithmInfo Twofish128CTR = new(10, "Twofish-128-CTR", () => new TwofishProvider(16, new TwofishCtr()));
+            internal static readonly EncryptionAlgorithmInfo Twofish192CTR = new(11, "Twofish-192-CTR", () => new TwofishProvider(24, new TwofishCtr()));
+            internal static readonly EncryptionAlgorithmInfo Twofish256CTR = new(12, "Twofish-256-CTR", () => new TwofishProvider(32, new TwofishCtr()));
+            internal static readonly EncryptionAlgorithmInfo Threefish256CTR = new(13, "Threefish-128-CTR", () => new ThreefishProvider(32, new ThreefishCtr(256)));
+            internal static readonly EncryptionAlgorithmInfo Threefish512CTR = new(14, "Threefish-192-CTR", () => new ThreefishProvider(64, new ThreefishCtr(512)));
+            internal static readonly EncryptionAlgorithmInfo Threefish1024CTR = new(15, "Threefish-256-CTR", () => new ThreefishProvider(128, new ThreefishCtr(1024)));
+            internal static readonly EncryptionAlgorithmInfo Serpent128GCM = new(16, "Serpent-128-GCM", () => new SerpentProvider(16, new SerpentGcm()));
+            internal static readonly EncryptionAlgorithmInfo Serpent192GCM = new(17, "Serpent-192-GCM", () => new SerpentProvider(24, new SerpentGcm()));
+            internal static readonly EncryptionAlgorithmInfo Serpent256GCM = new(18, "Serpent-256-GCM", () => new SerpentProvider(32, new SerpentGcm()));
+            internal static readonly EncryptionAlgorithmInfo Serpent128CTR = new(19, "Serpent-128-CTR", () => new SerpentProvider(16, new SerpentCtr()));
+            internal static readonly EncryptionAlgorithmInfo Serpent192CTR = new(20, "Serpent-192-CTR", () => new SerpentProvider(24, new SerpentCtr()));
+            internal static readonly EncryptionAlgorithmInfo Serpent256CTR = new(21, "Serpent-256-CTR", () => new SerpentProvider(32, new SerpentCtr()));
+            internal static readonly EncryptionAlgorithmInfo Camelia128GCM = new(22, "Camelia-128-GCM", () => new CameliaProvider(16, new CameliaGcm()));
+            internal static readonly EncryptionAlgorithmInfo Camelia192GCM = new(23, "Camelia-192-GCM", () => new CameliaProvider(24, new CameliaGcm()));
+            internal static readonly EncryptionAlgorithmInfo Camelia256GCM = new(24, "Camelia-256-GCM", () => new CameliaProvider(32, new CameliaGcm()));
+            internal static readonly EncryptionAlgorithmInfo Camelia128OCB = new(25, "Camelia-128-OCB", () => new CameliaProvider(16, new CameliaOcb()));
+            internal static readonly EncryptionAlgorithmInfo Camelia192OCB = new(26, "Camelia-192-OCB", () => new CameliaProvider(24, new CameliaOcb()));
+            internal static readonly EncryptionAlgorithmInfo Camelia256OCB = new(27, "Camelia-256-OCB", () => new CameliaProvider(32, new CameliaOcb()));
+            internal static readonly EncryptionAlgorithmInfo Camelia128CTR = new(28, "Camelia-128-CTR", () => new CameliaProvider(16, new CameliaCtr()));
+            internal static readonly EncryptionAlgorithmInfo Camelia192CTR = new(29, "Camelia-192-CTR", () => new CameliaProvider(24, new CameliaCtr()));
+            internal static readonly EncryptionAlgorithmInfo Camelia256CTR = new(30, "Camelia-256-CTR", () => new CameliaProvider(32, new CameliaCtr()));
+            internal static readonly EncryptionAlgorithmInfo XSalsa20 = new(31, "XSalsa20", () => new XSalsa20Provider(32, new XSalsa20()));
+
+            public override string ToString() => Name;
         }
 
-        internal static readonly Dictionary<EncryptionAlgorithmEnum, IEncryptionAlgorithmProvider> GetEncryptionAlgorithmProvider = new()
+        internal static readonly IReadOnlyDictionary<byte, EncryptionAlgorithmInfo> GetEncryptionAlgorithmInfo = _BuildDictionary();
+
+        private static IReadOnlyDictionary<byte, EncryptionAlgorithmInfo> _BuildDictionary()
         {
-            {EncryptionAlgorithmEnum.AES128GCM, new AesProvider(16, new AesGcm()) },
-            {EncryptionAlgorithmEnum.AES192GCM, new AesProvider(24, new AesGcm()) },
-            {EncryptionAlgorithmEnum.AES256GCM, new AesProvider(32, new AesGcm()) },
-            {EncryptionAlgorithmEnum.AES128CCM, new AesProvider(16, new AesCcm()) },
-            {EncryptionAlgorithmEnum.AES192CCM, new AesProvider(24, new AesCcm()) },
-            {EncryptionAlgorithmEnum.AES256CCM, new AesProvider(32, new AesCcm()) },
-            {EncryptionAlgorithmEnum.ChaCha20Poly1305, new ChaCha20Provider(32, new ChaCha20Poly1305()) },
-            {EncryptionAlgorithmEnum.AES128EAX, new AesProvider(16, new AesEax()) },
-            {EncryptionAlgorithmEnum.AES192EAX, new AesProvider(24, new AesEax()) },
-            {EncryptionAlgorithmEnum.AES256EAX, new AesProvider(32, new AesEax()) },
-            {EncryptionAlgorithmEnum.Twofish128CTR, new TwofishProvider(16, new TwofishCtr()) },
-            {EncryptionAlgorithmEnum.Twofish192CTR, new TwofishProvider(24, new TwofishCtr()) },
-            {EncryptionAlgorithmEnum.Twofish256CTR, new TwofishProvider(32, new TwofishCtr()) },
-            {EncryptionAlgorithmEnum.Threefish256CTR, new ThreefishProvider(32, new ThreefishCtr(256)) },
-            {EncryptionAlgorithmEnum.Threefish512CTR, new ThreefishProvider(64, new ThreefishCtr(512)) },
-            {EncryptionAlgorithmEnum.Threefish1024CTR, new ThreefishProvider(128, new ThreefishCtr(1024)) },
-            {EncryptionAlgorithmEnum.Serpent128GCM, new SerpentProvider(16, new SerpentGcm()) },
-            {EncryptionAlgorithmEnum.Serpent192GCM, new SerpentProvider(24, new SerpentGcm()) },
-            {EncryptionAlgorithmEnum.Serpent256GCM, new SerpentProvider(32, new SerpentGcm()) },
-            {EncryptionAlgorithmEnum.Serpent128CTR, new SerpentProvider(16, new SerpentCtr()) },
-            {EncryptionAlgorithmEnum.Serpent192CTR, new SerpentProvider(24, new SerpentCtr()) },
-            {EncryptionAlgorithmEnum.Serpent256CTR, new SerpentProvider(32, new SerpentCtr()) },
-            {EncryptionAlgorithmEnum.Camelia128GCM, new CameliaProvider(16, new CameliaGcm()) },
-            {EncryptionAlgorithmEnum.Camelia192GCM, new CameliaProvider(24, new CameliaGcm()) },
-            {EncryptionAlgorithmEnum.Camelia256GCM, new CameliaProvider(32, new CameliaGcm()) },
-            {EncryptionAlgorithmEnum.Camelia128OCB, new CameliaProvider(16, new CameliaOcb()) },
-            {EncryptionAlgorithmEnum.Camelia192OCB, new CameliaProvider(24, new CameliaOcb()) },
-            {EncryptionAlgorithmEnum.Camelia256OCB, new CameliaProvider(32, new CameliaOcb()) },
-            {EncryptionAlgorithmEnum.Camelia128CTR, new CameliaProvider(16, new CameliaCtr()) },
-            {EncryptionAlgorithmEnum.Camelia192CTR, new CameliaProvider(24, new CameliaCtr()) },
-            {EncryptionAlgorithmEnum.Camelia256CTR, new CameliaProvider(32, new CameliaCtr()) },
-            {EncryptionAlgorithmEnum.XSalsa20, new XSalsa20Provider(32, new XSalsa20()) }
-        };
+            return typeof(EncryptionAlgorithmInfo).GetFields(System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Static)
+                .Where(info => info.FieldType == typeof(EncryptionAlgorithmInfo))
+                .Select(info => (EncryptionAlgorithmInfo)info.GetValue(null)!) //Null because there is no instance, its a static field
+                .ToDictionary(info => info.ID);
+        }
 
         internal static byte[] CalculateHMAC(ReadOnlySpan<byte> key, params byte[][] bytes)
         {

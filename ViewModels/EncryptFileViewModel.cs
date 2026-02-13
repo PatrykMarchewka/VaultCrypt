@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.ComponentModel;
 using System.Diagnostics;
@@ -42,8 +42,8 @@ namespace VaultCrypt.ViewModels
             }
         }
 
-        private EncryptionAlgorithm.EncryptionAlgorithmEnum _selectedAlgorithm;
-        public EncryptionAlgorithm.EncryptionAlgorithmEnum SelectedAlgorithm
+        private EncryptionAlgorithm.EncryptionAlgorithmInfo _selectedAlgorithm = null!;
+        public EncryptionAlgorithm.EncryptionAlgorithmInfo SelectedAlgorithm
         {
             get => _selectedAlgorithm;
             set
@@ -54,14 +54,14 @@ namespace VaultCrypt.ViewModels
             }
         }
 
-        public Array EncryptionAlgorithmEnumValues => Enum.GetValues(typeof(EncryptionAlgorithm.EncryptionAlgorithmEnum));
+        public IEnumerable<EncryptionAlgorithm.EncryptionAlgorithmInfo> EncryptionAlgorithms => EncryptionAlgorithm.GetEncryptionAlgorithmInfo.Values;
 
         public ICommand GoBackCommand { get; }
         public ICommand EncryptCommand { get; }
         public EncryptFileViewModel()
         {
             SelectedPreset = ChunkSizePresets[0];
-
+            SelectedAlgorithm = EncryptionAlgorithm.GetEncryptionAlgorithmInfo.First().Value;
             GoBackCommand = new RelayCommand(_ => NavigationRequested?.Invoke(new NavigateToMainRequest()));
             EncryptCommand = new RelayCommand(async _ => await Encrypt(filePath!), null!);
         }
