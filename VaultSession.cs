@@ -59,6 +59,7 @@ namespace VaultCrypt
             ArgumentNullException.ThrowIfNull(password);
             ArgumentOutOfRangeException.ThrowIfNegativeOrZero(iterations);
 
+            if (!Directory.Exists(folderPath)) Directory.CreateDirectory(folderPath!);
             NormalizedPath vaultPath = NormalizedPath.From($"{folderPath}\\{vaultName}.vlt")!;
             VaultReader reader = VaultRegistry.GetVaultReader(NewestVaultVersion);
             byte[] salt = null!;
