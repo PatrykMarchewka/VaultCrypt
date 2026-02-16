@@ -5,11 +5,19 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 
-namespace VaultCrypt
+namespace VaultCrypt.Services
 {
-    class FileDialogHelper
+    public interface IFileDialogService
     {
-        internal static string? OpenFile(string title, bool allFiles)
+        string? OpenFile(string title, bool allFiles);
+        string? OpenFolder(string title);
+        string? SaveFile(string fileName);
+    }
+
+
+    public class FileDialogService : IFileDialogService
+    {
+        public string? OpenFile(string title, bool allFiles)
         {
             var dialog = new Microsoft.Win32.OpenFileDialog
             {
@@ -24,7 +32,7 @@ namespace VaultCrypt
             return null;
         }
 
-        internal static string? OpenFolder(string title)
+        public string? OpenFolder(string title)
         {
             var dialog = new Microsoft.Win32.OpenFolderDialog
             {
@@ -38,9 +46,8 @@ namespace VaultCrypt
             return null;
         }
 
-        internal static string? SaveFile(string fileName)
+        public string? SaveFile(string fileName)
         {
-
             string name = Path.GetFileNameWithoutExtension(fileName);
             string extension = Path.GetExtension(fileName).TrimStart('.');
 
