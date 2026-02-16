@@ -23,4 +23,11 @@
   <ItemGroup>
     <PackageReference Include="BouncyCastle.Cryptography" Version="2.6.2" />
   </ItemGroup>
+
+	<ItemGroup>
+		<Compile Remove="VaultCrypt.Tests\**" />
+		<EmbeddedResource Remove="VaultCrypt.Tests\**" />
+		<None Remove="VaultCrypt.Tests\**" />
+		<Page Remove="VaultCrypt.Tests\**" />
+	</ItemGroup>
 </Project>
