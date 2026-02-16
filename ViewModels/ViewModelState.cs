@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
@@ -10,10 +10,11 @@ namespace VaultCrypt.ViewModels
     internal class ViewModelState
     {
         private static readonly FileDialogService fileDialogService = new FileDialogService();
+        private static readonly VaultService vaultService = new VaultService();
 
         public MainWindowViewModel MainWindow { get; } = new MainWindowViewModel();
         public MainViewViewModel Main { get; } = new MainViewViewModel(fileDialogService);
-        public CreateVaultViewModel CreateVault { get; } = new CreateVaultViewModel(fileDialogService);
+        public CreateVaultViewModel CreateVault { get; } = new CreateVaultViewModel(fileDialogService, vaultService);
         public OpenVaultViewModel OpenVault { get; } = new OpenVaultViewModel(fileDialogService);
         public PasswordInputViewModel PasswordInput { get; } = new PasswordInputViewModel();
         public EncryptFileViewModel EncryptFile { get; } = new EncryptFileViewModel();

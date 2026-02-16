@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.ComponentModel;
 using System.Linq;
@@ -15,6 +15,8 @@ namespace VaultCrypt.ViewModels
     public class CreateVaultViewModel : INotifyPropertyChanged, IViewModel, INavigatingViewModel
     {
         private readonly IFileDialogService _fileDialogService;
+        private readonly IVaultService _vaultService;
+
         private string _vaultFolder = null!;
         public string VaultFolder
         {
@@ -75,9 +77,10 @@ namespace VaultCrypt.ViewModels
         public ICommand SelectFolderCommand { get; }
         public ICommand CreateVaultCommand { get; }
 
-        public CreateVaultViewModel(IFileDialogService fileDialogService)
+        public CreateVaultViewModel(IFileDialogService fileDialogService, IVaultService vaultService)
         {
             this._fileDialogService = fileDialogService;
+            this._vaultService = vaultService;
             SelectedPreset = IterationPresets[0];
             VaultFolder = AppContext.BaseDirectory;
             GoBackCommand = new RelayCommand(_ => NavigationRequested?.Invoke(new NavigateToMainRequest()));
@@ -95,7 +98,7 @@ namespace VaultCrypt.ViewModels
             }
         }
 
-        internal void CreateVault()
+        public void CreateVault()
         {
             ValidationHelper.NotEmptyString(VaultFolder, "Vault folder");
             ValidationHelper.NotEmptyString(VaultName, "Vault name");
@@ -107,7 +110,7 @@ namespace VaultCrypt.ViewModels
             try
             {
                 passwordBytes = PasswordHelper.SecureStringToBytes(Password);
-                VaultSession.CreateVault(folderPath, VaultName, passwordBytes, SelectedPreset.Iterations);
+                _vaultService.CreateVault(folderPath, VaultName, passwordBytes, SelectedPreset.Iterations);
             }
             finally
             {
@@ -122,7 +125,7 @@ namespace VaultCrypt.ViewModels
         public event Action<NavigationRequest> NavigationRequested = null!;
     }
 
-    internal record IterationPreset(string Name, int Iterations);
+    public record IterationPreset(string Name, int Iterations);
 
 
 

@@ -239,9 +239,9 @@ namespace VaultCrypt
         }
 
     }
-    internal class NormalizedPath
+    public class NormalizedPath
     {
-        internal string Value { get; }
+        public string Value { get; }
         private NormalizedPath(string path)
         {
             Value = Normalize(path);
@@ -256,7 +256,7 @@ namespace VaultCrypt
         /// </summary>
         /// <param name="input">String to normalize</param>
         /// <returns>NormalizedPath containing the path from the input</returns>
-        internal static NormalizedPath? From(string? input)
+        public static NormalizedPath? From(string? input)
         {
             if (input is null) return null;
             return new NormalizedPath(input);

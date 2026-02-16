@@ -9,7 +9,7 @@ using VaultCrypt.Services;
 namespace VaultCrypt
 {
 
-    internal abstract record NavigationRequest
+    public abstract record NavigationRequest
     {
         internal abstract void Request(INavigationService nav);
     }
