@@ -18,6 +18,7 @@ namespace VaultCrypt.ViewModels
             get => _currentView;
             set
             {
+                if (_currentView == value) return;
                 _currentView = value;
                 OnPropertyChanged(nameof(CurrentView));
             }
