@@ -9,21 +9,21 @@ using VaultCrypt.Services;
 
 namespace VaultCrypt.ViewModels
 {
-    internal class MainViewViewModel : INotifyPropertyChanged, IViewModel, INavigatingViewModel
+    public class MainViewViewModel : INotifyPropertyChanged, IViewModel, INavigatingViewModel
     {
         private readonly IFileDialogService _fileDialogService;
 
         public ICommand CreateVaultCommand { get; }
         public ICommand OpenVaultCommand { get; }
 
-        internal MainViewViewModel(IFileDialogService fileDialogService)
+        public MainViewViewModel(IFileDialogService fileDialogService)
         {
             this._fileDialogService = fileDialogService;
             CreateVaultCommand = new RelayCommand(_ => NavigationRequested?.Invoke(new NavigateToCreateVaultRequest()));
-            OpenVaultCommand = new RelayCommand(_ => SelectVaultFilePickerOpen());
+            OpenVaultCommand = new RelayCommand(_ => SelectVaultFile());
         }
 
-        internal void SelectVaultFilePickerOpen()
+        public void SelectVaultFile()
         {
             NormalizedPath? path = NormalizedPath.From(_fileDialogService.OpenFile("Select vault file", false));
             if (path != null)
