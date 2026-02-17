@@ -3,10 +3,11 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
+using VaultCrypt.ViewModels;
 
-namespace VaultCrypt.ViewModels
+namespace VaultCrypt.Tests.ViewModels
 {
-    public interface IViewModel
+    internal class FakeViewModel : IViewModel
     {
     }
 }
