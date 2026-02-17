@@ -1,25 +1,23 @@
-using System;
-using System.Buffers.Binary;
+﻿using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
-using System.Configuration;
 using System.IO;
-using System.IO.Packaging;
 using System.Linq;
-using System.Printing.IndexedProperties;
-using System.Reflection;
 using System.Security.Cryptography;
 using System.Text;
 using System.Threading.Tasks;
-using System.Windows.Documents;
 using VaultCrypt.Exceptions;
 
-namespace VaultCrypt
+namespace VaultCrypt.Services
 {
-    internal class Encryption
+    public interface IEncryptionService
     {
+        Task Encrypt(EncryptionAlgorithm.EncryptionAlgorithmInfo algorithm, ushort chunkSizeInMB, NormalizedPath filePath, ProgressionContext context);
+    }
 
-        internal static async Task Encrypt(EncryptionAlgorithm.EncryptionAlgorithmInfo algorithm, ushort chunkSizeInMB, NormalizedPath filePath, ProgressionContext context)
+    internal class EncryptionService : IEncryptionService
+    {
+        public async Task Encrypt(EncryptionAlgorithm.EncryptionAlgorithmInfo algorithm, ushort chunkSizeInMB, NormalizedPath filePath, ProgressionContext context)
         {
             ArgumentOutOfRangeException.ThrowIfZero(chunkSizeInMB);
             ArgumentNullException.ThrowIfNull(filePath);
@@ -47,11 +45,11 @@ namespace VaultCrypt
                     //Seek to the end of file to make sure its saved at the end and not after metadata data
                     vaultFS.Seek(0, SeekOrigin.End);
                     vaultFS.Write(paddedFileOptions);
-                    
+
                 }
                 finally
                 {
-                    if(paddedFileOptions is not null) CryptographicOperations.ZeroMemory(paddedFileOptions);
+                    if (paddedFileOptions is not null) CryptographicOperations.ZeroMemory(paddedFileOptions);
                 }
                 await EncryptChunks(fileFS, vaultFS, totalChunks, concurrentChunkCount, chunkSizeInMB, provider.EncryptionAlgorithm, key, context);
             }
@@ -61,7 +59,7 @@ namespace VaultCrypt
             }
         }
 
-        static async Task EncryptChunks(Stream fileFS, Stream vaultFS, int totalChunks, int concurrentChunkCount, ushort chunkSizeInMB, EncryptionAlgorithm.IEncryptionAlgorithm encryptionAlgorithm, ReadOnlyMemory<byte> key, ProgressionContext context)
+        private async Task EncryptChunks(Stream fileFS, Stream vaultFS, int totalChunks, int concurrentChunkCount, ushort chunkSizeInMB, EncryptionAlgorithm.IEncryptionAlgorithm encryptionAlgorithm, ReadOnlyMemory<byte> key, ProgressionContext context)
         {
             ArgumentNullException.ThrowIfNull(fileFS);
             ArgumentNullException.ThrowIfNull(vaultFS);
