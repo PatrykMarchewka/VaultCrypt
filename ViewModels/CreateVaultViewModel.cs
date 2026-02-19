@@ -8,11 +8,14 @@ using System.Text;
 using System.Threading.Tasks;
 using System.Windows;
 using System.Windows.Input;
+using VaultCrypt.Services;
 
 namespace VaultCrypt.ViewModels
 {
     internal class CreateVaultViewModel : INotifyPropertyChanged, IViewModel, INavigatingViewModel
     {
+        private readonly IVaultService _vaultService;
+
         private string _vaultFolder = null!;
         public string VaultFolder
         {
@@ -73,8 +76,9 @@ namespace VaultCrypt.ViewModels
         public ICommand SelectFolderCommand { get; }
         public ICommand CreateVaultCommand { get; }
 
-        internal CreateVaultViewModel()
+        internal CreateVaultViewModel(IVaultService vaultService)
         {
+            this._vaultService = vaultService;
             SelectedPreset = IterationPresets[0];
             VaultFolder = AppContext.BaseDirectory;
             GoBackCommand = new RelayCommand(_ => NavigationRequested?.Invoke(new NavigateToMainRequest()));
@@ -104,7 +108,7 @@ namespace VaultCrypt.ViewModels
             try
             {
                 passwordBytes = PasswordHelper.SecureStringToBytes(Password);
-                VaultSession.CreateVault(folderPath, VaultName, passwordBytes, SelectedPreset.Iterations);
+                _vaultService.CreateVault(folderPath, VaultName, passwordBytes, SelectedPreset.Iterations);
             }
             finally
             {
