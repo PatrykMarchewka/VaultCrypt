@@ -19,6 +19,7 @@ namespace VaultCrypt.ViewModels
     {
         private readonly IFileDialogService _fileDialogService;
         private readonly IVaultService _vaultService;
+        private readonly IDecryptionService _decryptionService;
 
         private SecureString? password;
         private NormalizedPath? vaultPath;
@@ -62,10 +63,11 @@ namespace VaultCrypt.ViewModels
         public ICommand TrimCommand { get; }
 
 
-        internal OpenVaultViewModel(IFileDialogService fileDialogService, IVaultService vaultService)
+        internal OpenVaultViewModel(IFileDialogService fileDialogService, IVaultService vaultService, IDecryptionService decryptionService)
         {
             this._fileDialogService = fileDialogService;
             this._vaultService = vaultService;
+            this._decryptionService = decryptionService;
             EncryptedFilesCollectionView = CollectionViewSource.GetDefaultView(VaultSession.CurrentSession.ENCRYPTED_FILES);
             GoBackCommand = new RelayCommand(_ => GoBack());
             AddNewFileCommand = new RelayCommand(_ => AddNewFile());
@@ -115,7 +117,7 @@ namespace VaultCrypt.ViewModels
             {
                 var context = new ProgressionContext();
                 NavigationRequested?.Invoke(new NavigateToProgressRequest(context));
-                await Decryption.Decrypt(SelectedFile!.Value.Key, NormalizedPath.From(file)!, context);
+                await _decryptionService.Decrypt(SelectedFile!.Value.Key, NormalizedPath.From(file)!, context);
             }
         }
 

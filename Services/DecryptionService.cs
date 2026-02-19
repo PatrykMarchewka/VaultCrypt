@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.IO;
@@ -7,16 +7,25 @@ using System.Security.Cryptography;
 using System.Text;
 using System.Threading.Tasks;
 using VaultCrypt.Exceptions;
-using VaultCrypt.Services;
 
-namespace VaultCrypt
+namespace VaultCrypt.Services
 {
-    internal class Decryption
+    public interface IDecryptionService
     {
-        //Temporary fix
-        private static readonly IFileService fileService = new FileService();
+        Task Decrypt(long metadataOffset, NormalizedPath filePath, ProgressionContext context);
+    }
 
-        internal static async Task Decrypt(long metadataOffset, NormalizedPath filePath, ProgressionContext context)
+    public class DecryptionService : IDecryptionService
+    {
+        private readonly IFileService _fileService;
+
+        public DecryptionService(IFileService fileService)
+        {
+            this._fileService = fileService;
+        }
+
+
+        public async Task Decrypt(long metadataOffset, NormalizedPath filePath, ProgressionContext context)
         {
             ArgumentOutOfRangeException.ThrowIfNegative(metadataOffset);
             ArgumentNullException.ThrowIfNull(filePath);
@@ -55,7 +64,7 @@ namespace VaultCrypt
             }
         }
 
-        static byte[] DecryptInOneChunk(Stream vaultFS, ulong fileSize, ReadOnlySpan<byte> key, EncryptionAlgorithm.IEncryptionAlgorithm encryptionAlgorithm)
+        private byte[] DecryptInOneChunk(Stream vaultFS, ulong fileSize, ReadOnlySpan<byte> key, EncryptionAlgorithm.IEncryptionAlgorithm encryptionAlgorithm)
         {
             ArgumentNullException.ThrowIfNull(vaultFS);
             ArgumentOutOfRangeException.ThrowIfZero(fileSize);
@@ -86,7 +95,7 @@ namespace VaultCrypt
         /// <param name="context"></param>
         /// <returns></returns>
         /// <exception cref="VaultException"></exception>
-        static async Task DecryptInMultipleChunks(Stream vaultFS, Stream fileFS, EncryptionOptions.ChunkInformation chunkInformation, short extraData, ReadOnlyMemory<byte> key, EncryptionAlgorithm.IEncryptionAlgorithm encryptionAlgorithm, ProgressionContext context)
+        private async Task DecryptInMultipleChunks(Stream vaultFS, Stream fileFS, EncryptionOptions.ChunkInformation chunkInformation, short extraData, ReadOnlyMemory<byte> key, EncryptionAlgorithm.IEncryptionAlgorithm encryptionAlgorithm, ProgressionContext context)
         {
             ArgumentNullException.ThrowIfNull(vaultFS);
             ArgumentNullException.ThrowIfNull(fileFS);
@@ -152,10 +161,10 @@ namespace VaultCrypt
                         }
                         finally
                         {
-                            if(currentChunk is not null) CryptographicOperations.ZeroMemory(currentChunk);
+                            if (currentChunk is not null) CryptographicOperations.ZeroMemory(currentChunk);
                             //decryptedChunk field gets cleaned in FileHelper.WriteReadyChunk after writing
                         }
-                        fileService.WriteReadyChunk(results, ref nextToWrite, currentIndex, fileFS, writeLock);
+                        _fileService.WriteReadyChunk(results, ref nextToWrite, currentIndex, fileFS, writeLock);
                         //Reporting current index + 1 because currentIndex is zero based while user gets to see 1 based indexing
                         context.Progress.Report(new ProgressStatus(currentIndex + 1, chunkInformation.TotalChunks));
                     }));

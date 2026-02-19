@@ -12,13 +12,15 @@ namespace VaultCrypt.ViewModels
         private static readonly FileDialogService fileDialogService = new FileDialogService();
         private static readonly FileService fileService = new FileService();
         private static readonly VaultService vaultService = new VaultService(fileService);
+        private static readonly EncryptionService encryptionService = new EncryptionService(fileService);
+        private static readonly DecryptionService decryptionService = new DecryptionService(fileService);
 
         public MainWindowViewModel MainWindow { get; } = new MainWindowViewModel();
         public MainViewViewModel Main { get; } = new MainViewViewModel(fileDialogService);
         public CreateVaultViewModel CreateVault { get; } = new CreateVaultViewModel(fileDialogService, vaultService);
-        public OpenVaultViewModel OpenVault { get; } = new OpenVaultViewModel(fileDialogService, vaultService);
+        public OpenVaultViewModel OpenVault { get; } = new OpenVaultViewModel(fileDialogService, vaultService, decryptionService);
         public PasswordInputViewModel PasswordInput { get; } = new PasswordInputViewModel();
-        public EncryptFileViewModel EncryptFile { get; } = new EncryptFileViewModel();
+        public EncryptFileViewModel EncryptFile { get; } = new EncryptFileViewModel(encryptionService);
         public ProgressViewModel Progress { get; } = new ProgressViewModel();
         public ExceptionThrownViewModel ExceptionThrown { get; } = new ExceptionThrownViewModel();
 

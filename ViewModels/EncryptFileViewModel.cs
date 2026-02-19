@@ -14,6 +14,8 @@ namespace VaultCrypt.ViewModels
 {
     internal class EncryptFileViewModel : INotifyPropertyChanged, INavigated, IViewModel, INavigatingViewModel
     {
+        private readonly IEncryptionService _encryptionService;
+
         private NormalizedPath filePath = null!;
         public IReadOnlyList<ChunkSizePreset> ChunkSizePresets { get; } = [
             new(Name: "1MB", SizeInMB: 1),
@@ -58,8 +60,9 @@ namespace VaultCrypt.ViewModels
 
         public ICommand GoBackCommand { get; }
         public ICommand EncryptCommand { get; }
-        public EncryptFileViewModel()
+        public EncryptFileViewModel(IEncryptionService encryptionService)
         {
+            this._encryptionService = encryptionService;
             SelectedPreset = ChunkSizePresets[0];
             SelectedAlgorithm = EncryptionAlgorithm.GetEncryptionAlgorithmInfo.First().Value;
             GoBackCommand = new RelayCommand(_ => NavigationRequested?.Invoke(new NavigateToMainRequest()));
@@ -70,7 +73,7 @@ namespace VaultCrypt.ViewModels
         {
             var context = new ProgressionContext();
             NavigationRequested?.Invoke(new NavigateToProgressRequest(context));
-            await Encryption.Encrypt(SelectedAlgorithm, SelectedPreset.SizeInMB, filePath, context);
+            await _encryptionService.Encrypt(SelectedAlgorithm, SelectedPreset.SizeInMB, filePath, context);
         }
 
         public void OnNavigatedTo(object? parameters)

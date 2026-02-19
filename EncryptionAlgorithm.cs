@@ -11,9 +11,9 @@ using VaultCrypt.Exceptions;
 
 namespace VaultCrypt
 {
-    internal class EncryptionAlgorithm
+    public class EncryptionAlgorithm
     {
-        internal sealed record EncryptionAlgorithmInfo(byte ID, string Name, Func<IEncryptionAlgorithmProvider> provider)
+        public sealed record EncryptionAlgorithmInfo(byte ID, string Name, Func<IEncryptionAlgorithmProvider> provider)
         {
             internal static readonly EncryptionAlgorithmInfo AES128GCM = new(0, "AES-128-GCM", () => new AesProvider(16, new AesGcm()));
             internal static readonly EncryptionAlgorithmInfo AES192GCM = new(1, "AES-192-GCM", () => new AesProvider(24, new AesGcm()));
@@ -51,7 +51,7 @@ namespace VaultCrypt
             public override string ToString() => Name;
         }
 
-        internal static readonly IReadOnlyDictionary<byte, EncryptionAlgorithmInfo> GetEncryptionAlgorithmInfo = _BuildDictionary();
+        public static readonly IReadOnlyDictionary<byte, EncryptionAlgorithmInfo> GetEncryptionAlgorithmInfo = _BuildDictionary();
 
         private static IReadOnlyDictionary<byte, EncryptionAlgorithmInfo> _BuildDictionary()
         {
@@ -92,7 +92,7 @@ namespace VaultCrypt
             }
         }
 
-        internal interface IEncryptionAlgorithm
+        public interface IEncryptionAlgorithm
         {
             public short ExtraEncryptionDataSize { get; }
             public byte[] EncryptBytes(ReadOnlySpan<byte> data, ReadOnlySpan<byte> key);
@@ -939,7 +939,7 @@ namespace VaultCrypt
         }
 
 
-        internal interface IEncryptionAlgorithmProvider
+        public interface IEncryptionAlgorithmProvider
         {
             public byte KeySize { get; }
             public IEncryptionAlgorithm EncryptionAlgorithm { get; }
