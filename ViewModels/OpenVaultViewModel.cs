@@ -17,6 +17,7 @@ namespace VaultCrypt.ViewModels
 {
     internal class OpenVaultViewModel : INotifyPropertyChanged, INavigated, IViewModel, INavigatingViewModel
     {
+        private readonly IVaultService _vaultService;
 
         private SecureString? password;
         private NormalizedPath? vaultPath;
@@ -60,8 +61,9 @@ namespace VaultCrypt.ViewModels
         public ICommand TrimCommand { get; }
 
 
-        internal OpenVaultViewModel()
+        internal OpenVaultViewModel(IVaultService vaultService)
         {
+            this._vaultService = vaultService;
             EncryptedFilesCollectionView = CollectionViewSource.GetDefaultView(VaultSession.CurrentSession.ENCRYPTED_FILES);
             GoBackCommand = new RelayCommand(_ => GoBack());
             AddNewFileCommand = new RelayCommand(_ => AddNewFile());
@@ -119,14 +121,14 @@ namespace VaultCrypt.ViewModels
         {
             var context = new ProgressionContext();
             NavigationRequested?.Invoke(new NavigateToProgressRequest(context));
-            await Task.Run(() => FileHelper.DeleteFileFromVault(SelectedFile!.Value, context));
+            await Task.Run(() => _vaultService.DeleteFileFromVault(SelectedFile!.Value, context));
         }
 
         private async Task Trim()
         {
             var context = new ProgressionContext();
             NavigationRequested?.Invoke(new NavigateToProgressRequest(context));
-            await Task.Run(() => FileHelper.TrimVault(context));
+            await Task.Run(() => _vaultService.TrimVault(context));
         }
 
         private void Filter(string text)

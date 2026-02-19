@@ -1,6 +1,4 @@
 ﻿using System;
-using System.Buffers.Binary;
-using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
@@ -8,17 +6,24 @@ using System.Runtime.InteropServices;
 using System.Security.Cryptography;
 using System.Text;
 using System.Threading.Tasks;
-using VaultCrypt.Exceptions;
-using VaultCrypt.Services;
 
-namespace VaultCrypt
+namespace VaultCrypt.Services
 {
-    internal class FileHelper
+    public interface IVaultService
     {
-        //Temporary fix
-        private static readonly IFileService fileService = new FileService();
+        public void TrimVault(ProgressionContext context);
+        public void DeleteFileFromVault(KeyValuePair<long, EncryptedFileInfo> FileMetadataEntry, ProgressionContext context);
+    }
 
-        internal static void TrimVault(ProgressionContext context)
+    public class VaultService : IVaultService
+    {
+        private readonly IFileService _fileService;
+        public VaultService(IFileService fileService)
+        {
+            this._fileService = fileService;
+        }
+
+        public void TrimVault(ProgressionContext context)
         {
             ArgumentNullException.ThrowIfNull(context);
 
@@ -27,7 +32,7 @@ namespace VaultCrypt
             using FileStream newVaultfs = new FileStream(VaultSession.CurrentSession.VAULTPATH + "_TRIMMED.vlt", FileMode.Create);
 
             var reader = VaultSession.CurrentSession.VAULT_READER;
-            fileService.CopyPartOfFile(vaultfs, 0, (ulong)reader.HeaderSize, newVaultfs, newVaultfs.Seek(0, SeekOrigin.End));
+            _fileService.CopyPartOfFile(vaultfs, 0, (ulong)reader.HeaderSize, newVaultfs, newVaultfs.Seek(0, SeekOrigin.End));
             var fileList = VaultSession.CurrentSession.ENCRYPTED_FILES.ToList();
             int fileListCount = fileList.Count;
 
@@ -65,7 +70,7 @@ namespace VaultCrypt
                     //Calculating toread to allow copying of partially encrypted files
                     ulong toread = Math.Min((ulong)(nextOffset - currentOffset), (ulong)reader.EncryptionOptionsSize + fileSize);
                     newVaultOffsets[i] = newVaultfs.Seek(0, SeekOrigin.End);
-                    fileService.CopyPartOfFile(vaultfs, currentOffset, toread, newVaultfs, newVaultOffsets[i]);
+                    _fileService.CopyPartOfFile(vaultfs, currentOffset, toread, newVaultfs, newVaultOffsets[i]);
                     //Reporting current index + 1 because i is zero based while user gets to see 1 based indexing, total is filelList.Count + 1 because last action is saving new header
                     context.Progress.Report(new ProgressStatus(i + 1, fileList.Count + 1));
                 }
@@ -78,11 +83,11 @@ namespace VaultCrypt
                 CryptographicOperations.ZeroMemory(MemoryMarshal.AsBytes(newVaultOffsets.AsSpan()));
                 if (trimmedOffsets is not null) CryptographicOperations.ZeroMemory(MemoryMarshal.AsBytes(trimmedOffsets.AsSpan()));
             }
-            
+
             context.Progress.Report(new ProgressStatus(fileListCount + 1, fileListCount + 1));
         }
 
-        internal static void DeleteFileFromVault(KeyValuePair<long, EncryptedFileInfo> FileMetadataEntry, ProgressionContext context)
+        public void DeleteFileFromVault(KeyValuePair<long, EncryptedFileInfo> FileMetadataEntry, ProgressionContext context)
         {
             ArgumentOutOfRangeException.ThrowIfNegative(FileMetadataEntry.Key);
             ArgumentNullException.ThrowIfNull(context);
@@ -117,11 +122,10 @@ namespace VaultCrypt
                     if (encryptionOptions is not null) encryptionOptions.Dispose();
                 }
 
-                fileService.ZeroOutPartOfFile(vaultFS, FileMetadataEntry.Key, length);
+                _fileService.ZeroOutPartOfFile(vaultFS, FileMetadataEntry.Key, length);
             }
             VaultSession.CurrentSession.VAULT_READER.RemoveAndSaveMetadataOffsets(vaultFS, checked((ushort)fileList.FindIndex(file => file.Equals(FileMetadataEntry))));
             context.Progress.Report(new ProgressStatus(1, 1));
         }
-
     }
 }

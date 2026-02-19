@@ -3,15 +3,19 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
+using VaultCrypt.Services;
 
 namespace VaultCrypt.ViewModels
 {
     internal class ViewModelState
     {
+        private static readonly FileService fileService = new FileService();
+        private static readonly VaultService vaultService = new VaultService(fileService);
+
         public MainWindowViewModel MainWindow { get; } = new MainWindowViewModel();
         public MainViewViewModel Main { get; } = new MainViewViewModel();
         public CreateVaultViewModel CreateVault { get; } = new CreateVaultViewModel();
-        public OpenVaultViewModel OpenVault { get; } = new OpenVaultViewModel();
+        public OpenVaultViewModel OpenVault { get; } = new OpenVaultViewModel(vaultService);
         public PasswordInputViewModel PasswordInput { get; } = new PasswordInputViewModel();
         public EncryptFileViewModel EncryptFile { get; } = new EncryptFileViewModel();
         public ProgressViewModel Progress { get; } = new ProgressViewModel();
