@@ -7,11 +7,15 @@ using System.Security.Cryptography;
 using System.Text;
 using System.Threading.Tasks;
 using VaultCrypt.Exceptions;
+using VaultCrypt.Services;
 
 namespace VaultCrypt
 {
     internal class Decryption
     {
+        //Temporary fix
+        private static readonly IFileService fileService = new FileService();
+
         internal static async Task Decrypt(long metadataOffset, NormalizedPath filePath, ProgressionContext context)
         {
             ArgumentOutOfRangeException.ThrowIfNegative(metadataOffset);
@@ -151,7 +155,7 @@ namespace VaultCrypt
                             if(currentChunk is not null) CryptographicOperations.ZeroMemory(currentChunk);
                             //decryptedChunk field gets cleaned in FileHelper.WriteReadyChunk after writing
                         }
-                        FileHelper.WriteReadyChunk(results, ref nextToWrite, currentIndex, fileFS, writeLock);
+                        fileService.WriteReadyChunk(results, ref nextToWrite, currentIndex, fileFS, writeLock);
                         //Reporting current index + 1 because currentIndex is zero based while user gets to see 1 based indexing
                         context.Progress.Report(new ProgressStatus(currentIndex + 1, chunkInformation.TotalChunks));
                     }));

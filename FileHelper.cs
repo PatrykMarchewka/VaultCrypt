@@ -9,88 +9,14 @@ using System.Security.Cryptography;
 using System.Text;
 using System.Threading.Tasks;
 using VaultCrypt.Exceptions;
+using VaultCrypt.Services;
 
 namespace VaultCrypt
 {
     internal class FileHelper
     {
-        internal static void WriteReadyChunk(ConcurrentDictionary<int, byte[]> results, ref int nextToWrite, int currentIndex, Stream fileFS, object lockObject)
-        {
-            ArgumentNullException.ThrowIfNull(results);
-            ArgumentOutOfRangeException.ThrowIfNegative(nextToWrite);
-            ArgumentOutOfRangeException.ThrowIfNegative(currentIndex);
-            ArgumentNullException.ThrowIfNull(fileFS);
-            ArgumentNullException.ThrowIfNull(lockObject);
-            lock (lockObject)
-            {
-                byte[] ready;
-                while (nextToWrite != currentIndex)
-                {
-                    Monitor.Wait(lockObject);
-                }
-
-                if (!results.TryRemove(nextToWrite, out ready!)) throw new VaultException(VaultException.ErrorContext.WriteToFile, VaultException.ErrorReason.MissingChunk);
-                try
-                {
-                    fileFS.Write(ready, 0, ready.Length);
-                }
-                finally
-                {
-                    CryptographicOperations.ZeroMemory(ready);
-                } 
-                nextToWrite++;
-
-                Monitor.PulseAll(lockObject);
-            }
-        }
-
-        private static void ZeroOutPartOfFile(Stream stream, long offset, ulong length)
-        {
-            ArgumentNullException.ThrowIfNull(stream);
-            ArgumentOutOfRangeException.ThrowIfNegative(offset);
-            ArgumentOutOfRangeException.ThrowIfZero(length);
-
-            Span<byte> zeroes = stackalloc byte[1024];
-            stream.Seek(offset, SeekOrigin.Begin);
-            while (length > 0)
-            {
-                //Length is provided as ulong to support fileSizes above 2GB
-                int chunk = (int)Math.Min(length, (ulong)zeroes.Length);
-                stream.Write(zeroes[..chunk]);
-                length -= (ulong)chunk;
-            }
-        }
-
-        private static void CopyPartOfFile(Stream source, long offset, ulong length, Stream destination, long destinationOffset)
-        {
-            ArgumentNullException.ThrowIfNull(source);
-            ArgumentOutOfRangeException.ThrowIfNegative(offset);
-            ArgumentOutOfRangeException.ThrowIfZero(length);
-            ArgumentNullException.ThrowIfNull(destination);
-            ArgumentOutOfRangeException.ThrowIfNegative(destinationOffset);
-
-            //8MB buffer
-            byte[] buffer = new byte[8_388_608];
-
-            source.Seek(offset, SeekOrigin.Begin);
-            destination.Seek(destinationOffset, SeekOrigin.Begin);
-            try
-            {
-                while (length > 0)
-                {
-                    //Length is provided as ulong to support fileSizes above 2GB
-                    int chunkSize = (int)Math.Min(length, (ulong)buffer.Length);
-                    source.ReadExactly(buffer, 0, chunkSize);
-                    destination.Write(buffer, 0, chunkSize);
-                    length -= (ulong)chunkSize;
-                }
-            }
-            finally
-            {
-                CryptographicOperations.ZeroMemory(buffer);
-            }
-            
-        }
+        //Temporary fix
+        private static readonly IFileService fileService = new FileService();
 
         internal static void TrimVault(ProgressionContext context)
         {
@@ -101,7 +27,7 @@ namespace VaultCrypt
             using FileStream newVaultfs = new FileStream(VaultSession.CurrentSession.VAULTPATH + "_TRIMMED.vlt", FileMode.Create);
 
             var reader = VaultSession.CurrentSession.VAULT_READER;
-            CopyPartOfFile(vaultfs, 0, (ulong)reader.HeaderSize, newVaultfs, newVaultfs.Seek(0, SeekOrigin.End));
+            fileService.CopyPartOfFile(vaultfs, 0, (ulong)reader.HeaderSize, newVaultfs, newVaultfs.Seek(0, SeekOrigin.End));
             var fileList = VaultSession.CurrentSession.ENCRYPTED_FILES.ToList();
             int fileListCount = fileList.Count;
 
@@ -139,7 +65,7 @@ namespace VaultCrypt
                     //Calculating toread to allow copying of partially encrypted files
                     ulong toread = Math.Min((ulong)(nextOffset - currentOffset), (ulong)reader.EncryptionOptionsSize + fileSize);
                     newVaultOffsets[i] = newVaultfs.Seek(0, SeekOrigin.End);
-                    CopyPartOfFile(vaultfs, currentOffset, toread, newVaultfs, newVaultOffsets[i]);
+                    fileService.CopyPartOfFile(vaultfs, currentOffset, toread, newVaultfs, newVaultOffsets[i]);
                     //Reporting current index + 1 because i is zero based while user gets to see 1 based indexing, total is filelList.Count + 1 because last action is saving new header
                     context.Progress.Report(new ProgressStatus(i + 1, fileList.Count + 1));
                 }
@@ -190,8 +116,8 @@ namespace VaultCrypt
                 {
                     if (encryptionOptions is not null) encryptionOptions.Dispose();
                 }
-                
-                ZeroOutPartOfFile(vaultFS, FileMetadataEntry.Key, length);
+
+                fileService.ZeroOutPartOfFile(vaultFS, FileMetadataEntry.Key, length);
             }
             VaultSession.CurrentSession.VAULT_READER.RemoveAndSaveMetadataOffsets(vaultFS, checked((ushort)fileList.FindIndex(file => file.Equals(FileMetadataEntry))));
             context.Progress.Report(new ProgressStatus(1, 1));

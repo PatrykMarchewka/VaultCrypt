@@ -13,11 +13,14 @@ using System.Text;
 using System.Threading.Tasks;
 using System.Windows.Documents;
 using VaultCrypt.Exceptions;
+using VaultCrypt.Services;
 
 namespace VaultCrypt
 {
     internal class Encryption
     {
+        //Temporary fix
+        private static readonly IFileService fileService = new FileService();
 
         internal static async Task Encrypt(EncryptionAlgorithm.EncryptionAlgorithmInfo algorithm, ushort chunkSizeInMB, NormalizedPath filePath, ProgressionContext context)
         {
@@ -121,7 +124,7 @@ namespace VaultCrypt
                             if (chunk is not null) CryptographicOperations.ZeroMemory(chunk);
                             //encrypted field gets cleaned in FileHelper.WriteReadyChunk after writing
                         }
-                        FileHelper.WriteReadyChunk(results, ref nextToWrite, currentIndex, vaultFS, writeLock);
+                        fileService.WriteReadyChunk(results, ref nextToWrite, currentIndex, vaultFS, writeLock);
                         //Reporting current index + 1 because currentIndex is zero based while user gets to see 1 based indexing
                         context.Progress.Report(new ProgressStatus(currentIndex + 1, totalChunks));
                     }));
