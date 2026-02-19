@@ -14,6 +14,7 @@ namespace VaultCrypt.ViewModels
 {
     internal class CreateVaultViewModel : INotifyPropertyChanged, IViewModel, INavigatingViewModel
     {
+        private readonly IFileDialogService _fileDialogService;
         private readonly IVaultService _vaultService;
 
         private string _vaultFolder = null!;
@@ -76,8 +77,9 @@ namespace VaultCrypt.ViewModels
         public ICommand SelectFolderCommand { get; }
         public ICommand CreateVaultCommand { get; }
 
-        internal CreateVaultViewModel(IVaultService vaultService)
+        internal CreateVaultViewModel(IFileDialogService fileDialogService, IVaultService vaultService)
         {
+            this._fileDialogService = fileDialogService;
             this._vaultService = vaultService;
             SelectedPreset = IterationPresets[0];
             VaultFolder = AppContext.BaseDirectory;
@@ -88,7 +90,7 @@ namespace VaultCrypt.ViewModels
 
         internal void SelectFolder()
         {
-            string? path = FileDialogHelper.OpenFolder("Select folder");
+            string? path = _fileDialogService.OpenFolder("Select folder");
 
             if (path != null)
             {

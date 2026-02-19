@@ -17,6 +17,7 @@ namespace VaultCrypt.ViewModels
 {
     internal class OpenVaultViewModel : INotifyPropertyChanged, INavigated, IViewModel, INavigatingViewModel
     {
+        private readonly IFileDialogService _fileDialogService;
         private readonly IVaultService _vaultService;
 
         private SecureString? password;
@@ -61,8 +62,9 @@ namespace VaultCrypt.ViewModels
         public ICommand TrimCommand { get; }
 
 
-        internal OpenVaultViewModel(IVaultService vaultService)
+        internal OpenVaultViewModel(IFileDialogService fileDialogService, IVaultService vaultService)
         {
+            this._fileDialogService = fileDialogService;
             this._vaultService = vaultService;
             EncryptedFilesCollectionView = CollectionViewSource.GetDefaultView(VaultSession.CurrentSession.ENCRYPTED_FILES);
             GoBackCommand = new RelayCommand(_ => GoBack());
@@ -98,7 +100,7 @@ namespace VaultCrypt.ViewModels
 
         private void AddNewFile()
         {
-            var dialog = FileDialogHelper.OpenFile("Select file to encrypt", true);
+            var dialog = _fileDialogService.OpenFile("Select file to encrypt", true);
 
             if (dialog != null)
             {
@@ -108,7 +110,7 @@ namespace VaultCrypt.ViewModels
 
         private async Task DecryptFile()
         {
-            var file = FileDialogHelper.SaveFile(SelectedFile!.Value.Value.FileName);
+            var file = _fileDialogService.SaveFile(SelectedFile!.Value.Value.FileName);
             if (file != null)
             {
                 var context = new ProgressionContext();

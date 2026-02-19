@@ -9,13 +9,14 @@ namespace VaultCrypt.ViewModels
 {
     internal class ViewModelState
     {
+        private static readonly FileDialogService fileDialogService = new FileDialogService();
         private static readonly FileService fileService = new FileService();
         private static readonly VaultService vaultService = new VaultService(fileService);
 
         public MainWindowViewModel MainWindow { get; } = new MainWindowViewModel();
-        public MainViewViewModel Main { get; } = new MainViewViewModel();
-        public CreateVaultViewModel CreateVault { get; } = new CreateVaultViewModel();
-        public OpenVaultViewModel OpenVault { get; } = new OpenVaultViewModel(vaultService);
+        public MainViewViewModel Main { get; } = new MainViewViewModel(fileDialogService);
+        public CreateVaultViewModel CreateVault { get; } = new CreateVaultViewModel(fileDialogService, vaultService);
+        public OpenVaultViewModel OpenVault { get; } = new OpenVaultViewModel(fileDialogService, vaultService);
         public PasswordInputViewModel PasswordInput { get; } = new PasswordInputViewModel();
         public EncryptFileViewModel EncryptFile { get; } = new EncryptFileViewModel();
         public ProgressViewModel Progress { get; } = new ProgressViewModel();
