@@ -25,7 +25,7 @@ namespace VaultCrypt
             ArgumentNullException.ThrowIfNull(filePath);
             ArgumentNullException.ThrowIfNull(context);
 
-            FileHelper.CheckFreeSpace(filePath);
+            SystemHelper.CheckFreeSpace(filePath);
 
             EncryptionOptions.FileEncryptionOptions options = null!;
             var provider = algorithm.provider();
@@ -34,7 +34,7 @@ namespace VaultCrypt
                 FileInfo fileInfo = new FileInfo(filePath!);
                 options = EncryptionOptions.PrepareEncryptionOptions(fileInfo, algorithm, chunkSizeInMB);
                 int totalChunks = options.ChunkInformation != null ? options.ChunkInformation!.TotalChunks : 1;
-                int concurrentChunkCount = FileHelper.CalculateConcurrency(options.IsChunked, chunkSizeInMB);
+                int concurrentChunkCount = SystemHelper.CalculateConcurrency(options.IsChunked, chunkSizeInMB);
                 ReadOnlyMemory<byte> key = PasswordHelper.GetSlicedKey(provider.KeySize);
                 await using FileStream vaultFS = new FileStream(VaultSession.CurrentSession.VAULTPATH!, FileMode.Open, FileAccess.ReadWrite);
                 await using FileStream fileFS = new FileStream(filePath!, FileMode.Open, FileAccess.Read);

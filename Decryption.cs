@@ -93,7 +93,7 @@ namespace VaultCrypt
 
             var tasks = new List<Task>();
             var results = new ConcurrentDictionary<int, byte[]>();
-            int concurrentChunkCount = FileHelper.CalculateConcurrency(true, chunkInformation.ChunkSize);
+            int concurrentChunkCount = SystemHelper.CalculateConcurrency(true, chunkInformation.ChunkSize);
             int nextToWrite = 0;
             int chunkIndex = 0;
             byte[] buffer = new byte[extraData + (chunkInformation.ChunkSize * 1024 * 1024)];
