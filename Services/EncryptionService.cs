@@ -18,10 +18,12 @@ namespace VaultCrypt.Services
     internal class EncryptionService : IEncryptionService
     {
         private readonly IFileService _fileService;
+        private readonly IEncryptionOptionsService _encryptionOptionsService;
 
-        public EncryptionService(IFileService fileService)
+        public EncryptionService(IFileService fileService, IEncryptionOptionsService encryptionOptionsService)
         {
             this._fileService = fileService;
+            this._encryptionOptionsService = encryptionOptionsService;
         }
 
         public async Task Encrypt(EncryptionAlgorithm.EncryptionAlgorithmInfo algorithm, ushort chunkSizeInMB, NormalizedPath filePath, ProgressionContext context)
@@ -37,7 +39,7 @@ namespace VaultCrypt.Services
             try
             {
                 FileInfo fileInfo = new FileInfo(filePath!);
-                options = EncryptionOptions.PrepareEncryptionOptions(fileInfo, algorithm, chunkSizeInMB);
+                options = _encryptionOptionsService.PrepareEncryptionOptions(fileInfo, algorithm, chunkSizeInMB);
                 int totalChunks = options.ChunkInformation != null ? options.ChunkInformation!.TotalChunks : 1;
                 int concurrentChunkCount = SystemHelper.CalculateConcurrency(options.IsChunked, chunkSizeInMB);
                 ReadOnlyMemory<byte> key = PasswordHelper.GetSlicedKey(provider.KeySize);
@@ -48,7 +50,7 @@ namespace VaultCrypt.Services
                 byte[] paddedFileOptions = null!;
                 try
                 {
-                    paddedFileOptions = EncryptionOptions.EncryptAndPadFileEncryptionOptions(options);
+                    paddedFileOptions = _encryptionOptionsService.EncryptAndPadFileEncryptionOptions(options);
                     //Seek to the end of file to make sure its saved at the end and not after metadata data
                     vaultFS.Seek(0, SeekOrigin.End);
                     vaultFS.Write(paddedFileOptions);

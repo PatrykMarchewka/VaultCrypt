@@ -19,7 +19,7 @@ namespace VaultCrypt.ViewModels
         private readonly IFileDialogService _fileDialogService;
         private readonly IVaultService _vaultService;
         private readonly IDecryptionService _decryptionService;
-        private IVaultSession _session;
+        private readonly IVaultSession _session;
 
         private SecureString? password;
         private NormalizedPath? vaultPath;

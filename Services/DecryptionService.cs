@@ -18,10 +18,12 @@ namespace VaultCrypt.Services
     public class DecryptionService : IDecryptionService
     {
         private readonly IFileService _fileService;
+        private readonly IEncryptionOptionsService _encryptionOptionsService;
 
-        public DecryptionService(IFileService fileService)
+        public DecryptionService(IFileService fileService, IEncryptionOptionsService encryptionOptionsService)
         {
             this._fileService = fileService;
+            this._encryptionOptionsService = encryptionOptionsService;
         }
 
 
@@ -32,7 +34,7 @@ namespace VaultCrypt.Services
             ArgumentNullException.ThrowIfNull(context);
 
             await using FileStream vaultFS = new FileStream(VaultSession.CurrentSession.VAULTPATH!, FileMode.Open, FileAccess.Read);
-            EncryptionOptions.FileEncryptionOptions encryptionOptions = EncryptionOptions.GetDecryptedFileEncryptionOptions(vaultFS, metadataOffset);
+            EncryptionOptions.FileEncryptionOptions encryptionOptions = _encryptionOptionsService.GetDecryptedFileEncryptionOptions(vaultFS, metadataOffset);
 
             try
             {
