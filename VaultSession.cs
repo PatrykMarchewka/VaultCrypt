@@ -9,6 +9,7 @@ using System.Security.Cryptography;
 using System.Text;
 using System.Threading.Tasks;
 using VaultCrypt.Exceptions;
+using VaultCrypt.Services;
 
 namespace VaultCrypt
 {
@@ -75,24 +76,27 @@ namespace VaultCrypt
 
     }
 
-    internal static class VaultRegistry
+    public class VaultRegistry
     {
-        private static readonly Dictionary<byte, Lazy<VaultReader>> registry = new()
+        private readonly IVaultSession _session;
+        private readonly IEncryptionOptionsService _encryptionOptionsService;
+        private static Dictionary<byte, Lazy<VaultReader>> registry = null!;
+        public VaultRegistry(IVaultSession session, IEncryptionOptionsService encryptionOptionsService)
         {
-            {0, new Lazy<VaultReader>(() => new VaultV0Reader()) }
-        };
+            this._session = session;
+            this._encryptionOptionsService = encryptionOptionsService;
 
-        internal static VaultReader GetVaultReader(byte version)
+            registry = new()
+            {
+                {0, new Lazy<VaultReader>(() => new VaultV0Reader(session, encryptionOptionsService)) }
+            };
+        }
+
+        public static VaultReader GetVaultReader(byte version)
         {
             return registry.TryGetValue(version, out var reader) ? reader.Value : throw new VaultException(VaultException.ErrorContext.VaultSession, VaultException.ErrorReason.NoReader);
         }
     }
-
-
-
-
-
-
 
     //For new versions append the additional data at the end
     //v0 = [version (1byte)][salt (32 bytes)][iterations (4 bytes)] + [metadata offsets (28 bytes for AES decryption + 2 bytes ushort number + 4KB (4096 bytes)]...
@@ -104,6 +108,15 @@ namespace VaultCrypt
         public virtual short EncryptionOptionsSize => 1024; //Size of already encrypted EncryptionOptions
         public virtual short MetadataOffsetsSize => 4096; //Size of metadata offsets collection before encryption
         public virtual short HeaderSize => (short)(1 + SaltSize + sizeof(int) + EncryptionAlgorithm.GetEncryptionAlgorithmInfo[VaultEncryptionAlgorithm].provider().EncryptionAlgorithm.ExtraEncryptionDataSize + sizeof(ushort) + MetadataOffsetsSize); //Full size of vault header
+
+        private readonly IVaultSession _session;
+        private readonly IEncryptionOptionsService _encryptionOptionsService;
+
+        public VaultReader(IVaultSession session, IEncryptionOptionsService encryptionOptionsService)
+        {
+            this._session = session;
+            this._encryptionOptionsService = encryptionOptionsService;
+        }
 
         #region Vault header
         public byte[] ReadSalt(Stream stream)
@@ -175,21 +188,21 @@ namespace VaultCrypt
                     EncryptionOptions.FileEncryptionOptions fileEncryptionOptions = null!;
                     try
                     {
-                        fileEncryptionOptions = EncryptionOptions.GetDecryptedFileEncryptionOptions(stream, offset);
+                        fileEncryptionOptions = _encryptionOptionsService.GetDecryptedFileEncryptionOptions(stream, offset);
                         try
                         {
-                            VaultSession.CurrentSession.ENCRYPTED_FILES.Add(offset, new EncryptedFileInfo(Encoding.UTF8.GetString(fileEncryptionOptions.FileName), fileEncryptionOptions.FileSize, EncryptionAlgorithm.GetEncryptionAlgorithmInfo[fileEncryptionOptions.EncryptionAlgorithm]));
+                            _session.ENCRYPTED_FILES.Add(offset, new EncryptedFileInfo(Encoding.UTF8.GetString(fileEncryptionOptions.FileName), fileEncryptionOptions.FileSize, EncryptionAlgorithm.GetEncryptionAlgorithmInfo[fileEncryptionOptions.EncryptionAlgorithm]));
                         }
                         catch (ArgumentException)
                         {
                             //Dictionary entry with the same key already exists, replace it
-                            VaultSession.CurrentSession.ENCRYPTED_FILES[offset] = new EncryptedFileInfo(Encoding.UTF8.GetString(fileEncryptionOptions.FileName), fileEncryptionOptions.FileSize, EncryptionAlgorithm.GetEncryptionAlgorithmInfo[fileEncryptionOptions.EncryptionAlgorithm]);
+                            _session.ENCRYPTED_FILES[offset] = new EncryptedFileInfo(Encoding.UTF8.GetString(fileEncryptionOptions.FileName), fileEncryptionOptions.FileSize, EncryptionAlgorithm.GetEncryptionAlgorithmInfo[fileEncryptionOptions.EncryptionAlgorithm]);
                         }
                         
                     }
                     catch(Exception)
                     {
-                        VaultSession.CurrentSession.ENCRYPTED_FILES.Add(offset, new EncryptedFileInfo(null, 0, null));
+                        _session.ENCRYPTED_FILES.Add(offset, new EncryptedFileInfo(null, 0, null));
                     }
                     finally
                     {
@@ -388,7 +401,7 @@ namespace VaultCrypt
             byte[] slicedKey = new byte[EncryptionAlgorithm.GetEncryptionAlgorithmInfo[VaultEncryptionAlgorithm].provider().KeySize];
             try
             {
-                Buffer.BlockCopy(VaultSession.CurrentSession.KEY, 0, slicedKey, 0, slicedKey.Length);
+                Buffer.BlockCopy(_session.KEY, 0, slicedKey, 0, slicedKey.Length);
                 return EncryptionAlgorithm.GetEncryptionAlgorithmInfo[VaultEncryptionAlgorithm].provider().EncryptionAlgorithm.EncryptBytes(data.Span, slicedKey);
             }
             catch(Exception)
@@ -406,7 +419,7 @@ namespace VaultCrypt
             byte[] slicedKey = new byte[EncryptionAlgorithm.GetEncryptionAlgorithmInfo[VaultEncryptionAlgorithm].provider().KeySize];
             try
             {
-                Buffer.BlockCopy(VaultSession.CurrentSession.KEY, 0, slicedKey, 0, slicedKey.Length);
+                Buffer.BlockCopy(_session.KEY, 0, slicedKey, 0, slicedKey.Length);
                 return EncryptionAlgorithm.GetEncryptionAlgorithmInfo[VaultEncryptionAlgorithm].provider().EncryptionAlgorithm.DecryptBytes(data.Span, slicedKey);
             }
             catch(Exception)
@@ -421,6 +434,8 @@ namespace VaultCrypt
 
     public class VaultV0Reader : VaultReader
     {
+        public VaultV0Reader(IVaultSession session, IEncryptionOptionsService encryptionOptionsService) : base(session, encryptionOptionsService) { }
+
         public override byte Version => 0;
         public override byte VaultEncryptionAlgorithm => EncryptionAlgorithm.EncryptionAlgorithmInfo.AES256GCM.ID;
     }
