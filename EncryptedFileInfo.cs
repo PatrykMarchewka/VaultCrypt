@@ -12,9 +12,9 @@ namespace VaultCrypt
         public string FileSize { get; init; }
         public string EncryptionAlgorithm { get; init; }
 
-        internal EncryptedFileInfo(string fileName, ulong fileSize, EncryptionAlgorithm.EncryptionAlgorithmInfo? algorithmInfo = null)
+        public EncryptedFileInfo(string? fileName, ulong fileSize, EncryptionAlgorithm.EncryptionAlgorithmInfo? algorithmInfo = null)
         {
-            this.FileName = fileName;
+            this.FileName = fileName ?? "Unknown file (Corrupted data!)";
             this.FileSize = FormatSize(fileSize);
             this.EncryptionAlgorithm = algorithmInfo?.Name ?? "Unknown";
         }

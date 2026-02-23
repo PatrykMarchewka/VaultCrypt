@@ -93,8 +93,7 @@ namespace VaultCrypt.Services
 
         public void NavigateFromProgress()
         {
-            using var vaultFS = new FileStream(VaultSession.CurrentSession.VAULTPATH!, FileMode.Open, FileAccess.Read, FileShare.ReadWrite);
-            VaultSession.RefreshEncryptedFilesList(vaultFS);
+            viewModels.OpenVault.RefreshCollection();
             Navigate(viewModels.OpenVault);
         }
 
