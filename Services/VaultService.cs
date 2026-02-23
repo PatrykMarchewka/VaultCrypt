@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
@@ -12,16 +12,20 @@ namespace VaultCrypt.Services
     public interface IVaultService
     {
         public void CreateVault(NormalizedPath folderPath, string vaultName, byte[] password, int iterations);
+        public void CreateSessionFromFile(byte[] password, NormalizedPath path);
         public void TrimVault(ProgressionContext context);
         public void DeleteFileFromVault(KeyValuePair<long, EncryptedFileInfo> FileMetadataEntry, ProgressionContext context);
+        public void RefreshEncryptedFilesList(Stream vaultFS);
     }
 
     public class VaultService : IVaultService
     {
         private readonly IFileService _fileService;
-        public VaultService(IFileService fileService)
+        private IVaultSession _session;
+        public VaultService(IFileService fileService, IVaultSession session)
         {
             this._fileService = fileService;
+            this._session = session;
         }
 
         /// <summary>
@@ -51,7 +55,7 @@ namespace VaultCrypt.Services
             {
                 salt = PasswordHelper.GenerateRandomSalt(reader.SaltSize);
                 buffer = reader.PrepareVaultHeader(salt, iterations);
-                VaultSession.CreateSession(vaultPath, reader, password, salt, iterations);
+                _session.CreateSession(vaultPath, reader, password, salt, iterations);
                 encryptedMetadata = reader.VaultEncryption(new byte[sizeof(ushort) + reader.MetadataOffsetsSize]);
                 data = new byte[buffer.Length + encryptedMetadata.Length];
                 Buffer.BlockCopy(buffer, 0, data, 0, buffer.Length);
@@ -64,6 +68,51 @@ namespace VaultCrypt.Services
                 if (buffer is not null) CryptographicOperations.ZeroMemory(buffer);
                 if (encryptedMetadata is not null) CryptographicOperations.ZeroMemory(encryptedMetadata);
                 if (data is not null) CryptographicOperations.ZeroMemory(data);
+            }
+        }
+
+        /// <summary>
+        /// Creates new vault session
+        /// </summary>
+        /// <param name="password">Password to unlock the vault with</param>
+        /// <param name="path">Path to the vault with extension</param>
+        public void CreateSessionFromFile(byte[] password, NormalizedPath path)
+        {
+            ArgumentNullException.ThrowIfNull(password);
+            ArgumentNullException.ThrowIfNullOrWhiteSpace(path);
+
+            using FileStream fs = new FileStream(path!, FileMode.Open, FileAccess.Read);
+            Span<byte> buffer = stackalloc byte[1];
+            fs.ReadExactly(buffer);
+            byte version = buffer[0];
+
+            VaultReader reader = VaultRegistry.GetVaultReader(version);
+            int iterations = reader.ReadIterationsNumber(fs);
+            byte[] salt = null!;
+            try
+            {
+                salt = reader.ReadSalt(fs);
+                _session.CreateSession(path, reader, password, salt, iterations);
+            }
+            finally
+            {
+                if (salt is not null) CryptographicOperations.ZeroMemory(salt);
+            }
+            RefreshEncryptedFilesList(fs);
+        }
+
+        public void RefreshEncryptedFilesList(Stream vaultFS)
+        {
+            ArgumentNullException.ThrowIfNull(vaultFS);
+
+            try
+            {
+                _session.ENCRYPTED_FILES.Clear();
+                _session.VAULT_READER.PopulateEncryptedFilesList(vaultFS);
+            }
+            finally
+            {
+                _session.RasiseEncryptedFileListUpdated();
             }
         }
 

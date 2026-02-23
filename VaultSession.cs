@@ -12,17 +12,28 @@ using VaultCrypt.Exceptions;
 
 namespace VaultCrypt
 {
-    internal class VaultSession : IDisposable
+    public interface IVaultSession
     {
-        
-        internal byte[] KEY { get; private set; }
-        internal NormalizedPath VAULTPATH { get; private set; }
-        internal Dictionary<long, EncryptedFileInfo> ENCRYPTED_FILES { get; private set; }
-        internal VaultReader VAULT_READER { get; private set; }
+        public byte[] KEY { get; }
+        public NormalizedPath VAULTPATH { get; }
+        public Dictionary<long, EncryptedFileInfo> ENCRYPTED_FILES { get; }
+        public VaultReader VAULT_READER { get; }
+        public event Action? EncryptedFilesListUpdated;
+        public void CreateSession(NormalizedPath vaultPath, VaultReader vaultReader, ReadOnlySpan<byte> password, ReadOnlySpan<byte> salt, int iterations);
+        public void RasiseEncryptedFileListUpdated();
+    }
 
-        internal static VaultSession CurrentSession = new();
+    public class VaultSession : IDisposable, IVaultSession
+    {
+
+        public byte[] KEY { get; private set; }
+        public NormalizedPath VAULTPATH { get; private set; }
+        public Dictionary<long, EncryptedFileInfo> ENCRYPTED_FILES { get; private set; }
+        public VaultReader VAULT_READER { get; private set; }
+
+        public static VaultSession CurrentSession = new();
         public const byte NewestVaultVersion = 0;
-        internal static event Action? EncryptedFilesListUpdated;
+        public event Action? EncryptedFilesListUpdated;
 
         /// <summary>
         /// Empty constructor initializing empty session to avoid NullReferenceException
@@ -35,59 +46,19 @@ namespace VaultCrypt
             VAULT_READER = null!;
         }
 
-        internal static void CreateSession(NormalizedPath vaultPath, VaultReader vaultReader, ReadOnlySpan<byte> password, ReadOnlySpan<byte> salt, int iterations)
+        public void CreateSession(NormalizedPath vaultPath, VaultReader vaultReader, ReadOnlySpan<byte> password, ReadOnlySpan<byte> salt, int iterations)
         {
-            CurrentSession.KEY = PasswordHelper.DeriveKey(password, salt, iterations);
-            CurrentSession.VAULTPATH = vaultPath;
-            CurrentSession.ENCRYPTED_FILES.Clear();
-            CurrentSession.VAULT_READER = vaultReader;
+            this.KEY = PasswordHelper.DeriveKey(password, salt, iterations);
+            this.VAULTPATH = vaultPath;
+            this.ENCRYPTED_FILES.Clear();
+            this.VAULT_READER = vaultReader;
         }
 
+        public void RasiseEncryptedFileListUpdated()
+        {
+            this.EncryptedFilesListUpdated?.Invoke();
+        }
         
-        internal static void RefreshEncryptedFilesList(Stream vaultFS)
-        {
-            ArgumentNullException.ThrowIfNull(vaultFS);
-
-            try
-            {
-                VaultSession.CurrentSession.ENCRYPTED_FILES.Clear();
-                VaultSession.CurrentSession.VAULT_READER.PopulateEncryptedFilesList(vaultFS);
-            }
-            finally
-            {
-                EncryptedFilesListUpdated?.Invoke();
-            }
-        }
-
-        /// <summary>
-        /// Creates new vault session
-        /// </summary>
-        /// <param name="password">Password to unlock the vault with</param>
-        /// <param name="path">Path to the vault with extension</param>
-        public static void CreateSessionFromFile(byte[] password, NormalizedPath path)
-        {
-            ArgumentNullException.ThrowIfNull(password);
-            ArgumentNullException.ThrowIfNullOrWhiteSpace(path);
-
-            using FileStream fs = new FileStream(path!, FileMode.Open, FileAccess.Read);
-            Span<byte> buffer = stackalloc byte[1];
-            fs.ReadExactly(buffer);
-            byte version = buffer[0];
-
-            VaultReader reader = VaultRegistry.GetVaultReader(version);
-            int iterations = reader.ReadIterationsNumber(fs);
-            byte[] salt = null!;
-            try
-            {
-                salt = reader.ReadSalt(fs);
-                CreateSession(path, reader, password, salt, iterations);
-            }
-            finally
-            {
-                if (salt is not null) CryptographicOperations.ZeroMemory(salt);
-            }
-            RefreshEncryptedFilesList(fs);
-        }
 
         /// <summary>
         /// Clears the sensitive vault session data from memory
@@ -125,17 +96,17 @@ namespace VaultCrypt
 
     //For new versions append the additional data at the end
     //v0 = [version (1byte)][salt (32 bytes)][iterations (4 bytes)] + [metadata offsets (28 bytes for AES decryption + 2 bytes ushort number + 4KB (4096 bytes)]...
-    internal abstract class VaultReader
+    public abstract class VaultReader
     {
-        internal abstract byte Version { get; } //Numeric version of the vault
-        internal abstract byte VaultEncryptionAlgorithm { get; } //Default encryption algorithm ID to encrypt vault metadata with
-        internal virtual short SaltSize => 32; //Size in bytes of the salt
-        internal virtual short EncryptionOptionsSize => 1024; //Size of already encrypted EncryptionOptions
-        internal virtual short MetadataOffsetsSize => 4096; //Size of metadata offsets collection before encryption
-        internal virtual short HeaderSize => (short)(1 + SaltSize + sizeof(int) + EncryptionAlgorithm.GetEncryptionAlgorithmInfo[VaultEncryptionAlgorithm].provider().EncryptionAlgorithm.ExtraEncryptionDataSize + sizeof(ushort) + MetadataOffsetsSize); //Full size of vault header
+        public abstract byte Version { get; } //Numeric version of the vault
+        public abstract byte VaultEncryptionAlgorithm { get; } //Default encryption algorithm ID to encrypt vault metadata with
+        public virtual short SaltSize => 32; //Size in bytes of the salt
+        public virtual short EncryptionOptionsSize => 1024; //Size of already encrypted EncryptionOptions
+        public virtual short MetadataOffsetsSize => 4096; //Size of metadata offsets collection before encryption
+        public virtual short HeaderSize => (short)(1 + SaltSize + sizeof(int) + EncryptionAlgorithm.GetEncryptionAlgorithmInfo[VaultEncryptionAlgorithm].provider().EncryptionAlgorithm.ExtraEncryptionDataSize + sizeof(ushort) + MetadataOffsetsSize); //Full size of vault header
 
         #region Vault header
-        internal byte[] ReadSalt(Stream stream)
+        public byte[] ReadSalt(Stream stream)
         {
             ArgumentNullException.ThrowIfNull(stream);
 
@@ -153,7 +124,7 @@ namespace VaultCrypt
             }
         }
 
-        internal int ReadIterationsNumber(Stream stream)
+        public int ReadIterationsNumber(Stream stream)
         {
             ArgumentNullException.ThrowIfNull(stream);
 
@@ -170,7 +141,7 @@ namespace VaultCrypt
             }
         }
 
-        internal byte[] PrepareVaultHeader(byte[] salt, int iterations)
+        public byte[] PrepareVaultHeader(byte[] salt, int iterations)
         {
             ArgumentNullException.ThrowIfNull(salt);
             ArgumentOutOfRangeException.ThrowIfNegativeOrZero(iterations);
@@ -190,7 +161,7 @@ namespace VaultCrypt
             }
         }
 
-        internal virtual void PopulateEncryptedFilesList(Stream stream)
+        public virtual void PopulateEncryptedFilesList(Stream stream)
         {
             ArgumentNullException.ThrowIfNull(stream);
 
@@ -391,7 +362,7 @@ namespace VaultCrypt
         #endregion
 
 
-        internal byte[] ReadAndDecryptData(Stream stream, long offset, int length)
+        public byte[] ReadAndDecryptData(Stream stream, long offset, int length)
         {
             ArgumentNullException.ThrowIfNull(stream);
             ArgumentOutOfRangeException.ThrowIfNegativeOrZero(offset);
@@ -410,9 +381,7 @@ namespace VaultCrypt
             }
         }
 
-        
-
-        internal virtual byte[] VaultEncryption(ReadOnlyMemory<byte> data)
+        public virtual byte[] VaultEncryption(ReadOnlyMemory<byte> data)
         {
             if (data.IsEmpty) throw new ArgumentException("Provided empty data", nameof(data));
 
@@ -430,7 +399,7 @@ namespace VaultCrypt
             
         }
 
-        internal virtual byte[] VaultDecryption(ReadOnlyMemory<byte> data)
+        public virtual byte[] VaultDecryption(ReadOnlyMemory<byte> data)
         {
             if (data.IsEmpty) throw new ArgumentException("Provided empty data", nameof(data));
 
@@ -450,10 +419,10 @@ namespace VaultCrypt
     }
 
 
-    internal class VaultV0Reader : VaultReader
+    public class VaultV0Reader : VaultReader
     {
-        internal override byte Version => 0;
-        internal override byte VaultEncryptionAlgorithm => EncryptionAlgorithm.EncryptionAlgorithmInfo.AES256GCM.ID;
+        public override byte Version => 0;
+        public override byte VaultEncryptionAlgorithm => EncryptionAlgorithm.EncryptionAlgorithmInfo.AES256GCM.ID;
     }
 
 
