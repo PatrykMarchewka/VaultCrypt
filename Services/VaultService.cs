@@ -22,10 +22,13 @@ namespace VaultCrypt.Services
     {
         private readonly IFileService _fileService;
         private readonly IVaultSession _session;
-        public VaultService(IFileService fileService, IVaultSession session)
+        private readonly IEncryptionOptionsService _encryptionOptionsService;
+
+        public VaultService(IFileService fileService, IVaultSession session, IEncryptionOptionsService encryptionOptionsService)
         {
             this._fileService = fileService;
             this._session = session;
+            this._encryptionOptionsService = encryptionOptionsService;
         }
 
         /// <summary>
@@ -147,7 +150,7 @@ namespace VaultCrypt.Services
                     EncryptionOptions.FileEncryptionOptions encryptionOptions = null!;
                     try
                     {
-                        encryptionOptions = EncryptionOptions.GetDecryptedFileEncryptionOptions(vaultfs, currentOffset);
+                        encryptionOptions = _encryptionOptionsService.GetDecryptedFileEncryptionOptions(vaultfs, currentOffset);
                         fileSize = encryptionOptions.FileSize;
                     }
                     catch
@@ -202,7 +205,7 @@ namespace VaultCrypt.Services
                 ulong length = 0;
                 try
                 {
-                    encryptionOptions = EncryptionOptions.GetDecryptedFileEncryptionOptions(vaultFS, FileMetadataEntry.Key);
+                    encryptionOptions = _encryptionOptionsService.GetDecryptedFileEncryptionOptions(vaultFS, FileMetadataEntry.Key);
                     length = Math.Min(encryptionOptions.FileSize + (ulong)encryptionMetadataSize, (ulong)(fileList[currentKey + 1].Key - fileList[currentKey].Key));
                 }
                 catch (Exception)
