@@ -21,7 +21,7 @@ namespace VaultCrypt.Services
     public class VaultService : IVaultService
     {
         private readonly IFileService _fileService;
-        private IVaultSession _session;
+        private readonly IVaultSession _session;
         public VaultService(IFileService fileService, IVaultSession session)
         {
             this._fileService = fileService;
@@ -120,13 +120,13 @@ namespace VaultCrypt.Services
         {
             ArgumentNullException.ThrowIfNull(context);
 
-            SystemHelper.CheckFreeSpace(VaultSession.CurrentSession.VAULTPATH);
-            using FileStream vaultfs = new FileStream(VaultSession.CurrentSession.VAULTPATH!, FileMode.Open, FileAccess.Read);
-            using FileStream newVaultfs = new FileStream(VaultSession.CurrentSession.VAULTPATH + "_TRIMMED.vlt", FileMode.Create);
+            SystemHelper.CheckFreeSpace(_session.VAULTPATH);
+            using FileStream vaultfs = new FileStream(_session.VAULTPATH!, FileMode.Open, FileAccess.Read);
+            using FileStream newVaultfs = new FileStream(_session.VAULTPATH + "_TRIMMED.vlt", FileMode.Create);
 
-            var reader = VaultSession.CurrentSession.VAULT_READER;
+            var reader = _session.VAULT_READER;
             _fileService.CopyPartOfFile(vaultfs, 0, (ulong)reader.HeaderSize, newVaultfs, newVaultfs.Seek(0, SeekOrigin.End));
-            var fileList = VaultSession.CurrentSession.ENCRYPTED_FILES.ToList();
+            var fileList = _session.ENCRYPTED_FILES.ToList();
             int fileListCount = fileList.Count;
 
             long[] newVaultOffsets = new long[fileListCount];
@@ -186,17 +186,17 @@ namespace VaultCrypt.Services
             ArgumentNullException.ThrowIfNull(context);
 
 
-            using FileStream vaultFS = new FileStream(VaultSession.CurrentSession.VAULTPATH!, FileMode.Open, FileAccess.ReadWrite);
-            var fileList = VaultSession.CurrentSession.ENCRYPTED_FILES.ToList();
+            using FileStream vaultFS = new FileStream(_session.VAULTPATH!, FileMode.Open, FileAccess.ReadWrite);
+            var fileList = _session.ENCRYPTED_FILES.ToList();
             //If the file is at the end, just trim the entire file, otherwise zero out the block
-            if (VaultSession.CurrentSession.ENCRYPTED_FILES.Last().Equals(FileMetadataEntry))
+            if (_session.ENCRYPTED_FILES.Last().Equals(FileMetadataEntry))
             {
                 vaultFS.SetLength(FileMetadataEntry.Key);
             }
             else
             {
                 //Calculate length incase of partially written file
-                var encryptionMetadataSize = VaultSession.CurrentSession.VAULT_READER.EncryptionOptionsSize;
+                var encryptionMetadataSize = _session.VAULT_READER.EncryptionOptionsSize;
                 int currentKey = fileList.FindIndex(file => file.Key == FileMetadataEntry.Key);
                 EncryptionOptions.FileEncryptionOptions encryptionOptions = null!;
                 ulong length = 0;
@@ -217,7 +217,7 @@ namespace VaultCrypt.Services
 
                 _fileService.ZeroOutPartOfFile(vaultFS, FileMetadataEntry.Key, length);
             }
-            VaultSession.CurrentSession.VAULT_READER.RemoveAndSaveMetadataOffsets(vaultFS, checked((ushort)fileList.FindIndex(file => file.Equals(FileMetadataEntry))));
+            _session.VAULT_READER.RemoveAndSaveMetadataOffsets(vaultFS, checked((ushort)fileList.FindIndex(file => file.Equals(FileMetadataEntry))));
             context.Progress.Report(new ProgressStatus(1, 1));
         }
     }
