@@ -189,7 +189,7 @@ namespace VaultCrypt
                     }
                     catch(Exception)
                     {
-                        VaultSession.CurrentSession.ENCRYPTED_FILES.Add(offset, new EncryptedFileInfo("Unknown file (Corrupted data!)", 0, null));
+                        VaultSession.CurrentSession.ENCRYPTED_FILES.Add(offset, new EncryptedFileInfo(null, 0, null));
                     }
                     finally
                     {
