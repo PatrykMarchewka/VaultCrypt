@@ -431,7 +431,7 @@ namespace VaultCrypt
         {
             internal ThreefishCtr(int blockSizeInBits)
             {
-                if(blockSizeInBits is not 256 and not 512 and not 1024) throw new ArgumentOutOfRangeException(nameof(blockSizeInBits));
+                if(blockSizeInBits is not (256 or 512 or 1024)) throw new ArgumentOutOfRangeException(nameof(blockSizeInBits));
                 this.blockSizeInBits = blockSizeInBits;
             }
 
