@@ -6,8 +6,8 @@ using System.Threading.Tasks;
 
 namespace VaultCrypt.ViewModels
 {
-    internal interface INavigatingViewModel
+    public interface INavigatingViewModel
     {
-        event Action<NavigationRequest> NavigationRequested;
+        public event Action<NavigationRequest> NavigationRequested;
     }
 }

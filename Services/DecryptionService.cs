@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.IO;
@@ -8,18 +8,35 @@ using System.Text;
 using System.Threading.Tasks;
 using VaultCrypt.Exceptions;
 
-namespace VaultCrypt
+namespace VaultCrypt.Services
 {
-    internal class Decryption
+    public interface IDecryptionService
     {
-        internal static async Task Decrypt(long metadataOffset, NormalizedPath filePath, ProgressionContext context)
+        public Task Decrypt(long metadataOffset, NormalizedPath filePath, ProgressionContext context);
+    }
+
+    public class DecryptionService : IDecryptionService
+    {
+        private readonly IFileService _fileService;
+        private readonly IEncryptionOptionsService _encryptionOptionsService;
+        private readonly IVaultSession _session;
+
+        public DecryptionService(IFileService fileService, IEncryptionOptionsService encryptionOptionsService, IVaultSession session)
+        {
+            this._fileService = fileService;
+            this._encryptionOptionsService = encryptionOptionsService;
+            this._session = session;
+        }
+
+
+        public async Task Decrypt(long metadataOffset, NormalizedPath filePath, ProgressionContext context)
         {
             ArgumentOutOfRangeException.ThrowIfNegative(metadataOffset);
             ArgumentNullException.ThrowIfNull(filePath);
             ArgumentNullException.ThrowIfNull(context);
 
-            await using FileStream vaultFS = new FileStream(VaultSession.CurrentSession.VAULTPATH!, FileMode.Open, FileAccess.Read);
-            EncryptionOptions.FileEncryptionOptions encryptionOptions = EncryptionOptions.GetDecryptedFileEncryptionOptions(vaultFS, metadataOffset);
+            await using FileStream vaultFS = new FileStream(_session.VAULTPATH!, FileMode.Open, FileAccess.Read);
+            EncryptionOptions.FileEncryptionOptions encryptionOptions = _encryptionOptionsService.GetDecryptedFileEncryptionOptions(vaultFS, metadataOffset);
 
             try
             {
@@ -51,7 +68,7 @@ namespace VaultCrypt
             }
         }
 
-        static byte[] DecryptInOneChunk(Stream vaultFS, ulong fileSize, ReadOnlySpan<byte> key, EncryptionAlgorithm.IEncryptionAlgorithm encryptionAlgorithm)
+        private byte[] DecryptInOneChunk(Stream vaultFS, ulong fileSize, ReadOnlySpan<byte> key, EncryptionAlgorithm.IEncryptionAlgorithm encryptionAlgorithm)
         {
             ArgumentNullException.ThrowIfNull(vaultFS);
             ArgumentOutOfRangeException.ThrowIfZero(fileSize);
@@ -82,7 +99,7 @@ namespace VaultCrypt
         /// <param name="context"></param>
         /// <returns></returns>
         /// <exception cref="VaultException"></exception>
-        static async Task DecryptInMultipleChunks(Stream vaultFS, Stream fileFS, EncryptionOptions.ChunkInformation chunkInformation, short extraData, ReadOnlyMemory<byte> key, EncryptionAlgorithm.IEncryptionAlgorithm encryptionAlgorithm, ProgressionContext context)
+        private async Task DecryptInMultipleChunks(Stream vaultFS, Stream fileFS, EncryptionOptions.ChunkInformation chunkInformation, short extraData, ReadOnlyMemory<byte> key, EncryptionAlgorithm.IEncryptionAlgorithm encryptionAlgorithm, ProgressionContext context)
         {
             ArgumentNullException.ThrowIfNull(vaultFS);
             ArgumentNullException.ThrowIfNull(fileFS);
@@ -93,7 +110,7 @@ namespace VaultCrypt
 
             var tasks = new List<Task>();
             var results = new ConcurrentDictionary<int, byte[]>();
-            int concurrentChunkCount = FileHelper.CalculateConcurrency(true, chunkInformation.ChunkSize);
+            int concurrentChunkCount = SystemHelper.CalculateConcurrency(true, chunkInformation.ChunkSize);
             int nextToWrite = 0;
             int chunkIndex = 0;
             byte[] buffer = new byte[extraData + (chunkInformation.ChunkSize * 1024 * 1024)];
@@ -148,10 +165,10 @@ namespace VaultCrypt
                         }
                         finally
                         {
-                            if(currentChunk is not null) CryptographicOperations.ZeroMemory(currentChunk);
+                            if (currentChunk is not null) CryptographicOperations.ZeroMemory(currentChunk);
                             //decryptedChunk field gets cleaned in FileHelper.WriteReadyChunk after writing
                         }
-                        FileHelper.WriteReadyChunk(results, ref nextToWrite, currentIndex, fileFS, writeLock);
+                        _fileService.WriteReadyChunk(results, ref nextToWrite, currentIndex, fileFS, writeLock);
                         //Reporting current index + 1 because currentIndex is zero based while user gets to see 1 based indexing
                         context.Progress.Report(new ProgressStatus(currentIndex + 1, chunkInformation.TotalChunks));
                     }));

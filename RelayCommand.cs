@@ -8,20 +8,20 @@ using System.Windows.Input;
 
 namespace VaultCrypt
 {
-    internal class RelayCommand : ICommand
+    public class RelayCommand : ICommand
     {
         private readonly Action<object>? _execute;
         private readonly Func<object, Task>? _asyncExecute;
         private readonly Func<object, bool>? _canExecute;
         private static event Action<Exception> ExceptionThrowRequested = null!;
 
-        internal RelayCommand(Action<object> execute, Func<object,bool>? canExecute = null)
+        public RelayCommand(Action<object> execute, Func<object,bool>? canExecute = null)
         {
             _execute = execute;
             _canExecute = canExecute;
         }
 
-        internal RelayCommand(Func<object, Task> execute, Func<object, bool>? canExecute = null)
+        public RelayCommand(Func<object, Task> execute, Func<object, bool>? canExecute = null)
         {
             _asyncExecute = execute;
             _canExecute = canExecute;

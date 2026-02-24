@@ -9,18 +9,18 @@ using VaultCrypt.ViewModels;
 
 namespace VaultCrypt.Services
 {
-    interface INavigationService
+    public interface INavigationService
     {
-        event Action<IViewModel> ChangeView;
-        void HandleNavigation(NavigationRequest request);
-        void NavigateToMain();
-        void NavigateToCreateVault();
-        void NavigateToOpenVault(SecureString password, NormalizedPath vaultPath);
-        void NavigateToPasswordInput(NormalizedPath vaultPath);
-        void NavigateToEncryptFile(NormalizedPath filePath);
-        void NavigateToProgress(ProgressionContext context);
-        void NavigateFromProgress();
-        void NavigateToExceptionThrown(Exception ex);
+        public event Action<IViewModel> ChangeView;
+        public void HandleNavigation(NavigationRequest request);
+        public void NavigateToMain();
+        public void NavigateToCreateVault();
+        public void NavigateToOpenVault(SecureString password, NormalizedPath vaultPath);
+        public void NavigateToPasswordInput(NormalizedPath vaultPath);
+        public void NavigateToEncryptFile(NormalizedPath filePath);
+        public void NavigateToProgress(ProgressionContext context);
+        public void NavigateFromProgress();
+        public void NavigateToExceptionThrown(Exception ex);
 
     }
 
@@ -93,8 +93,7 @@ namespace VaultCrypt.Services
 
         public void NavigateFromProgress()
         {
-            using var vaultFS = new FileStream(VaultSession.CurrentSession.VAULTPATH!, FileMode.Open, FileAccess.Read, FileShare.ReadWrite);
-            VaultSession.RefreshEncryptedFilesList(vaultFS);
+            viewModels.OpenVault.RefreshCollection();
             Navigate(viewModels.OpenVault);
         }
 
@@ -107,6 +106,6 @@ namespace VaultCrypt.Services
 
     interface INavigated
     {
-        void OnNavigatedTo(object? parameters);
+        public void OnNavigatedTo(object? parameters);
     }    
 }

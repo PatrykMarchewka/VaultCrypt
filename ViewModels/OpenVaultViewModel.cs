@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.ComponentModel;
@@ -10,18 +10,20 @@ using System.Text;
 using System.Threading.Tasks;
 using System.Windows.Data;
 using System.Windows.Input;
-using VaultCrypt.Exceptions;
 using VaultCrypt.Services;
 
 namespace VaultCrypt.ViewModels
 {
-    internal class OpenVaultViewModel : INotifyPropertyChanged, INavigated, IViewModel, INavigatingViewModel
+    public class OpenVaultViewModel : INotifyPropertyChanged, INavigated, IViewModel, INavigatingViewModel
     {
         private readonly IFileDialogService _fileDialogService;
+        private readonly IVaultService _vaultService;
+        private readonly IDecryptionService _decryptionService;
+        private readonly IVaultSession _session;
 
         private SecureString? password;
         private NormalizedPath? vaultPath;
-        public static ICollectionView EncryptedFilesCollectionView { get; private set; } = null!;
+        public ICollectionView EncryptedFilesCollectionView { get; private set; } = null!;
 
 
         public string VaultName { get; private set; } = null!;
@@ -61,27 +63,30 @@ namespace VaultCrypt.ViewModels
         public ICommand TrimCommand { get; }
 
 
-        internal OpenVaultViewModel(IFileDialogService fileDialogService)
+        public OpenVaultViewModel(IFileDialogService fileDialogService, IVaultService vaultService, IDecryptionService decryptionService, IVaultSession session)
         {
             this._fileDialogService = fileDialogService;
-            EncryptedFilesCollectionView = CollectionViewSource.GetDefaultView(VaultSession.CurrentSession.ENCRYPTED_FILES);
+            this._vaultService = vaultService;
+            this._decryptionService = decryptionService;
+            this._session = session;
+            EncryptedFilesCollectionView = CollectionViewSource.GetDefaultView(_session.ENCRYPTED_FILES);
             GoBackCommand = new RelayCommand(_ => GoBack());
             AddNewFileCommand = new RelayCommand(_ => AddNewFile());
             DecryptFileCommand = new RelayCommand(async _ => await DecryptFile(), _ => SelectedFile != null);
             DeleteFileCommand = new RelayCommand(async _ => await DeleteFile(), _ => SelectedFile != null);
             TrimCommand = new RelayCommand(async _ => await Trim());
 
-            VaultSession.EncryptedFilesListUpdated += () => EncryptedFilesCollectionView.Refresh();
+            _session.EncryptedFilesListUpdated += () => EncryptedFilesCollectionView.Refresh();
         }
 
-        private void CreateSession()
+        public void CreateSession()
         {
             byte[] password = null!;
             try
             {
                 password = PasswordHelper.SecureStringToBytes(this.password!);
                 this.password!.Clear();
-                VaultSession.CreateSessionFromFile(password, vaultPath!);
+                _vaultService.CreateSessionFromFile(password, vaultPath!);
             }
             finally
             {
@@ -90,48 +95,54 @@ namespace VaultCrypt.ViewModels
             this.VaultName = Path.GetFileName(vaultPath!);
         }
 
-        private void GoBack()
+        public void RefreshCollection()
+        {
+            using var vaultFS = new FileStream(_session.VAULTPATH!, FileMode.Open, FileAccess.Read, FileShare.ReadWrite);
+            _vaultService.RefreshEncryptedFilesList(vaultFS);
+        }
+
+        public void GoBack()
         {
             Dispose();
             NavigationRequested?.Invoke(new NavigateToMainRequest());
         }
 
-        private void AddNewFile()
+        public void AddNewFile()
         {
             var dialog = _fileDialogService.OpenFile("Select file to encrypt", true);
 
             if (dialog != null)
             {
-                NavigationRequested?.Invoke(new NavigateToEncryptFileRequest(NormalizedPath.From(dialog)!));
+                NavigationRequested?.Invoke(new NavigateToEncryptFileRequest(NormalizedPath.From(dialog)));
             }
         }
 
-        private async Task DecryptFile()
+        public async Task DecryptFile()
         {
             var file = _fileDialogService.SaveFile(SelectedFile!.Value.Value.FileName);
             if (file != null)
             {
                 var context = new ProgressionContext();
                 NavigationRequested?.Invoke(new NavigateToProgressRequest(context));
-                await Decryption.Decrypt(SelectedFile!.Value.Key, NormalizedPath.From(file)!, context);
+                await _decryptionService.Decrypt(SelectedFile!.Value.Key, NormalizedPath.From(file), context);
             }
         }
 
-        private async Task DeleteFile()
+        public async Task DeleteFile()
         {
             var context = new ProgressionContext();
             NavigationRequested?.Invoke(new NavigateToProgressRequest(context));
-            await Task.Run(() => FileHelper.DeleteFileFromVault(SelectedFile!.Value, context));
+            await Task.Run(() => _vaultService.DeleteFileFromVault(SelectedFile!.Value, context));
         }
 
-        private async Task Trim()
+        public async Task Trim()
         {
             var context = new ProgressionContext();
             NavigationRequested?.Invoke(new NavigateToProgressRequest(context));
-            await Task.Run(() => FileHelper.TrimVault(context));
+            await Task.Run(() => _vaultService.TrimVault(context));
         }
 
-        private void Filter(string text)
+        public void Filter(string text)
         {
             EncryptedFilesCollectionView.Filter = file => { var kvp = (KeyValuePair<long, EncryptedFileInfo>)file; return kvp.Value.FileName.Contains(text, StringComparison.OrdinalIgnoreCase); };
             EncryptedFilesCollectionView.Refresh();
@@ -147,7 +158,7 @@ namespace VaultCrypt.ViewModels
             CreateSession();
         }
 
-        private void Dispose()
+        public void Dispose()
         {
             this.password!.Clear();
             this.vaultPath = null;

@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
@@ -9,9 +9,9 @@ namespace VaultCrypt.Services
 {
     public interface IFileDialogService
     {
-        string? OpenFile(string title, bool allFiles);
-        string? OpenFolder(string title);
-        string? SaveFile(string fileName);
+        public string? OpenFile(string title, bool allFiles);
+        public string? OpenFolder(string title);
+        public string? SaveFile(string fileName);
     }
 
 

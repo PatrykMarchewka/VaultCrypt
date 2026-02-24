@@ -13,8 +13,8 @@ namespace VaultCrypt.Services
 {
     internal interface IDialogService
     {
-        void ShowWindow(UserControl view, IViewModel viewModel);
-        void ShowErrorWindow(Exception ex);
+        public void ShowWindow(UserControl view, IViewModel viewModel);
+        public void ShowErrorWindow(Exception ex);
     }
 
 
