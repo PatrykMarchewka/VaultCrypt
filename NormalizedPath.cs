@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
@@ -23,9 +23,9 @@ namespace VaultCrypt
         /// </summary>
         /// <param name="input">String to normalize</param>
         /// <returns>NormalizedPath containing the path from the input</returns>
-        public static NormalizedPath? From(string? input)
+        public static NormalizedPath From(string input)
         {
-            if (input is null) return null;
+            ArgumentNullException.ThrowIfNull(input);
             return new NormalizedPath(input);
         }
 

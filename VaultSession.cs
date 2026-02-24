@@ -43,7 +43,7 @@ namespace VaultCrypt
         {
             KEY = Array.Empty<byte>();
             ENCRYPTED_FILES = new();
-            VAULTPATH = NormalizedPath.From(string.Empty)!;
+            VAULTPATH = NormalizedPath.From(string.Empty);
             VAULT_READER = null!;
         }
 
@@ -70,7 +70,7 @@ namespace VaultCrypt
             //Attempting to hide size of KEY by making it an empty array instead of zero-ed one
             KEY = Array.Empty<byte>();
             ENCRYPTED_FILES.Clear();
-            VAULTPATH = NormalizedPath.From(string.Empty)!;
+            VAULTPATH = NormalizedPath.From(string.Empty);
             VAULT_READER = null!;
         }
 

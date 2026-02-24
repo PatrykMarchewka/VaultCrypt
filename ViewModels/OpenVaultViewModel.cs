@@ -113,7 +113,7 @@ namespace VaultCrypt.ViewModels
 
             if (dialog != null)
             {
-                NavigationRequested?.Invoke(new NavigateToEncryptFileRequest(NormalizedPath.From(dialog)!));
+                NavigationRequested?.Invoke(new NavigateToEncryptFileRequest(NormalizedPath.From(dialog)));
             }
         }
 
@@ -124,7 +124,7 @@ namespace VaultCrypt.ViewModels
             {
                 var context = new ProgressionContext();
                 NavigationRequested?.Invoke(new NavigateToProgressRequest(context));
-                await _decryptionService.Decrypt(SelectedFile!.Value.Key, NormalizedPath.From(file)!, context);
+                await _decryptionService.Decrypt(SelectedFile!.Value.Key, NormalizedPath.From(file), context);
             }
         }
 

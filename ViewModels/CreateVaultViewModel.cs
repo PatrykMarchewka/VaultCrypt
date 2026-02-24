@@ -104,8 +104,8 @@ namespace VaultCrypt.ViewModels
             ValidationHelper.NotEmptyString(VaultName, "Vault name");
             ValidationHelper.NotEmptySecureString(Password, "Vault password");
 
-            NormalizedPath folderPath = NormalizedPath.From(VaultFolder)!;
-            NormalizedPath vaultPath = NormalizedPath.From($"{folderPath}\\{VaultName}.vlt")!;
+            NormalizedPath folderPath = NormalizedPath.From(VaultFolder);
+            NormalizedPath vaultPath = NormalizedPath.From($"{folderPath}\\{VaultName}.vlt");
             byte[]? passwordBytes = null;
             try
             {

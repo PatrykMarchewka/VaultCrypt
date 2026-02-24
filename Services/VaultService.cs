@@ -48,7 +48,7 @@ namespace VaultCrypt.Services
             ArgumentOutOfRangeException.ThrowIfNegativeOrZero(iterations);
 
             if (!Directory.Exists(folderPath)) Directory.CreateDirectory(folderPath!);
-            NormalizedPath vaultPath = NormalizedPath.From($"{folderPath}\\{vaultName}.vlt")!;
+            NormalizedPath vaultPath = NormalizedPath.From($"{folderPath}\\{vaultName}.vlt");
             VaultReader reader = VaultRegistry.GetVaultReader(VaultSession.NewestVaultVersion);
             byte[] salt = null!;
             byte[] buffer = null!;

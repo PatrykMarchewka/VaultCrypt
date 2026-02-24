@@ -24,10 +24,10 @@ namespace VaultCrypt.ViewModels
 
         internal void SelectVaultFilePickerOpen()
         {
-            NormalizedPath? path = NormalizedPath.From(_fileDialogService.OpenFile("Select vault file", false));
-            if (path != null)
+            var dialog = _fileDialogService.OpenFile("Select vault file", false);
+            if (dialog != null)
             {
-                NavigationRequested?.Invoke(new NavigateToPasswordInputRequest(path));
+                NavigationRequested?.Invoke(new NavigateToPasswordInputRequest(NormalizedPath.From(dialog)));
             }
 
         }
