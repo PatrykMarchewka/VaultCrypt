@@ -9,7 +9,7 @@ namespace VaultCrypt.Services
 {
     internal interface IExceptionHandler
     {
-        void HandleException(Exception ex);
+        public void HandleException(Exception ex);
     }
 
     internal class ExceptionHandlerService(IDialogService dialogService, INavigationService navigationService) : IExceptionHandler

@@ -108,7 +108,7 @@ namespace VaultCrypt
         private interface XSalsa20Algorithm : IEncryptionAlgorithm;
 
 
-        internal class AesGcm : AESAlgorithm
+        public class AesGcm : AESAlgorithm
         {
             public short ExtraEncryptionDataSize => 28;
             public byte[] EncryptBytes(ReadOnlySpan<byte> data, ReadOnlySpan<byte> key)
@@ -173,7 +173,7 @@ namespace VaultCrypt
 
 
 
-        internal class AesCcm : AESAlgorithm
+        public class AesCcm : AESAlgorithm
         {
             public short ExtraEncryptionDataSize => 28;
             public byte[] EncryptBytes(ReadOnlySpan<byte> data, ReadOnlySpan<byte> key)
@@ -228,7 +228,7 @@ namespace VaultCrypt
             }
         }
 
-        internal class ChaCha20Poly1305 : ChaCha20Algorithm
+        public class ChaCha20Poly1305 : ChaCha20Algorithm
         {
             public short ExtraEncryptionDataSize => 28;
             public byte[] EncryptBytes(ReadOnlySpan<byte> data, ReadOnlySpan<byte> key)
@@ -283,7 +283,7 @@ namespace VaultCrypt
             }
         }
 
-        internal class AesEax : AESAlgorithm
+        public class AesEax : AESAlgorithm
         {
             public short ExtraEncryptionDataSize => 28;
 
@@ -351,7 +351,7 @@ namespace VaultCrypt
             }
         }
 
-        internal class TwofishCtr : TwoFishAlgorithm
+        public class TwofishCtr : TwoFishAlgorithm
         {
             public short ExtraEncryptionDataSize => 76;
 
@@ -427,9 +427,9 @@ namespace VaultCrypt
             }
         }
 
-        internal class ThreefishCtr : ThreeFishAlgorithm
+        public class ThreefishCtr : ThreeFishAlgorithm
         {
-            internal ThreefishCtr(int blockSizeInBits)
+            public ThreefishCtr(int blockSizeInBits)
             {
                 if(blockSizeInBits is not (256 or 512 or 1024)) throw new ArgumentOutOfRangeException(nameof(blockSizeInBits));
                 this.blockSizeInBits = blockSizeInBits;
@@ -509,7 +509,7 @@ namespace VaultCrypt
             }
         }
 
-        internal class SerpentGcm : SerpentAlgorithm
+        public class SerpentGcm : SerpentAlgorithm
         {
             public short ExtraEncryptionDataSize => 28;
 
@@ -577,7 +577,7 @@ namespace VaultCrypt
             }
         }
 
-        internal class SerpentCtr : SerpentAlgorithm
+        public class SerpentCtr : SerpentAlgorithm
         {
             public short ExtraEncryptionDataSize => 76;
 
@@ -652,7 +652,7 @@ namespace VaultCrypt
             }
         }
 
-        internal class CameliaGcm : CameliaAlgorithm
+        public class CameliaGcm : CameliaAlgorithm
         {
             public short ExtraEncryptionDataSize => 28;
 
@@ -720,7 +720,7 @@ namespace VaultCrypt
             }
         }
 
-        internal class CameliaOcb : CameliaAlgorithm
+        public class CameliaOcb : CameliaAlgorithm
         {
             public short ExtraEncryptionDataSize => 28;
 
@@ -788,7 +788,7 @@ namespace VaultCrypt
             }
         }
 
-        internal class CameliaCtr : CameliaAlgorithm
+        public class CameliaCtr : CameliaAlgorithm
         {
             public short ExtraEncryptionDataSize => 76;
 
@@ -863,7 +863,7 @@ namespace VaultCrypt
             }
         }
 
-        internal class XSalsa20 : XSalsa20Algorithm
+        public class XSalsa20 : XSalsa20Algorithm
         {
             public short ExtraEncryptionDataSize => 88;
 

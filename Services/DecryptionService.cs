@@ -12,7 +12,7 @@ namespace VaultCrypt.Services
 {
     public interface IDecryptionService
     {
-        Task Decrypt(long metadataOffset, NormalizedPath filePath, ProgressionContext context);
+        public Task Decrypt(long metadataOffset, NormalizedPath filePath, ProgressionContext context);
     }
 
     public class DecryptionService : IDecryptionService

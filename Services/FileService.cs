@@ -12,9 +12,9 @@ namespace VaultCrypt.Services
 {
     public interface IFileService
     {
-        void WriteReadyChunk(ConcurrentDictionary<int, byte[]> results, ref int nextToWrite, int currentIndex, Stream fileFS, object lockObject);
-        void ZeroOutPartOfFile(Stream stream, long offset, ulong length);
-        void CopyPartOfFile(Stream source, long offset, ulong length, Stream destination, long destinationOffset);
+        public void WriteReadyChunk(ConcurrentDictionary<int, byte[]> results, ref int nextToWrite, int currentIndex, Stream fileFS, object lockObject);
+        public void ZeroOutPartOfFile(Stream stream, long offset, ulong length);
+        public void CopyPartOfFile(Stream source, long offset, ulong length, Stream destination, long destinationOffset);
     }
 
     public class FileService : IFileService

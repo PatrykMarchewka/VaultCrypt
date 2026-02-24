@@ -6,7 +6,7 @@ using System.Threading.Tasks;
 
 namespace VaultCrypt.ViewModels
 {
-    internal interface IViewModel
+    public interface IViewModel
     {
     }
 }

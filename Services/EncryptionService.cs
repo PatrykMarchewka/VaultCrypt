@@ -12,7 +12,7 @@ namespace VaultCrypt.Services
 {
     public interface IEncryptionService
     {
-        Task Encrypt(EncryptionAlgorithm.EncryptionAlgorithmInfo algorithm, ushort chunkSizeInMB, NormalizedPath filePath, ProgressionContext context);
+        public Task Encrypt(EncryptionAlgorithm.EncryptionAlgorithmInfo algorithm, ushort chunkSizeInMB, NormalizedPath filePath, ProgressionContext context);
     }
 
     internal class EncryptionService : IEncryptionService

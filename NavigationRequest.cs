@@ -9,48 +9,48 @@ using VaultCrypt.Services;
 namespace VaultCrypt
 {
 
-    internal abstract record NavigationRequest
+    public abstract record NavigationRequest
     {
-        internal abstract void Request(INavigationService nav);
+        public abstract void Request(INavigationService nav);
     }
 
-    internal sealed record NavigateToMainRequest : NavigationRequest
+    public sealed record NavigateToMainRequest : NavigationRequest
     {
-        internal override void Request(INavigationService nav) => nav.NavigateToMain();
+        public override void Request(INavigationService nav) => nav.NavigateToMain();
     }
 
-    internal sealed record NavigateToCreateVaultRequest : NavigationRequest
+    public sealed record NavigateToCreateVaultRequest : NavigationRequest
     {
-        internal override void Request(INavigationService nav) => nav.NavigateToCreateVault();
+        public override void Request(INavigationService nav) => nav.NavigateToCreateVault();
     }
 
-    internal sealed record NavigateToOpenVaultRequest(SecureString password, NormalizedPath vaultPath) : NavigationRequest
+    public sealed record NavigateToOpenVaultRequest(SecureString password, NormalizedPath vaultPath) : NavigationRequest
     {
-        internal override void Request(INavigationService nav) => nav.NavigateToOpenVault(password, vaultPath);
+        public override void Request(INavigationService nav) => nav.NavigateToOpenVault(password, vaultPath);
     }
 
-    internal sealed record NavigateToPasswordInputRequest(NormalizedPath vaultPath) : NavigationRequest
+    public sealed record NavigateToPasswordInputRequest(NormalizedPath vaultPath) : NavigationRequest
     {
-        internal override void Request(INavigationService nav) => nav.NavigateToPasswordInput(vaultPath);
+        public override void Request(INavigationService nav) => nav.NavigateToPasswordInput(vaultPath);
     }
 
-    internal sealed record NavigateToEncryptFileRequest(NormalizedPath filePath) : NavigationRequest
+    public sealed record NavigateToEncryptFileRequest(NormalizedPath filePath) : NavigationRequest
     {
-        internal override void Request(INavigationService nav) => nav.NavigateToEncryptFile(filePath);
+        public override void Request(INavigationService nav) => nav.NavigateToEncryptFile(filePath);
     }
 
-    internal sealed record NavigateToProgressRequest(ProgressionContext context) : NavigationRequest
+    public sealed record NavigateToProgressRequest(ProgressionContext context) : NavigationRequest
     {
-        internal override void Request(INavigationService nav) => nav.NavigateToProgress(context);
+        public override void Request(INavigationService nav) => nav.NavigateToProgress(context);
     }
 
-    internal sealed record NavigateFromProgressRequest : NavigationRequest
+    public sealed record NavigateFromProgressRequest : NavigationRequest
     {
-        internal override void Request(INavigationService nav) => nav.NavigateFromProgress();
+        public override void Request(INavigationService nav) => nav.NavigateFromProgress();
     }
 
-    internal sealed record NavigateToExceptionThrownRequest(Exception ex) : NavigationRequest
+    public sealed record NavigateToExceptionThrownRequest(Exception ex) : NavigationRequest
     {
-        internal override void Request(INavigationService nav) => nav.NavigateToExceptionThrown(ex);
+        public override void Request(INavigationService nav) => nav.NavigateToExceptionThrown(ex);
     }
 }
