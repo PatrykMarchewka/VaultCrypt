@@ -11,7 +11,7 @@ using VaultCrypt.Services;
 
 namespace VaultCrypt.ViewModels
 {
-    class ProgressViewModel : INotifyPropertyChanged, INavigated, IViewModel, INavigatingViewModel
+    public class ProgressViewModel : INotifyPropertyChanged, INavigated, IViewModel, INavigatingViewModel
     {
         private ProgressionContext _context = null!;
         public ProgressionContext Context
@@ -37,18 +37,18 @@ namespace VaultCrypt.ViewModels
             CancelCommand = new RelayCommand(_ => Cancel(), _ => (Context.Completed != Context.Total || Context.Completed == 0));
         }
 
-        private void Finish()
+        public void Finish()
         {
             NavigateBack();
         }
 
-        private void Cancel()
+        public void Cancel()
         {
             Context.CancellationTokenSource.Cancel();
             NavigateBack();
         }
 
-        private void NavigateBack()
+        public void NavigateBack()
         {
             NavigationRequested?.Invoke(new NavigateFromProgressRequest());
         }
