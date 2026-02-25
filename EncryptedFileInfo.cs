@@ -19,16 +19,17 @@ namespace VaultCrypt
             this.EncryptionAlgorithm = algorithmInfo?.Name ?? "Unknown";
         }
 
-        private static string FormatSize(ulong fileSize)
+        private string FormatSize(ulong fileSize)
         {
-            string[] sizes = { "B", "KB", "MB", "GB", "TB", "PB" };
-            double copy = fileSize;
+            string[] sizes = { "B", "KB", "MB", "GB", "TB", "PB", "EB" };
+            decimal copy = fileSize;
             byte order = 0;
             while (copy >= 1024 && order < sizes.Length - 1)
             {
                 order++;
                 copy /= 1024;
             }
+            copy = Math.Floor(copy * 100) / 100;
 
             return $"{copy:0.##}{sizes[order]}";
         }
