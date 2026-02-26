@@ -37,7 +37,7 @@ namespace VaultCrypt.Services
             SystemHelper.CheckFreeSpace(filePath);
 
             EncryptionOptions.FileEncryptionOptions options = null!;
-            var provider = algorithm.provider();
+            var provider = algorithm.Provider();
             try
             {
                 FileInfo fileInfo = new FileInfo(filePath!);

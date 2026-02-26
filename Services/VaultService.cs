@@ -125,7 +125,8 @@ namespace VaultCrypt.Services
 
             SystemHelper.CheckFreeSpace(_session.VAULTPATH);
             using FileStream vaultfs = new FileStream(_session.VAULTPATH!, FileMode.Open, FileAccess.Read);
-            using FileStream newVaultfs = new FileStream(_session.VAULTPATH + "_TRIMMED.vlt", FileMode.Create);
+            //Remove the last 4 characters from a string (.vlt) before adding new text
+            using FileStream newVaultfs = new FileStream(_session.VAULTPATH.Value[..^4] + "_TRIMMED.vlt", FileMode.Create);
 
             var reader = _session.VAULT_READER;
             _fileService.CopyPartOfFile(vaultfs, 0, (ulong)reader.HeaderSize, newVaultfs, newVaultfs.Seek(0, SeekOrigin.End));

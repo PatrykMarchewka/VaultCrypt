@@ -107,7 +107,7 @@ namespace VaultCrypt
         public virtual short SaltSize => 32; //Size in bytes of the salt
         public virtual short EncryptionOptionsSize => 1024; //Size of already encrypted EncryptionOptions
         public virtual short MetadataOffsetsSize => 4096; //Size of metadata offsets collection before encryption
-        public virtual short HeaderSize => (short)(1 + SaltSize + sizeof(int) + EncryptionAlgorithm.GetEncryptionAlgorithmInfo[VaultEncryptionAlgorithm].provider().EncryptionAlgorithm.ExtraEncryptionDataSize + sizeof(ushort) + MetadataOffsetsSize); //Full size of vault header
+        public virtual short HeaderSize => (short)(1 + SaltSize + sizeof(int) + EncryptionAlgorithm.GetEncryptionAlgorithmInfo[VaultEncryptionAlgorithm].Provider().EncryptionAlgorithm.ExtraEncryptionDataSize + sizeof(ushort) + MetadataOffsetsSize); //Full size of vault header
 
         private readonly IVaultSession _session;
         private readonly IEncryptionOptionsService _encryptionOptionsService;
@@ -251,7 +251,7 @@ namespace VaultCrypt
         internal virtual byte[] ReadMetadataOffsetsBytes(Stream stream)
         {
             stream.Seek(sizeof(byte) + SaltSize + sizeof(uint), SeekOrigin.Begin);
-            byte[] buffer = new byte[EncryptionAlgorithm.GetEncryptionAlgorithmInfo[VaultEncryptionAlgorithm].provider().EncryptionAlgorithm.ExtraEncryptionDataSize + sizeof(ushort) + MetadataOffsetsSize]; //Example: extra data (28 bytes for AES) + number of files (ushort) + max metadata offsets size
+            byte[] buffer = new byte[EncryptionAlgorithm.GetEncryptionAlgorithmInfo[VaultEncryptionAlgorithm].Provider().EncryptionAlgorithm.ExtraEncryptionDataSize + sizeof(ushort) + MetadataOffsetsSize]; //Example: extra data (28 bytes for AES) + number of files (ushort) + max metadata offsets size
             try
             {
                 stream.ReadExactly(buffer);
@@ -398,11 +398,11 @@ namespace VaultCrypt
         {
             if (data.IsEmpty) throw new ArgumentException("Provided empty data", nameof(data));
 
-            byte[] slicedKey = new byte[EncryptionAlgorithm.GetEncryptionAlgorithmInfo[VaultEncryptionAlgorithm].provider().KeySize];
+            byte[] slicedKey = new byte[EncryptionAlgorithm.GetEncryptionAlgorithmInfo[VaultEncryptionAlgorithm].Provider().KeySize];
             try
             {
                 Buffer.BlockCopy(_session.KEY, 0, slicedKey, 0, slicedKey.Length);
-                return EncryptionAlgorithm.GetEncryptionAlgorithmInfo[VaultEncryptionAlgorithm].provider().EncryptionAlgorithm.EncryptBytes(data.Span, slicedKey);
+                return EncryptionAlgorithm.GetEncryptionAlgorithmInfo[VaultEncryptionAlgorithm].Provider().EncryptionAlgorithm.EncryptBytes(data.Span, slicedKey);
             }
             catch(Exception)
             {
@@ -416,11 +416,11 @@ namespace VaultCrypt
         {
             if (data.IsEmpty) throw new ArgumentException("Provided empty data", nameof(data));
 
-            byte[] slicedKey = new byte[EncryptionAlgorithm.GetEncryptionAlgorithmInfo[VaultEncryptionAlgorithm].provider().KeySize];
+            byte[] slicedKey = new byte[EncryptionAlgorithm.GetEncryptionAlgorithmInfo[VaultEncryptionAlgorithm].Provider().KeySize];
             try
             {
                 Buffer.BlockCopy(_session.KEY, 0, slicedKey, 0, slicedKey.Length);
-                return EncryptionAlgorithm.GetEncryptionAlgorithmInfo[VaultEncryptionAlgorithm].provider().EncryptionAlgorithm.DecryptBytes(data.Span, slicedKey);
+                return EncryptionAlgorithm.GetEncryptionAlgorithmInfo[VaultEncryptionAlgorithm].Provider().EncryptionAlgorithm.DecryptBytes(data.Span, slicedKey);
             }
             catch(Exception)
             {
