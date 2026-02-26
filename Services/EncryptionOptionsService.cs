@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
@@ -6,15 +6,14 @@ using System.Security.Cryptography;
 using System.Text;
 using System.Threading.Tasks;
 using VaultCrypt.Exceptions;
-using static VaultCrypt.EncryptionOptions;
 
 namespace VaultCrypt.Services
 {
     public interface IEncryptionOptionsService
     {
-        public FileEncryptionOptions PrepareEncryptionOptions(FileInfo fileInfo, EncryptionAlgorithm.EncryptionAlgorithmInfo algorithm, ushort chunkSizeInMB);
-        public byte[] EncryptAndPadFileEncryptionOptions(FileEncryptionOptions options);
-        public FileEncryptionOptions GetDecryptedFileEncryptionOptions(Stream vaultFS, long metadataOffset);
+        public EncryptionOptions.FileEncryptionOptions PrepareEncryptionOptions(FileInfo fileInfo, EncryptionAlgorithm.EncryptionAlgorithmInfo algorithm, ushort chunkSizeInMB);
+        public byte[] EncryptAndPadFileEncryptionOptions(EncryptionOptions.FileEncryptionOptions options);
+        public EncryptionOptions.FileEncryptionOptions GetDecryptedFileEncryptionOptions(Stream vaultFS, long metadataOffset);
 
     }
 
@@ -26,14 +25,14 @@ namespace VaultCrypt.Services
             this._session = session;
         }
 
-        public FileEncryptionOptions PrepareEncryptionOptions(FileInfo fileInfo, EncryptionAlgorithm.EncryptionAlgorithmInfo algorithm, ushort chunkSizeInMB)
+        public EncryptionOptions.FileEncryptionOptions PrepareEncryptionOptions(FileInfo fileInfo, EncryptionAlgorithm.EncryptionAlgorithmInfo algorithm, ushort chunkSizeInMB)
         {
             ArgumentNullException.ThrowIfNull(fileInfo);
             ArgumentOutOfRangeException.ThrowIfZero(chunkSizeInMB);
 
             byte[] fileName = Encoding.UTF8.GetBytes(fileInfo.Name);
             bool chunked = false;
-            ChunkInformation? chunkInformation = null;
+            EncryptionOptions.ChunkInformation? chunkInformation = null;
 
             if (fileInfo.Length > (chunkSizeInMB * 1024 * 1024))
             {
@@ -50,16 +49,16 @@ namespace VaultCrypt.Services
                     chunkNumber--;
                     lastChunk = chunkSize;
                 }
-                chunkInformation = new ChunkInformation(chunkSizeInMB, checked((ushort)chunkNumber), checked((uint)lastChunk));
+                chunkInformation = new EncryptionOptions.ChunkInformation(chunkSizeInMB, checked((ushort)chunkNumber), checked((uint)lastChunk));
             }
             short extraBytes = algorithm.provider().EncryptionAlgorithm.ExtraEncryptionDataSize;
 
             ulong fileSize = chunkInformation is null ? (ulong)(fileInfo.Length + extraBytes) : (ulong)(fileInfo.Length + (extraBytes * chunkInformation.TotalChunks));
-            return new FileEncryptionOptions(0, fileName, fileSize, algorithm.ID, chunked, chunkInformation);
+            return new EncryptionOptions.FileEncryptionOptions(0, fileName, fileSize, algorithm.ID, chunked, chunkInformation);
         }
 
 
-        public byte[] EncryptAndPadFileEncryptionOptions(FileEncryptionOptions options)
+        public byte[] EncryptAndPadFileEncryptionOptions(EncryptionOptions.FileEncryptionOptions options)
         {
             ArgumentNullException.ThrowIfNull(options);
 
@@ -69,7 +68,7 @@ namespace VaultCrypt.Services
             byte[] paddedFileOptions = new byte[vaultReader.EncryptionOptionsSize - extraEncryptionDataSize];
             try
             {
-                encryptionOptionsBytes = FileEncryptionOptions.SerializeFileEncryptionOptions(options);
+                encryptionOptionsBytes = EncryptionOptions.FileEncryptionOptions.SerializeFileEncryptionOptions(options);
                 if ((encryptionOptionsBytes.Length + extraEncryptionDataSize) > vaultReader.EncryptionOptionsSize)
                 {
                     throw new VaultException(VaultException.ErrorContext.EncryptionOptions, VaultException.ErrorReason.FileNameTooLong);
@@ -96,15 +95,15 @@ namespace VaultCrypt.Services
                 CryptographicOperations.ZeroMemory(paddedFileOptions);
             }
         }
-        public FileEncryptionOptions GetDecryptedFileEncryptionOptions(Stream vaultFS, long metadataOffset)
+        public EncryptionOptions.FileEncryptionOptions GetDecryptedFileEncryptionOptions(Stream vaultFS, long metadataOffset)
         {
             VaultReader vaultReader = _session.VAULT_READER;
             byte[] decryptedMetadata = null!;
-            FileEncryptionOptions fileEncryptionOptions = null!;
+            EncryptionOptions.FileEncryptionOptions fileEncryptionOptions = null!;
             try
             {
                 decryptedMetadata = vaultReader.ReadAndDecryptData(vaultFS, metadataOffset, vaultReader.EncryptionOptionsSize);
-                fileEncryptionOptions = FileEncryptionOptionsReader.Deserialize(decryptedMetadata);
+                fileEncryptionOptions = EncryptionOptions.FileEncryptionOptionsReader.Deserialize(decryptedMetadata);
             }
             catch (Exception)
             {
