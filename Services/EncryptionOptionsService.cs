@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
@@ -51,7 +51,7 @@ namespace VaultCrypt.Services
                 }
                 chunkInformation = new EncryptionOptions.ChunkInformation(chunkSizeInMB, checked((ushort)chunkNumber), checked((uint)lastChunk));
             }
-            short extraBytes = algorithm.provider().EncryptionAlgorithm.ExtraEncryptionDataSize;
+            short extraBytes = algorithm.Provider().EncryptionAlgorithm.ExtraEncryptionDataSize;
 
             ulong fileSize = chunkInformation is null ? (ulong)(fileInfo.Length + extraBytes) : (ulong)(fileInfo.Length + (extraBytes * chunkInformation.TotalChunks));
             return new EncryptionOptions.FileEncryptionOptions(0, fileName, fileSize, algorithm.ID, chunked, chunkInformation);
@@ -63,7 +63,7 @@ namespace VaultCrypt.Services
             ArgumentNullException.ThrowIfNull(options);
 
             VaultReader vaultReader = _session.VAULT_READER;
-            short extraEncryptionDataSize = EncryptionAlgorithm.GetEncryptionAlgorithmInfo[vaultReader.VaultEncryptionAlgorithm].provider().EncryptionAlgorithm.ExtraEncryptionDataSize;
+            short extraEncryptionDataSize = EncryptionAlgorithm.GetEncryptionAlgorithmInfo[vaultReader.VaultEncryptionAlgorithm].Provider().EncryptionAlgorithm.ExtraEncryptionDataSize;
             byte[] encryptionOptionsBytes = null!;
             byte[] paddedFileOptions = new byte[vaultReader.EncryptionOptionsSize - extraEncryptionDataSize];
             try
