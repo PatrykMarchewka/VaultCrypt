@@ -6,17 +6,17 @@ using System.Threading.Tasks;
 
 namespace VaultCrypt.Exceptions
 {
-    internal class VaultException : Exception
+    public class VaultException : Exception
     {
-        internal ErrorContext ExceptionContext { get; }
-        internal ErrorReason ExceptionReason { get; }
-        
-        internal VaultException(ErrorContext context, ErrorReason reason, Exception? innerException = null) : base($"{GetContext(context)}: {GetReason(reason)}", innerException) {
+        public ErrorContext ExceptionContext { get; }
+        public ErrorReason ExceptionReason { get; }
+
+        public VaultException(ErrorContext context, ErrorReason reason, Exception? innerException = null) : base($"{GetContext(context)}: {GetReason(reason)}", innerException) {
             ExceptionContext = context;
             ExceptionReason = reason;
         }
 
-        internal enum ErrorContext
+        public enum ErrorContext
         {
             Encrypt,
             Decrypt,
@@ -26,7 +26,7 @@ namespace VaultCrypt.Exceptions
             WriteToFile
         }
 
-        internal static string GetContext(ErrorContext context) => context switch
+        public static string GetContext(ErrorContext context) => context switch
         {
             ErrorContext.Encrypt => "Encryption failed",
             ErrorContext.Decrypt => "Decryption failed",
@@ -37,7 +37,7 @@ namespace VaultCrypt.Exceptions
             _ => "Unknown error context"
         };
 
-        internal enum ErrorReason
+        public enum ErrorReason
         {
             EndOfFile,
             FileNameTooLong,
@@ -49,7 +49,7 @@ namespace VaultCrypt.Exceptions
             TaskFaulted,
             WrongHMAC
         }
-        internal static string GetReason(ErrorReason reason) => reason switch
+        public static string GetReason(ErrorReason reason) => reason switch
         {
             ErrorReason.EndOfFile => "Unexpected end of file",
             ErrorReason.FileNameTooLong => "File name is too long",
