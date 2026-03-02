@@ -104,10 +104,10 @@ namespace VaultCrypt
     {
         public abstract byte Version { get; } //Numeric version of the vault
         public abstract byte VaultEncryptionAlgorithm { get; } //Default encryption algorithm ID to encrypt vault metadata with
-        public virtual short SaltSize => 32; //Size in bytes of the salt
-        public virtual short EncryptionOptionsSize => 1024; //Size of already encrypted EncryptionOptions
-        public virtual short MetadataOffsetsSize => 4096; //Size of metadata offsets collection before encryption
-        public virtual short HeaderSize => (short)(1 + SaltSize + sizeof(int) + EncryptionAlgorithm.GetEncryptionAlgorithmInfo[VaultEncryptionAlgorithm].Provider().EncryptionAlgorithm.ExtraEncryptionDataSize + sizeof(ushort) + MetadataOffsetsSize); //Full size of vault header
+        public virtual ushort SaltSize => 32; //Size in bytes of the salt
+        public virtual ushort EncryptionOptionsSize => 1024; //Size of already encrypted EncryptionOptions
+        public virtual ushort MetadataOffsetsSize => 4096; //Size of metadata offsets collection before encryption
+        public virtual ushort HeaderSize => (ushort)(1 + SaltSize + sizeof(int) + EncryptionAlgorithm.GetEncryptionAlgorithmInfo[VaultEncryptionAlgorithm].Provider().EncryptionAlgorithm.ExtraEncryptionDataSize + sizeof(ushort) + MetadataOffsetsSize); //Full size of vault header
 
         private readonly IVaultSession _session;
         private readonly IEncryptionOptionsService _encryptionOptionsService;
