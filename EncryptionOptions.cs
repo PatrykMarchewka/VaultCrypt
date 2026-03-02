@@ -20,7 +20,7 @@ namespace VaultCrypt
         public record FileEncryptionOptions : IDisposable
         {
             public byte Version { get; private set; } //Fixed 1 byte, version of the FileEncryptionOptions
-            public ushort NameLength => checked((ushort)FileName.Length); //Fixed 2 bytes, length of fileName text
+            public ushort NameLength { get; private set; } //Fixed 2 bytes, length of fileName text
             public byte[] FileName { get; private set; } //Varying length (read from nameLength), file name with extension!
             public ulong FileSize { get; private set; } //Fixed 8 bytes, Size in bytes of encrypted file, with extra encryption metadata
             public byte EncryptionAlgorithm { get; private set; } //Fixed 1 byte, Encryption algorithm ID
@@ -29,7 +29,10 @@ namespace VaultCrypt
 
             public FileEncryptionOptions(byte version, byte[] fileName, ulong fileSize, byte algorithm, bool chunked, ChunkInformation? chunkInformation)
             {
+                if (chunked && chunkInformation is null) throw new ArgumentException("Chunk information cannot be null if chunk flag is set to true");
+
                 Version = version;
+                NameLength = checked((ushort)fileName.Length);
                 FileName = fileName;
                 FileSize = fileSize;
                 EncryptionAlgorithm = algorithm;

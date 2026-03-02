@@ -49,7 +49,8 @@ namespace VaultCrypt
 
             if (!chunked) return 1;
             int threadCount = Math.Max(1, Environment.ProcessorCount);
-            int ramSpace = (int)(CheckFreeRamSpace() / (chunkSizeInMB * 1024 * 1024));
+            //Cast to long to interpret the entire value as long and not an int.
+            int ramSpace = (int)(CheckFreeRamSpace() / ((long)chunkSizeInMB * 1024 * 1024));
             return Math.Min(threadCount, ramSpace);
         }
     }
