@@ -40,6 +40,27 @@ namespace VaultCrypt
                 ChunkInformation = chunkInformation;
             }
 
+            public virtual bool Equals(FileEncryptionOptions? other)
+            {
+                if (other is null) return false;
+                if (!FileName.AsSpan().SequenceEqual(other.FileName)) return false;
+                if (ChunkInformation is not null) if (!ChunkInformation.Equals(other.ChunkInformation)) return false;
+                return (Version == other.Version && NameLength == other.NameLength && FileSize == other.FileSize && EncryptionAlgorithm == other.EncryptionAlgorithm && IsChunked == other.IsChunked);
+            }
+
+            public override int GetHashCode()
+            {
+                HashCode hash = new HashCode();
+                hash.Add(Version);
+                hash.Add(NameLength);
+                foreach (byte character in FileName) hash.Add(character);
+                hash.Add(FileSize);
+                hash.Add(EncryptionAlgorithm);
+                hash.Add(IsChunked);
+                hash.Add(ChunkInformation);
+                return hash.ToHashCode();
+            }
+
             public static byte[] SerializeFileEncryptionOptions(FileEncryptionOptions encryptionOptions)
             {
                 ArgumentNullException.ThrowIfNull(encryptionOptions);
