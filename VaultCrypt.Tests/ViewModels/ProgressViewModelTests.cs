@@ -54,13 +54,13 @@ namespace VaultCrypt.Tests.ViewModels
         {
             int eventRaisedCount = 0;
             (_viewModel.FinishCommand as RelayCommand)!.CanExecuteChanged += (sender, args) => { eventRaisedCount++; };
-            _viewModel.Context = new() { Completed = 1};
-            _viewModel.Context.Total = 1;
+            _viewModel.Context = new() { Completed = 10};
+            _viewModel.Context.Total = 10;
             Assert.Equal(1, eventRaisedCount);
             Assert.True(_viewModel.FinishCommand.CanExecute(null));
 
-            _viewModel.Context = new() { Completed = 1 };
-            _viewModel.Context.Total = 2;
+            _viewModel.Context = new() { Completed = 10 };
+            _viewModel.Context.Total = 20;
             Assert.Equal(2, eventRaisedCount);
             Assert.False(_viewModel.FinishCommand.CanExecute(null));
         }
@@ -75,8 +75,8 @@ namespace VaultCrypt.Tests.ViewModels
             Assert.Equal(1, eventRaisedCount);
             Assert.True(_viewModel.CancelCommand.CanExecute(null));
 
-            _viewModel.Context = new() { Completed = 1 };
-            _viewModel.Context.Total = 1;
+            _viewModel.Context = new() { Completed = 2 };
+            _viewModel.Context.Total = 2;
             Assert.Equal(2, eventRaisedCount);
             Assert.False(_viewModel.CancelCommand.CanExecute(null));
         }
