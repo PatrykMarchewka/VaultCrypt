@@ -33,8 +33,8 @@ namespace VaultCrypt.ViewModels
         public ICommand CancelCommand { get; }
         public ProgressViewModel()
         {
-            FinishCommand = new RelayCommand(_ => Finish(), _ => (Context.Completed == Context.Total && Context.Completed != 0));
-            CancelCommand = new RelayCommand(_ => Cancel(), _ => (Context.Completed != Context.Total || Context.Completed == 0));
+            FinishCommand = new RelayCommand(_ => Finish(), _ => (Context.Completed == Context.Total));
+            CancelCommand = new RelayCommand(_ => Cancel(), _ => (Context.Completed != Context.Total));
         }
 
         public void Finish()
