@@ -18,7 +18,7 @@ namespace VaultCrypt
             base.OnStartup(e);
 
             ViewModelState vms = new ViewModelState();
-            var navigationService = new NavigationService(vms);
+            var navigationService = new NavigationService(vms, VaultSession.CurrentSession);
             var dialogService = new DialogService();
             var exceptionService = new ExceptionHandlerService(dialogService, navigationService);
             RelayCommand.SubscribeToExceptionThrowEvent((ex) => exceptionService.HandleException(ex));
