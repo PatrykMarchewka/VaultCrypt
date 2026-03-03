@@ -88,7 +88,9 @@ namespace VaultCrypt.Tests
         {
             _progressionContext.Progress.Report(new ProgressStatus(completed, total));
 
-            await Task.Yield(); //Small delay due to Progress.Report not updating immediately as it runs in background
+            //Wait until values are set or until 100ms passes
+            System.Threading.SpinWait.SpinUntil(() => _progressionContext.Completed == completed, 100);
+            System.Threading.SpinWait.SpinUntil(() => _progressionContext.Total == total, 100);
 
             Assert.Equal(completed, _progressionContext.Completed);
             Assert.Equal(total, _progressionContext.Total);
