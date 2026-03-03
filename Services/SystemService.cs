@@ -10,32 +10,48 @@ using System.Text;
 using System.Threading.Tasks;
 using VaultCrypt.Exceptions;
 
-namespace VaultCrypt
+namespace VaultCrypt.Services
 {
-    internal class SystemHelper
+    public interface ISystemService
     {
+        public void CheckFreeSpace(NormalizedPath filePath);
+        public int CalculateConcurrency(bool chunked, ushort chunkSizeInMB);
+    }
+
+
+    public class SystemService : ISystemService
+    {
+        private readonly IVaultSession _session;
+
+        public SystemService(IVaultSession session)
+        {
+            this._session = session;
+        }
+
+
+
         /// <summary>
         /// Checks whether there is enough free space to perform operation
         /// </summary>
         /// <param name="filePath">Path of the file to check</param>
         /// <exception cref="Exception">There is not enough free space on the disk with the vault or file can't be located</exception>
-        internal static void CheckFreeSpace(NormalizedPath filePath)
+        public void CheckFreeSpace(NormalizedPath filePath)
         {
             ArgumentNullException.ThrowIfNull(filePath);
 
-            long availableBytes = new DriveInfo(Path.GetPathRoot(VaultSession.CurrentSession.VAULTPATH)!).AvailableFreeSpace;
+            long availableBytes = new DriveInfo(Path.GetPathRoot(_session.VAULTPATH)!).AvailableFreeSpace;
             if (availableBytes < (GetTotalBytes(filePath) * 1.05))
             {
                 throw new VaultException(VaultException.ErrorContext.SystemCheck, VaultException.ErrorReason.NoFreeSpace);
             }
         }
 
-        private static long CheckFreeRamSpace()
+        private long CheckFreeRamSpace()
         {
             return (GC.GetGCMemoryInfo().HighMemoryLoadThresholdBytes - GC.GetGCMemoryInfo().MemoryLoadBytes);
         }
 
-        private static long GetTotalBytes(NormalizedPath filePath)
+        private long GetTotalBytes(NormalizedPath filePath)
         {
             ArgumentNullException.ThrowIfNull(filePath);
             if (!File.Exists(filePath)) throw new ArgumentException($"Cant find the file at {filePath}");
@@ -43,7 +59,7 @@ namespace VaultCrypt
             return new FileInfo(filePath!).Length;
         }
 
-        internal static int CalculateConcurrency(bool chunked, ushort chunkSizeInMB)
+        public int CalculateConcurrency(bool chunked, ushort chunkSizeInMB)
         {
             ArgumentOutOfRangeException.ThrowIfZero(chunkSizeInMB);
 

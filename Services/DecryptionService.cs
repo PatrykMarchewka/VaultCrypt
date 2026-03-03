@@ -20,12 +20,14 @@ namespace VaultCrypt.Services
         private readonly IFileService _fileService;
         private readonly IEncryptionOptionsService _encryptionOptionsService;
         private readonly IVaultSession _session;
+        private readonly ISystemService _systemService;
 
-        public DecryptionService(IFileService fileService, IEncryptionOptionsService encryptionOptionsService, IVaultSession session)
+        public DecryptionService(IFileService fileService, IEncryptionOptionsService encryptionOptionsService, IVaultSession session, ISystemService systemService)
         {
             this._fileService = fileService;
             this._encryptionOptionsService = encryptionOptionsService;
             this._session = session;
+            this._systemService = systemService;
         }
 
 
@@ -110,7 +112,7 @@ namespace VaultCrypt.Services
 
             var tasks = new List<Task>();
             var results = new ConcurrentDictionary<int, byte[]>();
-            int concurrentChunkCount = SystemHelper.CalculateConcurrency(true, chunkInformation.ChunkSize);
+            int concurrentChunkCount = _systemService.CalculateConcurrency(true, chunkInformation.ChunkSize);
             int nextToWrite = 0;
             int chunkIndex = 0;
             byte[] buffer = new byte[extraData + (chunkInformation.ChunkSize * 1024 * 1024)];
