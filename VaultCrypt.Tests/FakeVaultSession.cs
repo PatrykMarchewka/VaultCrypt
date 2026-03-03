@@ -11,6 +11,7 @@ namespace VaultCrypt.Tests
     {
         public bool CreateSessionWasCalled = false;
         public bool RaiseEncryptedFileListUpdatedWasCalled = false;
+        public bool DisposeWasCalled = false;
         private FakeVaultSession() { }
 
         public static FakeVaultSession EmptyMockSession()
@@ -61,5 +62,7 @@ namespace VaultCrypt.Tests
         public void CreateSession(NormalizedPath vaultPath, VaultReader vaultReader, ReadOnlySpan<byte> password, ReadOnlySpan<byte> salt, int iterations) => CreateSessionWasCalled = true;
 
         public void RasiseEncryptedFileListUpdated() => RaiseEncryptedFileListUpdatedWasCalled = true;
+
+        public void Dispose() => DisposeWasCalled = true;
     }
 }
