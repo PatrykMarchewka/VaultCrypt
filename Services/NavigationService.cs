@@ -29,10 +29,12 @@ namespace VaultCrypt.Services
     internal class NavigationService : INavigationService
     {
         private readonly ViewModelState viewModels;
+        private readonly IVaultSession _session;
 
-        internal NavigationService(ViewModelState viewModels)
+        internal NavigationService(ViewModelState viewModels, IVaultSession session)
         {
             this.viewModels = viewModels;
+            this._session = session;
 
             foreach (var viewModel in viewModels.AllViewModels)
             {
@@ -62,7 +64,7 @@ namespace VaultCrypt.Services
 
         public void NavigateToMain()
         {
-            VaultSession.CurrentSession.Dispose();
+            _session.Dispose();
             Navigate(viewModels.Main);
         }
 

@@ -23,12 +23,14 @@ namespace VaultCrypt.Services
         private readonly IFileService _fileService;
         private readonly IVaultSession _session;
         private readonly IEncryptionOptionsService _encryptionOptionsService;
+        private readonly ISystemService _systemService;
 
-        public VaultService(IFileService fileService, IVaultSession session, IEncryptionOptionsService encryptionOptionsService)
+        public VaultService(IFileService fileService, IVaultSession session, IEncryptionOptionsService encryptionOptionsService, ISystemService systemService)
         {
             this._fileService = fileService;
             this._session = session;
             this._encryptionOptionsService = encryptionOptionsService;
+            this._systemService = systemService;
         }
 
         /// <summary>
@@ -123,7 +125,7 @@ namespace VaultCrypt.Services
         {
             ArgumentNullException.ThrowIfNull(context);
 
-            SystemHelper.CheckFreeSpace(_session.VAULTPATH);
+            _systemService.CheckFreeSpace(_session.VAULTPATH);
             using FileStream vaultfs = new FileStream(_session.VAULTPATH!, FileMode.Open, FileAccess.Read);
             //Remove the last 4 characters from a string (.vlt) before adding new text
             using FileStream newVaultfs = new FileStream(_session.VAULTPATH.Value[..^4] + "_TRIMMED.vlt", FileMode.Create);

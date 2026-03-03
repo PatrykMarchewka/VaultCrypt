@@ -22,6 +22,7 @@ namespace VaultCrypt
         public event Action? EncryptedFilesListUpdated;
         public void CreateSession(NormalizedPath vaultPath, VaultReader vaultReader, ReadOnlySpan<byte> password, ReadOnlySpan<byte> salt, int iterations);
         public void RasiseEncryptedFileListUpdated();
+        public void Dispose();
     }
 
     public class VaultSession : IDisposable, IVaultSession
