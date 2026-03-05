@@ -247,7 +247,7 @@ namespace VaultCrypt
 
         }
 
-        internal virtual byte[] ReadMetadataOffsetsBytes(Stream stream)
+        private byte[] ReadMetadataOffsetsBytes(Stream stream)
         {
             stream.Seek(sizeof(byte) + SaltSize + sizeof(int), SeekOrigin.Begin);
             byte[] buffer = new byte[EncryptionAlgorithm.GetEncryptionAlgorithmInfo[VaultEncryptionAlgorithm].Provider().EncryptionAlgorithm.ExtraEncryptionDataSize + sizeof(ushort) + MetadataOffsetsSize]; //Example: extra data (28 bytes for AES) + number of files (ushort) + max metadata offsets size
@@ -268,7 +268,7 @@ namespace VaultCrypt
         /// <param name="stream"></param>
         /// <param name="newOffset"></param>
         /// <exception cref="Exception"></exception>
-        internal virtual void AddAndSaveMetadataOffsets(Stream stream, long newOffset)
+        public void AddAndSaveMetadataOffsets(Stream stream, long newOffset)
         {
             ArgumentNullException.ThrowIfNull(stream);
             ArgumentOutOfRangeException.ThrowIfNegativeOrZero(newOffset);
@@ -300,7 +300,7 @@ namespace VaultCrypt
         /// </summary>
         /// <param name="stream"></param>
         /// <param name="itemIndex"></param>
-        internal void RemoveAndSaveMetadataOffsets(Stream stream, ushort itemIndex)
+        public void RemoveAndSaveMetadataOffsets(Stream stream, ushort itemIndex)
         {
             long[] oldOffsets = null!;
             long[] newOffsets = null!;
@@ -318,7 +318,7 @@ namespace VaultCrypt
             }
         }
 
-        internal virtual byte[] PrepareMetadataOffsets(long[] offsets)
+        private byte[] PrepareMetadataOffsets(long[] offsets)
         {
             byte[] offsetsBytes = new byte[sizeof(ushort) + (offsets.Length * sizeof(long))];
             Buffer.BlockCopy(offsets, 0, offsetsBytes, sizeof(ushort), offsets.Length * sizeof(long));
@@ -326,7 +326,7 @@ namespace VaultCrypt
             return offsetsBytes;
         }
 
-        internal void SaveMetadataOffsets(Stream stream, long[] offsets)
+        public void SaveMetadataOffsets(Stream stream, long[] offsets)
         {
             ArgumentNullException.ThrowIfNull(stream);
             ArgumentNullException.ThrowIfNull(offsets);
@@ -372,7 +372,7 @@ namespace VaultCrypt
             }
         }
 
-        internal virtual void WriteMetadataOffsets(Stream stream, byte[] encryptedMetadataOffsets)
+        private void WriteMetadataOffsets(Stream stream, byte[] encryptedMetadataOffsets)
         {
             stream.Seek(sizeof(byte) + SaltSize + sizeof(int), SeekOrigin.Begin); //1 byte for version + bytes for salt + 4 bytes for iterations
             stream.Write(encryptedMetadataOffsets);
@@ -399,7 +399,7 @@ namespace VaultCrypt
             }
         }
 
-        public virtual byte[] VaultEncryption(ReadOnlyMemory<byte> data)
+        public byte[] VaultEncryption(ReadOnlyMemory<byte> data)
         {
             if (data.IsEmpty) throw new ArgumentException("Provided empty data", nameof(data));
 
@@ -407,7 +407,7 @@ namespace VaultCrypt
             return provider.EncryptionAlgorithm.EncryptBytes(data.Span, PasswordHelper.GetSlicedKey(provider.KeySize).Span);
         }
 
-        public virtual byte[] VaultDecryption(ReadOnlyMemory<byte> data)
+        private byte[] VaultDecryption(ReadOnlyMemory<byte> data)
         {
             if (data.IsEmpty) throw new ArgumentException("Provided empty data", nameof(data));
 
