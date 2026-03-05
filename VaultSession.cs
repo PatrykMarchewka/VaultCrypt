@@ -272,6 +272,9 @@ namespace VaultCrypt
         /// <exception cref="Exception"></exception>
         internal virtual void AddAndSaveMetadataOffsets(Stream stream, long newOffset)
         {
+            ArgumentNullException.ThrowIfNull(stream);
+            ArgumentOutOfRangeException.ThrowIfNegativeOrZero(newOffset);
+
             long[] oldOffsets = null!;
             long[] newOffsets = null!;
             try
@@ -327,6 +330,9 @@ namespace VaultCrypt
 
         internal void SaveMetadataOffsets(Stream stream, long[] offsets)
         {
+            ArgumentNullException.ThrowIfNull(stream);
+            ArgumentNullException.ThrowIfNull(offsets);
+
             byte[] offsetsBytes = null!;
             byte[] encryptedMetadataOffsets = null!;
             try
