@@ -302,6 +302,8 @@ namespace VaultCrypt
         /// <param name="itemIndex"></param>
         public void RemoveAndSaveMetadataOffsets(Stream stream, ushort itemIndex)
         {
+            ArgumentNullException.ThrowIfNull(stream);
+
             long[] oldOffsets = null!;
             long[] newOffsets = null!;
             try
