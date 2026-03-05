@@ -323,8 +323,8 @@ namespace VaultCrypt
         private byte[] PrepareMetadataOffsets(long[] offsets)
         {
             byte[] offsetsBytes = new byte[sizeof(ushort) + (offsets.Length * sizeof(long))];
+            BinaryPrimitives.WriteUInt16LittleEndian(offsetsBytes, (ushort)offsets.Length);
             Buffer.BlockCopy(offsets, 0, offsetsBytes, sizeof(ushort), offsets.Length * sizeof(long));
-            BinaryPrimitives.WriteUInt16LittleEndian(offsetsBytes.AsSpan(0, sizeof(ushort)), (ushort)(offsets.Length));
             return offsetsBytes;
         }
 
