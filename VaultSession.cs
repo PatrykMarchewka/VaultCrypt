@@ -160,12 +160,12 @@ namespace VaultCrypt
             ArgumentNullException.ThrowIfNull(salt);
             ArgumentOutOfRangeException.ThrowIfNegativeOrZero(iterations);
 
-            byte[] buffer = new byte[1 + SaltSize + sizeof(uint)];
+            byte[] buffer = new byte[1 + SaltSize + sizeof(int)];
             try
             {
                 buffer[0] = Version;
                 Buffer.BlockCopy(salt, 0, buffer, 1, SaltSize);
-                BinaryPrimitives.WriteInt32LittleEndian(buffer.AsSpan().Slice(1 + SaltSize, sizeof(uint)), iterations);
+                BinaryPrimitives.WriteInt32LittleEndian(buffer.AsSpan().Slice(1 + SaltSize, sizeof(int)), iterations);
                 return buffer;
             }
             catch(Exception)
@@ -251,7 +251,7 @@ namespace VaultCrypt
 
         internal virtual byte[] ReadMetadataOffsetsBytes(Stream stream)
         {
-            stream.Seek(sizeof(byte) + SaltSize + sizeof(uint), SeekOrigin.Begin);
+            stream.Seek(sizeof(byte) + SaltSize + sizeof(int), SeekOrigin.Begin);
             byte[] buffer = new byte[EncryptionAlgorithm.GetEncryptionAlgorithmInfo[VaultEncryptionAlgorithm].Provider().EncryptionAlgorithm.ExtraEncryptionDataSize + sizeof(ushort) + MetadataOffsetsSize]; //Example: extra data (28 bytes for AES) + number of files (ushort) + max metadata offsets size
             try
             {
@@ -370,7 +370,7 @@ namespace VaultCrypt
 
         internal virtual void WriteMetadataOffsets(Stream stream, byte[] encryptedMetadataOffsets)
         {
-            stream.Seek(sizeof(byte) + SaltSize + sizeof(uint), SeekOrigin.Begin); //1 byte for version + bytes for salt + 4 bytes for iterations
+            stream.Seek(sizeof(byte) + SaltSize + sizeof(int), SeekOrigin.Begin); //1 byte for version + bytes for salt + 4 bytes for iterations
             stream.Write(encryptedMetadataOffsets);
         }
         #endregion
