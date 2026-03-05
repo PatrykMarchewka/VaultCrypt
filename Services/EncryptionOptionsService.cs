@@ -62,7 +62,7 @@ namespace VaultCrypt.Services
         {
             ArgumentNullException.ThrowIfNull(options);
 
-            VaultReader vaultReader = _session.VAULT_READER;
+            IVaultReader vaultReader = _session.VAULT_READER;
             short extraEncryptionDataSize = EncryptionAlgorithm.GetEncryptionAlgorithmInfo[vaultReader.VaultEncryptionAlgorithm].Provider().EncryptionAlgorithm.ExtraEncryptionDataSize;
             byte[] encryptionOptionsBytes = null!;
             byte[] paddedFileOptions = new byte[vaultReader.EncryptionOptionsSize - extraEncryptionDataSize];
@@ -97,7 +97,7 @@ namespace VaultCrypt.Services
         }
         public EncryptionOptions.FileEncryptionOptions GetDecryptedFileEncryptionOptions(Stream vaultFS, long metadataOffset)
         {
-            VaultReader vaultReader = _session.VAULT_READER;
+            IVaultReader vaultReader = _session.VAULT_READER;
             byte[] decryptedMetadata = null!;
             EncryptionOptions.FileEncryptionOptions fileEncryptionOptions = null!;
             try
