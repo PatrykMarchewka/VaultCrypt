@@ -183,7 +183,6 @@ namespace VaultCrypt
             try
             {
                 offsets = ReadMetadataOffsets(stream);
-                byte[] decrypted = null!;
                 foreach (long offset in offsets)
                 {
                     EncryptionOptions.FileEncryptionOptions fileEncryptionOptions = null!;
@@ -207,7 +206,6 @@ namespace VaultCrypt
                     }
                     finally
                     {
-                        if (decrypted is not null) CryptographicOperations.ZeroMemory(decrypted);
                         if (fileEncryptionOptions is not null) fileEncryptionOptions.Dispose();
                     }
                 }
