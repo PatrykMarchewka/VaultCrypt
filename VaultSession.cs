@@ -403,36 +403,16 @@ namespace VaultCrypt
         {
             if (data.IsEmpty) throw new ArgumentException("Provided empty data", nameof(data));
 
-            byte[] slicedKey = new byte[EncryptionAlgorithm.GetEncryptionAlgorithmInfo[VaultEncryptionAlgorithm].Provider().KeySize];
-            try
-            {
-                Buffer.BlockCopy(_session.KEY, 0, slicedKey, 0, slicedKey.Length);
-                return EncryptionAlgorithm.GetEncryptionAlgorithmInfo[VaultEncryptionAlgorithm].Provider().EncryptionAlgorithm.EncryptBytes(data.Span, slicedKey);
-            }
-            catch(Exception)
-            {
-                CryptographicOperations.ZeroMemory(slicedKey);
-                throw;
-            }
-            
+            var provider = EncryptionAlgorithm.GetEncryptionAlgorithmInfo[VaultEncryptionAlgorithm].Provider();
+            return provider.EncryptionAlgorithm.EncryptBytes(data.Span, PasswordHelper.GetSlicedKey(provider.KeySize).Span);
         }
 
         public virtual byte[] VaultDecryption(ReadOnlyMemory<byte> data)
         {
             if (data.IsEmpty) throw new ArgumentException("Provided empty data", nameof(data));
 
-            byte[] slicedKey = new byte[EncryptionAlgorithm.GetEncryptionAlgorithmInfo[VaultEncryptionAlgorithm].Provider().KeySize];
-            try
-            {
-                Buffer.BlockCopy(_session.KEY, 0, slicedKey, 0, slicedKey.Length);
-                return EncryptionAlgorithm.GetEncryptionAlgorithmInfo[VaultEncryptionAlgorithm].Provider().EncryptionAlgorithm.DecryptBytes(data.Span, slicedKey);
-            }
-            catch(Exception)
-            {
-                CryptographicOperations.ZeroMemory(slicedKey);
-                throw;
-            }
-            
+            var provider = EncryptionAlgorithm.GetEncryptionAlgorithmInfo[VaultEncryptionAlgorithm].Provider();
+            return provider.EncryptionAlgorithm.DecryptBytes(data.Span, PasswordHelper.GetSlicedKey(provider.KeySize).Span);
         }
     }
 
