@@ -55,11 +55,11 @@ namespace VaultCrypt.Tests
 
         public Dictionary<long, EncryptedFileInfo> ENCRYPTED_FILES { get; set; }
 
-        public VaultReader VAULT_READER { get; set; }
+        public IVaultReader VAULT_READER { get; set; }
 
         public event Action? EncryptedFilesListUpdated;
 
-        public void CreateSession(NormalizedPath vaultPath, VaultReader vaultReader, ReadOnlySpan<byte> password, ReadOnlySpan<byte> salt, int iterations) => CreateSessionWasCalled = true;
+        public void CreateSession(NormalizedPath vaultPath, IVaultReader vaultReader, ReadOnlySpan<byte> password, ReadOnlySpan<byte> salt, int iterations) => CreateSessionWasCalled = true;
 
         public void RasiseEncryptedFileListUpdated() => RaiseEncryptedFileListUpdatedWasCalled = true;
 
