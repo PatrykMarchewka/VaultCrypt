@@ -27,7 +27,7 @@ namespace VaultCrypt.Tests
                 {long.MaxValue, new EncryptedFileInfo("MAX", ulong.MaxValue, EncryptionAlgorithm.GetEncryptionAlgorithmInfo[1]) }
             };
             var registry = new VaultRegistry(null!, null!);
-            session.VAULT_READER = VaultRegistry.GetVaultReader(0);
+            session.VAULT_READER = new FakeVaultReader();
 
             return session;
         }
