@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
@@ -11,6 +11,7 @@ namespace VaultCrypt.Tests
     {
         public bool CreateSessionWasCalled = false;
         public bool RaiseEncryptedFileListUpdatedWasCalled = false;
+        public bool GetSlicedKeyWasCalled = false;
         public bool DisposeWasCalled = false;
         private FakeVaultSession() { }
 
@@ -62,6 +63,12 @@ namespace VaultCrypt.Tests
         public void CreateSession(NormalizedPath vaultPath, IVaultReader vaultReader, ReadOnlySpan<byte> password, ReadOnlySpan<byte> salt, int iterations) => CreateSessionWasCalled = true;
 
         public void RasiseEncryptedFileListUpdated() => RaiseEncryptedFileListUpdatedWasCalled = true;
+
+        public ReadOnlyMemory<byte> GetSlicedKey(byte keySize)
+        {
+            GetSlicedKeyWasCalled = true;
+            return new byte[0];
+        }
 
         public void Dispose() => DisposeWasCalled = true;
     }
