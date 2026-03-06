@@ -46,7 +46,7 @@ namespace VaultCrypt.Services
                 options = _encryptionOptionsService.PrepareEncryptionOptions(fileInfo, algorithm, chunkSizeInMB);
                 int totalChunks = options.ChunkInformation != null ? options.ChunkInformation!.TotalChunks : 1;
                 int concurrentChunkCount = _systemService.CalculateConcurrency(options.IsChunked, chunkSizeInMB);
-                ReadOnlyMemory<byte> key = PasswordHelper.GetSlicedKey(provider.KeySize);
+                ReadOnlyMemory<byte> key = _session.GetSlicedKey(provider.KeySize);
                 await using FileStream vaultFS = new FileStream(_session.VAULTPATH!, FileMode.Open, FileAccess.ReadWrite);
                 await using FileStream fileFS = new FileStream(filePath!, FileMode.Open, FileAccess.Read);
                 _session.VAULT_READER.AddAndSaveMetadataOffsets(vaultFS, vaultFS.Seek(0, SeekOrigin.End));

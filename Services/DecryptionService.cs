@@ -43,7 +43,7 @@ namespace VaultCrypt.Services
             try
             {
                 var encryptionAlgorithmProvider = EncryptionAlgorithm.GetEncryptionAlgorithmInfo[encryptionOptions.EncryptionAlgorithm].Provider();
-                ReadOnlyMemory<byte> key = PasswordHelper.GetSlicedKey(encryptionAlgorithmProvider.KeySize);
+                ReadOnlyMemory<byte> key = _session.GetSlicedKey(encryptionAlgorithmProvider.KeySize);
                 if (!encryptionOptions.IsChunked)
                 {
                     byte[]? decrypted = null;
