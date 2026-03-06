@@ -22,6 +22,7 @@ namespace VaultCrypt
         public event Action? EncryptedFilesListUpdated;
         public void CreateSession(NormalizedPath vaultPath, IVaultReader vaultReader, ReadOnlySpan<byte> password, ReadOnlySpan<byte> salt, int iterations);
         public void RasiseEncryptedFileListUpdated();
+        public ReadOnlyMemory<byte> GetSlicedKey(byte keySize);
         public void Dispose();
     }
 
@@ -60,7 +61,12 @@ namespace VaultCrypt
         {
             this.EncryptedFilesListUpdated?.Invoke();
         }
-        
+
+        public ReadOnlyMemory<byte> GetSlicedKey(byte keySize)
+        {
+            if (keySize > this.KEY.Length) throw new ArgumentOutOfRangeException("Requested bigger slice than the length of entire key");
+            return this.KEY.AsMemory(0, keySize);
+        }
 
         /// <summary>
         /// Clears the sensitive vault session data from memory
@@ -514,7 +520,7 @@ namespace VaultCrypt
             if (data.IsEmpty) throw new ArgumentException("Provided empty data", nameof(data));
 
             var provider = EncryptionAlgorithm.GetEncryptionAlgorithmInfo[VaultEncryptionAlgorithm].Provider();
-            return provider.EncryptionAlgorithm.EncryptBytes(data.Span, PasswordHelper.GetSlicedKey(provider.KeySize).Span);
+            return provider.EncryptionAlgorithm.EncryptBytes(data.Span, _session.GetSlicedKey(provider.KeySize).Span);
         }
 
         private byte[] VaultDecryption(ReadOnlyMemory<byte> data)
@@ -522,7 +528,7 @@ namespace VaultCrypt
             if (data.IsEmpty) throw new ArgumentException("Provided empty data", nameof(data));
 
             var provider = EncryptionAlgorithm.GetEncryptionAlgorithmInfo[VaultEncryptionAlgorithm].Provider();
-            return provider.EncryptionAlgorithm.DecryptBytes(data.Span, PasswordHelper.GetSlicedKey(provider.KeySize).Span);
+            return provider.EncryptionAlgorithm.DecryptBytes(data.Span, _session.GetSlicedKey(provider.KeySize).Span);
         }
     }
 

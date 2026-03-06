@@ -27,12 +27,6 @@ namespace VaultCrypt
             return Rfc2898DeriveBytes.Pbkdf2(password, salt, iterations, HashAlgorithmName.SHA512, 128);
         }
 
-        public static ReadOnlyMemory<byte> GetSlicedKey(byte keySize)
-        {
-            if (keySize > VaultSession.CurrentSession.KEY.Length) throw new ArgumentOutOfRangeException("Requested bigger slice than the length of entire key");
-            return VaultSession.CurrentSession.KEY.AsMemory(0, keySize);
-        }
-
         public static byte[] SecureStringToBytes(SecureString secureString)
         {
             //Null Pointer
