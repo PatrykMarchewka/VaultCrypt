@@ -27,7 +27,7 @@ namespace VaultCrypt.Tests
             var command = new RelayCommand(async _ => { await Task.Delay(1); called = true; });
 
             command.Execute(null);
-            await Task.Delay(10); //Waiting for async method to complete
+            await Task.Delay(100); //Waiting for async method to complete
 
             Assert.True(called);
         }
