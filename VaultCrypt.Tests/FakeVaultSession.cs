@@ -26,7 +26,6 @@ namespace VaultCrypt.Tests
                 {1, new EncryptedFileInfo("TEST", 123, EncryptionAlgorithm.GetEncryptionAlgorithmInfo[0]) },
                 {long.MaxValue, new EncryptedFileInfo("MAX", ulong.MaxValue, EncryptionAlgorithm.GetEncryptionAlgorithmInfo[1]) }
             };
-            var registry = new VaultRegistry(null!, null!);
             session.VAULT_READER = new FakeVaultReader();
 
             return session;
@@ -43,8 +42,7 @@ namespace VaultCrypt.Tests
                 {1, new EncryptedFileInfo("video.mkv", 1_234_567, EncryptionAlgorithm.GetEncryptionAlgorithmInfo[0]) },
                 {1010, new EncryptedFileInfo("file.txt", 1, EncryptionAlgorithm.GetEncryptionAlgorithmInfo[1]) }
             };
-            var registry = new VaultRegistry(session, encryptionOptionsService);
-            session.VAULT_READER = VaultRegistry.GetVaultReader(vaultVersion);
+            session.VAULT_READER = new FakeVaultReader();
 
             return session;
         }
