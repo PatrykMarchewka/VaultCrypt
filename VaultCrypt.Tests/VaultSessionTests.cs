@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
@@ -80,15 +80,16 @@ namespace VaultCrypt.Tests
 
     public class VaultRegistryTests
     {
+        private readonly VaultRegistry _registry;
         public VaultRegistryTests()
         {
-            var registry = new VaultRegistry(null!, null!);
+            _registry = TestsHelper.CreateVaultRegistry(null!, null!);
         }
 
         [Fact]
         void GetVaultReaderReturnsCorrectValue()
         {
-            var reader = VaultRegistry.GetVaultReader(0);
+            var reader = _registry.GetVaultReader(0);
             Assert.Equal(0, reader.Version);
             Assert.True(reader is VaultV0Reader);
         }
@@ -96,7 +97,7 @@ namespace VaultCrypt.Tests
         [Fact]
         void GetVaultReaderThrowsForNonExistentReader()
         {
-            Assert.Throws<VaultException>(() => VaultRegistry.GetVaultReader(byte.MaxValue));
+            Assert.Throws<VaultException>(() => _registry.GetVaultReader(byte.MaxValue));
         }
     }
 }
