@@ -234,7 +234,7 @@ namespace VaultCrypt
         private readonly IVaultSession _session;
         private readonly IEncryptionOptionsService _encryptionOptionsService;
 
-        public VaultReader(IVaultSession session, IEncryptionOptionsService encryptionOptionsService)
+        protected VaultReader(IVaultSession session, IEncryptionOptionsService encryptionOptionsService)
         {
             this._session = session;
             this._encryptionOptionsService = encryptionOptionsService;
