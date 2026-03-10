@@ -64,10 +64,9 @@ namespace VaultCrypt.Services
             ArgumentOutOfRangeException.ThrowIfZero(chunkSizeInMB);
 
             if (!chunked) return 1;
-            int threadCount = Math.Max(1, Environment.ProcessorCount);
             //Cast to long to interpret the byte value as long and not an int, preventing int overflow for chunkSize >= 2048
             int ramSpace = (int)(CheckFreeRamSpace() / ((long)chunkSizeInMB * 1024 * 1024)) / 2; //Divided by 2 to account for HDDs as they cant read and write at the same time
-            return Math.Min(threadCount, ramSpace);
+            return Math.Max(1, Math.Min(Environment.ProcessorCount, ramSpace));
         }
     }
     
