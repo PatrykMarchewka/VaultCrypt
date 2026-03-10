@@ -28,15 +28,13 @@ namespace VaultCrypt.Services
 
     internal class NavigationService : INavigationService
     {
-        private readonly ViewModelState viewModels;
         private readonly IVaultSession _session;
 
-        internal NavigationService(ViewModelState viewModels, IVaultSession session)
+        internal NavigationService(IVaultSession session)
         {
-            this.viewModels = viewModels;
             this._session = session;
 
-            foreach (var viewModel in viewModels.AllViewModels)
+            foreach (var viewModel in ViewModelState.AllViewModels)
             {
                 if (viewModel is INavigatingViewModel navigatingModel)
                 {
@@ -65,43 +63,43 @@ namespace VaultCrypt.Services
         public void NavigateToMain()
         {
             _session.Dispose();
-            Navigate(viewModels.Main);
+            Navigate(ViewModelState.Main);
         }
 
         public void NavigateToCreateVault()
         {
-            Navigate(viewModels.CreateVault);
+            Navigate(ViewModelState.CreateVault);
         }
 
         public void NavigateToOpenVault(SecureString password, NormalizedPath vaultPath)
         {
-            Navigate(viewModels.OpenVault, new { Password = password, VaultPath = vaultPath });
+            Navigate(ViewModelState.OpenVault, new { Password = password, VaultPath = vaultPath });
         }
 
         public void NavigateToPasswordInput(NormalizedPath vaultPath)
         {
-            Navigate(viewModels.PasswordInput, vaultPath);
+            Navigate(ViewModelState.PasswordInput, vaultPath);
         }
 
         public void NavigateToEncryptFile(NormalizedPath filePath)
         {
-            Navigate(viewModels.EncryptFile, filePath);
+            Navigate(ViewModelState.EncryptFile, filePath);
         }
 
         public void NavigateToProgress(ProgressionContext context)
         {
-            Navigate(viewModels.Progress, context);
+            Navigate(ViewModelState.Progress, context);
         }
 
         public void NavigateFromProgress()
         {
-            viewModels.OpenVault.RefreshCollection();
-            Navigate(viewModels.OpenVault);
+            ViewModelState.OpenVault.RefreshCollection();
+            Navigate(ViewModelState.OpenVault);
         }
 
         public void NavigateToExceptionThrown(Exception ex)
         {
-            Navigate(viewModels.ExceptionThrown, ex);
+            Navigate(ViewModelState.ExceptionThrown, ex);
         }
         public event Action<IViewModel> ChangeView = null!;
     }

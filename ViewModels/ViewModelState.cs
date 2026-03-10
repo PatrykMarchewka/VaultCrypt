@@ -16,18 +16,18 @@ namespace VaultCrypt.ViewModels
         private static readonly VaultService vaultService = new VaultService(fileService, VaultSession.CurrentSession, encryptionOptionsService, systemService);
         private static readonly EncryptionService encryptionService = new EncryptionService(fileService, encryptionOptionsService, VaultSession.CurrentSession, systemService);
         private static readonly DecryptionService decryptionService = new DecryptionService(fileService, encryptionOptionsService, VaultSession.CurrentSession, systemService);
-        private static readonly VaultRegistry vaultRegistry = new VaultRegistry(VaultSession.CurrentSession, encryptionOptionsService);
+        private static readonly VaultRegistry vaultRegistry = VaultRegistry.Initialize(VaultSession.CurrentSession, encryptionOptionsService);
 
-        public MainWindowViewModel MainWindow { get; } = new MainWindowViewModel();
-        public MainViewViewModel Main { get; } = new MainViewViewModel(fileDialogService);
-        public CreateVaultViewModel CreateVault { get; } = new CreateVaultViewModel(fileDialogService, vaultService);
-        public OpenVaultViewModel OpenVault { get; } = new OpenVaultViewModel(fileDialogService, vaultService, decryptionService, VaultSession.CurrentSession);
-        public PasswordInputViewModel PasswordInput { get; } = new PasswordInputViewModel();
-        public EncryptFileViewModel EncryptFile { get; } = new EncryptFileViewModel(encryptionService);
-        public ProgressViewModel Progress { get; } = new ProgressViewModel();
-        public ExceptionThrownViewModel ExceptionThrown { get; } = new ExceptionThrownViewModel();
+        public static MainWindowViewModel MainWindow { get; } = new MainWindowViewModel();
+        public static MainViewViewModel Main { get; } = new MainViewViewModel(fileDialogService);
+        public static CreateVaultViewModel CreateVault { get; } = new CreateVaultViewModel(fileDialogService, vaultService);
+        public static OpenVaultViewModel OpenVault { get; } = new OpenVaultViewModel(fileDialogService, vaultService, decryptionService, VaultSession.CurrentSession);
+        public static PasswordInputViewModel PasswordInput { get; } = new PasswordInputViewModel();
+        public static EncryptFileViewModel EncryptFile { get; } = new EncryptFileViewModel(encryptionService);
+        public static ProgressViewModel Progress { get; } = new ProgressViewModel();
+        public static ExceptionThrownViewModel ExceptionThrown { get; } = new ExceptionThrownViewModel();
 
-        public IEnumerable<IViewModel> AllViewModels
+        public static IEnumerable<IViewModel> AllViewModels
         {
             get
             {

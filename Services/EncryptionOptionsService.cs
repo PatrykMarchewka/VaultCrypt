@@ -97,6 +97,9 @@ namespace VaultCrypt.Services
         }
         public EncryptionOptions.FileEncryptionOptions GetDecryptedFileEncryptionOptions(Stream vaultFS, long metadataOffset)
         {
+            ArgumentNullException.ThrowIfNull(vaultFS);
+            ArgumentOutOfRangeException.ThrowIfNegative(metadataOffset);
+
             IVaultReader vaultReader = _session.VAULT_READER;
             byte[] decryptedMetadata = null!;
             EncryptionOptions.FileEncryptionOptions fileEncryptionOptions = null!;
