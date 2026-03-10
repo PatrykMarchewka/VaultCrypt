@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
@@ -7,11 +7,14 @@ using VaultCrypt.Exceptions;
 
 namespace VaultCrypt.Tests
 {
-    [Collection("VaultSessionTests")]
-    [CollectionDefinition("VaultSessionTests", DisableParallelization = true)] //Disable Parallelization to stop CreateSession and Dispose overwriting each other
     public class VaultSessionTests
     {
-        private readonly VaultSession _session = VaultSession.CurrentSession;
+        private readonly VaultSession _session;
+
+        public VaultSessionTests()
+        {
+            _session = TestsHelper.CreateEmptySessionInstance();
+        }
 
         private void SetKey(byte[] key)
         {
