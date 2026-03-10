@@ -51,7 +51,7 @@ namespace VaultCrypt.Services
 
             if (!Directory.Exists(folderPath)) Directory.CreateDirectory(folderPath!);
             NormalizedPath vaultPath = NormalizedPath.From($"{folderPath}\\{vaultName}.vlt");
-            IVaultReader reader = VaultRegistry.GetVaultReader(VaultSession.NewestVaultVersion);
+            IVaultReader reader = VaultRegistry.Current.GetVaultReader(VaultSession.NewestVaultVersion);
             byte[] salt = null!;
             byte[] buffer = null!;
             byte[] encryptedMetadata = null!;
@@ -91,7 +91,7 @@ namespace VaultCrypt.Services
             fs.ReadExactly(buffer);
             byte version = buffer[0];
 
-            IVaultReader reader = VaultRegistry.GetVaultReader(version);
+            IVaultReader reader = VaultRegistry.Current.GetVaultReader(version);
             int iterations = reader.ReadIterationsNumber(fs);
             byte[] salt = null!;
             try
