@@ -18,7 +18,7 @@ namespace VaultCrypt.Tests.Services
         public EncryptionOptionsServiceTests()
         {
             _vaultSession = TestsHelper.CreateFilledSessionInstanceWithReader();
-            _service = new VaultCrypt.Services.EncryptionOptionsService(_vaultSession);
+            _service = new VaultCrypt.Services.EncryptionOptionsService(_vaultSession.VAULT_READER);
         }
 
         [Fact]
