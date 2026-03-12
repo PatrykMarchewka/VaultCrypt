@@ -1,4 +1,4 @@
-using Newtonsoft.Json.Linq;
+﻿using Newtonsoft.Json.Linq;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -76,7 +76,7 @@ namespace VaultCrypt.Tests
         internal static VaultSession CreateFilledSessionInstanceWithReader(byte[]? key = null, NormalizedPath? vaultPath = null, Dictionary<long, EncryptedFileInfo>? encryptedFiles = null)
         {
             var session = CreateFilledSessionInstance(key, vaultPath, encryptedFiles, null);
-            var optionsService = new EncryptionOptionsService(session.VAULT_READER);
+            var optionsService = new EncryptionOptionsService(session);
             typeof(VaultSession).GetProperty(nameof(VaultSession.VAULT_READER))!.SetValue(session, CreateVaultRegistry(session, optionsService).GetVaultReader(VaultSession.NewestVaultVersion));
             return session;
         }
