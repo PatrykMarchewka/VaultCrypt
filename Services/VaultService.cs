@@ -24,13 +24,15 @@ namespace VaultCrypt.Services
         private readonly IVaultSession _session;
         private readonly IEncryptionOptionsService _encryptionOptionsService;
         private readonly ISystemService _systemService;
+        private readonly IVaultRegistry _registry;
 
-        public VaultService(IFileService fileService, IVaultSession session, IEncryptionOptionsService encryptionOptionsService, ISystemService systemService)
+        public VaultService(IFileService fileService, IVaultSession session, IEncryptionOptionsService encryptionOptionsService, ISystemService systemService, IVaultRegistry registry)
         {
             this._fileService = fileService;
             this._session = session;
             this._encryptionOptionsService = encryptionOptionsService;
             this._systemService = systemService;
+            this._registry = registry;
         }
 
         /// <summary>
@@ -47,32 +49,32 @@ namespace VaultCrypt.Services
             ArgumentNullException.ThrowIfNullOrWhiteSpace(folderPath);
             ArgumentNullException.ThrowIfNullOrWhiteSpace(vaultName);
             ArgumentNullException.ThrowIfNull(password);
+            if(password.Length == 0) { throw new ArgumentException("Provided empty password"); }
             ArgumentOutOfRangeException.ThrowIfNegativeOrZero(iterations);
 
             if (!Directory.Exists(folderPath)) Directory.CreateDirectory(folderPath!);
             NormalizedPath vaultPath = NormalizedPath.From($"{folderPath}\\{vaultName}.vlt");
-            IVaultReader reader = VaultRegistry.Current.GetVaultReader(VaultSession.NewestVaultVersion);
+            IVaultReader reader = _registry.GetVaultReader(VaultSession.NewestVaultVersion);
             byte[] salt = null!;
-            byte[] buffer = null!;
+            byte[] vaultHeader = null!;
             byte[] encryptedMetadata = null!;
-            byte[] data = null!;
             try
             {
                 salt = PasswordHelper.GenerateRandomSalt(reader.SaltSize);
-                buffer = reader.PrepareVaultHeader(salt, iterations);
+                vaultHeader = reader.PrepareVaultHeader(salt, iterations);
                 _session.CreateSession(vaultPath, reader, password, salt, iterations);
                 encryptedMetadata = reader.VaultEncryption(new byte[sizeof(ushort) + reader.MetadataOffsetsSize]);
-                data = new byte[buffer.Length + encryptedMetadata.Length];
-                Buffer.BlockCopy(buffer, 0, data, 0, buffer.Length);
-                Buffer.BlockCopy(encryptedMetadata, 0, data, buffer.Length, encryptedMetadata.Length);
-                File.WriteAllBytes(vaultPath!, data);
+                using (FileStream vaultFS = new FileStream(vaultPath!, FileMode.Create, FileAccess.Write))
+                {
+                    vaultFS.Write(vaultHeader);
+                    vaultFS.Write(encryptedMetadata);
+                }
             }
             finally
             {
                 if (salt is not null) CryptographicOperations.ZeroMemory(salt);
-                if (buffer is not null) CryptographicOperations.ZeroMemory(buffer);
+                if (vaultHeader is not null) CryptographicOperations.ZeroMemory(vaultHeader);
                 if (encryptedMetadata is not null) CryptographicOperations.ZeroMemory(encryptedMetadata);
-                if (data is not null) CryptographicOperations.ZeroMemory(data);
             }
         }
 
@@ -84,6 +86,7 @@ namespace VaultCrypt.Services
         public void CreateSessionFromFile(byte[] password, NormalizedPath path)
         {
             ArgumentNullException.ThrowIfNull(password);
+            if(password.Length == 0) { throw new ArgumentException("Provided empty password"); }
             ArgumentNullException.ThrowIfNullOrWhiteSpace(path);
 
             using FileStream fs = new FileStream(path!, FileMode.Open, FileAccess.Read);
@@ -91,7 +94,7 @@ namespace VaultCrypt.Services
             fs.ReadExactly(buffer);
             byte version = buffer[0];
 
-            IVaultReader reader = VaultRegistry.Current.GetVaultReader(version);
+            IVaultReader reader = _registry.GetVaultReader(version);
             int iterations = reader.ReadIterationsNumber(fs);
             byte[] salt = null!;
             try
