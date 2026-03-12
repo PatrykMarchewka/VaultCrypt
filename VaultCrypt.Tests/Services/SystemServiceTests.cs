@@ -19,7 +19,7 @@ namespace VaultCrypt.Tests.Services
         [Fact]
         void CheckFreeSpaceDoesNotThrowForValidValues()
         {
-            var path = Path.GetTempPath();
+            var path = Path.GetTempFileName();
             _service.CheckFreeSpace(NormalizedPath.From(path));
         }
 
