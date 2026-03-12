@@ -19,10 +19,10 @@ namespace VaultCrypt.Services
 
     public class EncryptionOptionsService : IEncryptionOptionsService
     {
-        private readonly IVaultSession _session;
-        public EncryptionOptionsService(IVaultSession session)
+        private readonly IVaultReader _reader;
+        public EncryptionOptionsService(IVaultReader reader)
         {
-            this._session = session;
+            this._reader = reader;
         }
 
         public EncryptionOptions.FileEncryptionOptions PrepareEncryptionOptions(FileInfo fileInfo, EncryptionAlgorithm.EncryptionAlgorithmInfo algorithm, ushort chunkSizeInMB)
@@ -62,14 +62,13 @@ namespace VaultCrypt.Services
         {
             ArgumentNullException.ThrowIfNull(options);
 
-            IVaultReader vaultReader = _session.VAULT_READER;
-            short extraEncryptionDataSize = EncryptionAlgorithm.GetEncryptionAlgorithmInfo[vaultReader.VaultEncryptionAlgorithm].Provider().EncryptionAlgorithm.ExtraEncryptionDataSize;
+            short extraEncryptionDataSize = EncryptionAlgorithm.GetEncryptionAlgorithmInfo[_reader.VaultEncryptionAlgorithm].Provider().EncryptionAlgorithm.ExtraEncryptionDataSize;
             byte[] encryptionOptionsBytes = null!;
-            byte[] paddedFileOptions = new byte[vaultReader.EncryptionOptionsSize - extraEncryptionDataSize];
+            byte[] paddedFileOptions = new byte[_reader.EncryptionOptionsSize - extraEncryptionDataSize];
             try
             {
                 encryptionOptionsBytes = EncryptionOptions.FileEncryptionOptions.SerializeFileEncryptionOptions(options);
-                if ((encryptionOptionsBytes.Length + extraEncryptionDataSize) > vaultReader.EncryptionOptionsSize)
+                if ((encryptionOptionsBytes.Length + extraEncryptionDataSize) > _reader.EncryptionOptionsSize)
                 {
                     throw new VaultException(VaultException.ErrorContext.EncryptionOptions, VaultException.ErrorReason.FileNameTooLong);
                 }
@@ -82,7 +81,7 @@ namespace VaultCrypt.Services
             byte[] encryptedFileOptions = null!;
             try
             {
-                encryptedFileOptions = vaultReader.VaultEncryption(paddedFileOptions);
+                encryptedFileOptions = _reader.VaultEncryption(paddedFileOptions);
                 return encryptedFileOptions;
             }
             catch (Exception)
@@ -100,12 +99,11 @@ namespace VaultCrypt.Services
             ArgumentNullException.ThrowIfNull(vaultFS);
             ArgumentOutOfRangeException.ThrowIfNegative(metadataOffset);
 
-            IVaultReader vaultReader = _session.VAULT_READER;
             byte[] decryptedMetadata = null!;
             EncryptionOptions.FileEncryptionOptions fileEncryptionOptions = null!;
             try
             {
-                decryptedMetadata = vaultReader.ReadAndDecryptData(vaultFS, metadataOffset, vaultReader.EncryptionOptionsSize);
+                decryptedMetadata = _reader.ReadAndDecryptData(vaultFS, metadataOffset, _reader.EncryptionOptionsSize);
                 fileEncryptionOptions = EncryptionOptions.FileEncryptionOptionsReader.Deserialize(decryptedMetadata);
             }
             catch (Exception)
