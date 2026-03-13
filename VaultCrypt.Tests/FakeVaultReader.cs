@@ -13,6 +13,7 @@ namespace VaultCrypt.Tests
         public bool PrepareVaultHeaderWasCalled = false;
         public bool ReadAndDecryptMetadataWasCalled = false;
         public bool ReadIterationsNumberWasCalled = false;
+        public bool ReadMetadataOffsetsWasCalled = false;
         public bool ReadSaltWasCalled = false;
         public bool RemoveAndSaveMetadataOffsetsWasCalled = false;
         public bool SaveMetadataOffsetsWasCalled = false;
@@ -51,6 +52,12 @@ namespace VaultCrypt.Tests
         {
             ReadIterationsNumberWasCalled = true;
             return 0;
+        }
+
+        public long[] ReadMetadataOffsets(Stream stream)
+        {
+            ReadMetadataOffsetsWasCalled = true;
+            return new long[0];
         }
 
         public byte[] ReadSalt(Stream stream)

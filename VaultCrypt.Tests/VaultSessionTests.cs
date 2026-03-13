@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
@@ -86,7 +86,7 @@ namespace VaultCrypt.Tests
         private readonly VaultRegistry _registry;
         public VaultRegistryTests()
         {
-            _registry = TestsHelper.CreateVaultRegistry(null!, null!);
+            _registry = TestsHelper.CreateVaultRegistry(null!);
         }
 
         [Fact]

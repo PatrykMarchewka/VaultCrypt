@@ -1,4 +1,4 @@
-﻿using Newtonsoft.Json.Linq;
+using Newtonsoft.Json.Linq;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -76,8 +76,7 @@ namespace VaultCrypt.Tests
         internal static VaultSession CreateFilledSessionInstanceWithReader(byte[]? key = null, NormalizedPath? vaultPath = null, Dictionary<long, EncryptedFileInfo>? encryptedFiles = null)
         {
             var session = CreateFilledSessionInstance(key, vaultPath, encryptedFiles, null);
-            var optionsService = new EncryptionOptionsService(session);
-            typeof(VaultSession).GetProperty(nameof(VaultSession.VAULT_READER))!.SetValue(session, CreateVaultRegistry(session, optionsService).GetVaultReader(VaultSession.NewestVaultVersion));
+            typeof(VaultSession).GetProperty(nameof(VaultSession.VAULT_READER))!.SetValue(session, CreateVaultRegistry(session).GetVaultReader(VaultSession.NewestVaultVersion));
             return session;
         }
 
@@ -87,10 +86,10 @@ namespace VaultCrypt.Tests
         /// <param name="session"></param>
         /// <param name="encryptionOptionsService"></param>
         /// <returns>New instance of VaultRegistry</returns>
-        internal static VaultRegistry CreateVaultRegistry(IVaultSession session, IEncryptionOptionsService encryptionOptionsService)
+        internal static VaultRegistry CreateVaultRegistry(IVaultSession session)
         {
-            var registryConstructor = typeof(VaultRegistry).GetConstructor(BindingFlags.Instance | BindingFlags.NonPublic, new Type[] { typeof(IVaultSession), typeof(IEncryptionOptionsService) });
-            return (VaultRegistry)registryConstructor!.Invoke(new object[] { session, encryptionOptionsService });
+            var registryConstructor = typeof(VaultRegistry).GetConstructor(BindingFlags.Instance | BindingFlags.NonPublic, new Type[] { typeof(IVaultSession) });
+            return (VaultRegistry)registryConstructor!.Invoke(new object[] { session });
         }
     }
 }
