@@ -94,15 +94,15 @@ namespace VaultCrypt
         private static Dictionary<byte, Lazy<IVaultReader>> registry = null!;
         
 
-        public static VaultRegistry Initialize(IVaultSession session, IEncryptionOptionsService encryptionOptionsService)
+        public static VaultRegistry Initialize(IVaultSession session)
         {
-            return Current = new VaultRegistry(session, encryptionOptionsService);
+            return Current = new VaultRegistry(session);
         }
-        private VaultRegistry(IVaultSession session, IEncryptionOptionsService encryptionOptionsService)
+        private VaultRegistry(IVaultSession session)
         {
             registry = new()
             {
-                {0, new Lazy<IVaultReader>(() => new VaultV0Reader(session, encryptionOptionsService)) }
+                {0, new Lazy<IVaultReader>(() => new VaultV0Reader(session)) }
             };
         }
 
@@ -168,11 +168,11 @@ namespace VaultCrypt
         public byte[] PrepareVaultHeader(byte[] salt, int iterations);
 
         /// <summary>
-        /// Populates <see cref="IVaultSession.ENCRYPTED_FILES"/> list with the information from the <paramref name="stream"/>
+        /// Reads metadata offsets from vault header
         /// </summary>
-        /// <param name="stream">Vault file to read from</param>
-        /// <exception cref="ArgumentNullException">Thrown when <paramref name="stream"/> is set to null</exception>
-        public void PopulateEncryptedFilesList(Stream stream);
+        /// <param name="stream">Stream to vault file to read from</param>
+        /// <returns>Array of offsets</returns>
+        public long[] ReadMetadataOffsets(Stream stream);
 
         /// <summary>
         /// Adds <paramref name="newOffset"/> to offsets list and saves it back to the <paramref name="stream"/>
@@ -232,12 +232,10 @@ namespace VaultCrypt
         public virtual ushort HeaderSize => (ushort)(1 + SaltSize + sizeof(int) + EncryptionAlgorithm.GetEncryptionAlgorithmInfo[VaultEncryptionAlgorithm].Provider().EncryptionAlgorithm.ExtraEncryptionDataSize + sizeof(ushort) + MetadataOffsetsSize);
 
         private readonly IVaultSession _session;
-        private readonly IEncryptionOptionsService _encryptionOptionsService;
 
-        protected VaultReader(IVaultSession session, IEncryptionOptionsService encryptionOptionsService)
+        protected VaultReader(IVaultSession session)
         {
             this._session = session;
-            this._encryptionOptionsService = encryptionOptionsService;
         }
 
         #region Vault header
@@ -296,50 +294,11 @@ namespace VaultCrypt
             }
         }
 
-        public virtual void PopulateEncryptedFilesList(Stream stream)
-        {
-            ArgumentNullException.ThrowIfNull(stream);
-
-            long[] offsets = null!;
-            try
-            {
-                offsets = ReadMetadataOffsets(stream);
-                foreach (long offset in offsets)
-                {
-                    EncryptionOptions.FileEncryptionOptions fileEncryptionOptions = null!;
-                    try
-                    {
-                        fileEncryptionOptions = _encryptionOptionsService.GetDecryptedFileEncryptionOptions(stream, offset);
-                        try
-                        {
-                            _session.ENCRYPTED_FILES.Add(offset, new EncryptedFileInfo(Encoding.UTF8.GetString(fileEncryptionOptions.FileName), fileEncryptionOptions.FileSize, EncryptionAlgorithm.GetEncryptionAlgorithmInfo[fileEncryptionOptions.EncryptionAlgorithm]));
-                        }
-                        catch (ArgumentException)
-                        {
-                            //Dictionary entry with the same key already exists, replace it
-                            _session.ENCRYPTED_FILES[offset] = new EncryptedFileInfo(Encoding.UTF8.GetString(fileEncryptionOptions.FileName), fileEncryptionOptions.FileSize, EncryptionAlgorithm.GetEncryptionAlgorithmInfo[fileEncryptionOptions.EncryptionAlgorithm]);
-                        }
-                        
-                    }
-                    catch(Exception)
-                    {
-                        _session.ENCRYPTED_FILES.Add(offset, new EncryptedFileInfo(null, 0, null));
-                    }
-                    finally
-                    {
-                        if (fileEncryptionOptions is not null) fileEncryptionOptions.Dispose();
-                    }
-                }
-            }
-            finally
-            {
-                if (offsets is not null) CryptographicOperations.ZeroMemory(MemoryMarshal.AsBytes(offsets.AsSpan()));
-            }
-        }
+        
         #endregion
 
         #region Metadata offsets
-        private long[] ReadMetadataOffsets(Stream stream)
+        public long[] ReadMetadataOffsets(Stream stream)
         {
             byte[] decrypted = null!;
             long[] offsets = null!;
@@ -542,7 +501,7 @@ namespace VaultCrypt
 
     public class VaultV0Reader : VaultReader
     {
-        public VaultV0Reader(IVaultSession session, IEncryptionOptionsService encryptionOptionsService) : base(session, encryptionOptionsService) { }
+        public VaultV0Reader(IVaultSession session) : base(session) { }
 
         public override byte Version => 0;
         public override byte VaultEncryptionAlgorithm => EncryptionAlgorithm.EncryptionAlgorithmInfo.AES256GCM.ID;

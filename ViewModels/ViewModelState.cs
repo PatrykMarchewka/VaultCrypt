@@ -16,7 +16,7 @@ namespace VaultCrypt.ViewModels
         private static readonly VaultService vaultService = new VaultService(fileService, VaultSession.CurrentSession, encryptionOptionsService, systemService, VaultRegistry.Current);
         private static readonly EncryptionService encryptionService = new EncryptionService(fileService, encryptionOptionsService, VaultSession.CurrentSession, systemService);
         private static readonly DecryptionService decryptionService = new DecryptionService(fileService, encryptionOptionsService, VaultSession.CurrentSession, systemService);
-        private static readonly VaultRegistry vaultRegistry = VaultRegistry.Initialize(VaultSession.CurrentSession, encryptionOptionsService);
+        private static readonly VaultRegistry vaultRegistry = VaultRegistry.Initialize(VaultSession.CurrentSession);
 
         public static MainWindowViewModel MainWindow { get; } = new MainWindowViewModel();
         public static MainViewViewModel Main { get; } = new MainViewViewModel(fileDialogService);

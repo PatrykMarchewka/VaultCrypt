@@ -116,13 +116,60 @@ namespace VaultCrypt.Services
             try
             {
                 _session.ENCRYPTED_FILES.Clear();
-                _session.VAULT_READER.PopulateEncryptedFilesList(vaultFS);
+                PopulateEncryptedFilesList(vaultFS);
             }
             finally
             {
                 _session.RasiseEncryptedFileListUpdated();
             }
         }
+
+        /// <summary>
+        /// Populates <see cref="IVaultSession.ENCRYPTED_FILES"/> list with the information from the <paramref name="stream"/>
+        /// </summary>
+        /// <param name="stream">Vault file to read from</param>
+        /// <exception cref="ArgumentNullException">Thrown when <paramref name="stream"/> is set to null</exception>
+        private void PopulateEncryptedFilesList(Stream stream)
+        {
+            ArgumentNullException.ThrowIfNull(stream);
+
+            long[] offsets = null!;
+            try
+            {
+                offsets = _session.VAULT_READER.ReadMetadataOffsets(stream);
+                foreach (long offset in offsets)
+                {
+                    EncryptionOptions.FileEncryptionOptions fileEncryptionOptions = null!;
+                    try
+                    {
+                        fileEncryptionOptions = _encryptionOptionsService.GetDecryptedFileEncryptionOptions(stream, offset);
+                        try
+                        {
+                            _session.ENCRYPTED_FILES.Add(offset, new EncryptedFileInfo(Encoding.UTF8.GetString(fileEncryptionOptions.FileName), fileEncryptionOptions.FileSize, EncryptionAlgorithm.GetEncryptionAlgorithmInfo[fileEncryptionOptions.EncryptionAlgorithm]));
+                        }
+                        catch (ArgumentException)
+                        {
+                            //Dictionary entry with the same key already exists, replace it
+                            _session.ENCRYPTED_FILES[offset] = new EncryptedFileInfo(Encoding.UTF8.GetString(fileEncryptionOptions.FileName), fileEncryptionOptions.FileSize, EncryptionAlgorithm.GetEncryptionAlgorithmInfo[fileEncryptionOptions.EncryptionAlgorithm]);
+                        }
+
+                    }
+                    catch (Exception)
+                    {
+                        _session.ENCRYPTED_FILES.Add(offset, new EncryptedFileInfo(null, 0, null));
+                    }
+                    finally
+                    {
+                        if (fileEncryptionOptions is not null) fileEncryptionOptions.Dispose();
+                    }
+                }
+            }
+            finally
+            {
+                if (offsets is not null) CryptographicOperations.ZeroMemory(MemoryMarshal.AsBytes(offsets.AsSpan()));
+            }
+        }
+
 
         public void TrimVault(ProgressionContext context)
         {
