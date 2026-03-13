@@ -224,11 +224,33 @@ namespace VaultCrypt
     //v0 = [version (1byte)][salt (32 bytes)][iterations (4 bytes)] + [metadata offsets (28 bytes for AES decryption + 2 bytes ushort number +  MetadataOffsetsSize (4KB (4096 bytes))]...
     public abstract class VaultReader : IVaultReader
     {
+        /// <summary>
+        /// Version of the vault
+        /// </summary>
         public abstract byte Version { get; }
+        /// <summary>
+        /// ID of encryption algoritm used to encrypt/decrypt vault metadata
+        /// </summary>
         public abstract byte VaultEncryptionAlgorithm { get; }
+
+        /// <summary>
+        /// Length of the salt in bytes
+        /// </summary>
         public virtual ushort SaltSize => 32;
+
+        /// <summary>
+        /// Length of the individual file encryption options after encryption in bytes
+        /// </summary>
         public virtual ushort EncryptionOptionsSize => 1024;
+
+        /// <summary>
+        /// Length of metadata offsets in bytes
+        /// </summary>
         public virtual ushort MetadataOffsetsSize => 4096;
+
+        /// <summary>
+        /// Length of entire vault header in bytes
+        /// </summary>
         public virtual ushort HeaderSize => (ushort)(1 + SaltSize + sizeof(int) + EncryptionAlgorithm.GetEncryptionAlgorithmInfo[VaultEncryptionAlgorithm].Provider().EncryptionAlgorithm.ExtraEncryptionDataSize + sizeof(ushort) + MetadataOffsetsSize);
 
         private readonly IVaultSession _session;
@@ -239,6 +261,12 @@ namespace VaultCrypt
         }
 
         #region Vault header
+        /// <summary>
+        /// Reads salt from vault header
+        /// </summary>
+        /// <param name="stream">Stream to read from</param>
+        /// <returns>Salt</returns>
+        /// <exception cref="ArgumentNullException">Thrown when provided <paramref name="stream"/> is set to null value</exception>
         public byte[] ReadSalt(Stream stream)
         {
             ArgumentNullException.ThrowIfNull(stream);
@@ -257,6 +285,12 @@ namespace VaultCrypt
             }
         }
 
+        /// <summary>
+        /// Reads iteration number from vault header
+        /// </summary>
+        /// <param name="stream">Stream to read from</param>
+        /// <returns>Iteration number</returns>
+        /// <exception cref="ArgumentNullException">Thrown when provided <paramref name="stream"/> is set to null value</exception>
         public int ReadIterationsNumber(Stream stream)
         {
             ArgumentNullException.ThrowIfNull(stream);
@@ -274,6 +308,14 @@ namespace VaultCrypt
             }
         }
 
+        /// <summary>
+        /// Takes <see cref="Version"/>, <paramref name="salt"/> and <paramref name="iterations"/> and puts them into byte array resembling vault header
+        /// </summary>
+        /// <param name="salt">Salt used to derive vault key</param>
+        /// <param name="iterations">Iteration count used when deriving vault key</param>
+        /// <returns>Byte array </returns>
+        /// <exception cref="ArgumentNullException">Thrown when provided <paramref name="salt"/> is set to null value</exception>
+        /// <exception cref="ArgumentOutOfRangeException">Thrown when provided <paramref name="iterations"/> is set to negative or zero value</exception>"
         public byte[] PrepareVaultHeader(byte[] salt, int iterations)
         {
             ArgumentNullException.ThrowIfNull(salt);
@@ -298,8 +340,16 @@ namespace VaultCrypt
         #endregion
 
         #region Metadata offsets
+        /// <summary>
+        /// Decrypts and returns metadata offsets
+        /// </summary>
+        /// <param name="stream">Stream to read from</param>
+        /// <returns>Array of metadata offsets</returns>
+        /// <exception cref="ArgumentNullException">Thrown when provided <paramref name="stream"/> is set to null value</exception>
         public long[] ReadMetadataOffsets(Stream stream)
         {
+            ArgumentNullException.ThrowIfNull(stream);
+
             byte[] decrypted = null!;
             long[] offsets = null!;
             try
@@ -345,9 +395,10 @@ namespace VaultCrypt
         /// <summary>
         /// Adds new offset and writes encrypted offsets to vault
         /// </summary>
-        /// <param name="stream"></param>
-        /// <param name="newOffset"></param>
-        /// <exception cref="Exception"></exception>
+        /// <param name="stream">Stream to read and write to</param>
+        /// <param name="newOffset">New offset to add</param>
+        /// <exception cref="ArgumentNullException">Thrown when provided <paramref name="stream"/> is set to null</exception>
+        /// <exception cref="ArgumentOutOfRangeException">Thrown when provided <paramref name="newOffset"/> is set to negative or zero value</exception>
         public void AddAndSaveMetadataOffsets(Stream stream, long newOffset)
         {
             ArgumentNullException.ThrowIfNull(stream);
@@ -378,8 +429,9 @@ namespace VaultCrypt
         /// <summary>
         /// Removes offset at specified index and writes encrypted offsest to vault
         /// </summary>
-        /// <param name="stream"></param>
-        /// <param name="itemIndex"></param>
+        /// <param name="stream">Stream to read and write to</param>
+        /// <param name="itemIndex">Index of item to remove</param>
+        /// <exception cref="ArgumentNullException">Thrown when provided <paramref name="stream"/> is set to null</exception>
         public void RemoveAndSaveMetadataOffsets(Stream stream, ushort itemIndex)
         {
             ArgumentNullException.ThrowIfNull(stream);
@@ -408,6 +460,12 @@ namespace VaultCrypt
             return offsetsBytes;
         }
 
+        /// <summary>
+        /// Encrypts provided <paramref name="offsets"/> and replaces current metadata offsets in <paramref name="stream"/>
+        /// </summary>
+        /// <param name="stream">Stream to read and write to</param>
+        /// <param name="offsets">Metadata offsets to save</param>
+        /// <exception cref="ArgumentNullException">Thrown when provided <paramref name="stream"/> or <paramref name="offsets"/> are set to null</exception>
         public void SaveMetadataOffsets(Stream stream, long[] offsets)
         {
             ArgumentNullException.ThrowIfNull(stream);
@@ -461,11 +519,19 @@ namespace VaultCrypt
         }
         #endregion
 
-
+        /// <summary>
+        /// Reads <paramref name="length"/> from <paramref name="stream"/> starting at <paramref name="offset"/> and decrypts it
+        /// </summary>
+        /// <param name="stream">Stream to read from</param>
+        /// <param name="offset">Offset at where to start reading</param>
+        /// <param name="length">Length to read</param>
+        /// <returns>Decrypted data</returns>
+        /// <exception cref="ArgumentNullException">Thrown when provided <paramref name="stream"/> is null</exception>
+        /// <exception cref="ArgumentOutOfRangeException">Thrown when provided <paramref name="offset"/>, <paramref name="length"/> are set to negative, or <paramref name="length"/> is set to 0 </exception>
         public byte[] ReadAndDecryptData(Stream stream, long offset, int length)
         {
             ArgumentNullException.ThrowIfNull(stream);
-            ArgumentOutOfRangeException.ThrowIfNegativeOrZero(offset);
+            ArgumentOutOfRangeException.ThrowIfNegative(offset);
             ArgumentOutOfRangeException.ThrowIfNegativeOrZero(length);
 
             byte[] buffer = new byte[length];
@@ -481,6 +547,12 @@ namespace VaultCrypt
             }
         }
 
+        /// <summary>
+        /// Encrypts provided data using vault encryption algorithm
+        /// </summary>
+        /// <param name="data">Data to encrypt</param>
+        /// <returns>Encrypted data</returns>
+        /// <exception cref="ArgumentException">Thrown when provided empty data</exception>
         public byte[] VaultEncryption(ReadOnlyMemory<byte> data)
         {
             if (data.IsEmpty) throw new ArgumentException("Provided empty data", nameof(data));
@@ -494,6 +566,8 @@ namespace VaultCrypt
             if (data.IsEmpty) throw new ArgumentException("Provided empty data", nameof(data));
 
             var provider = EncryptionAlgorithm.GetEncryptionAlgorithmInfo[VaultEncryptionAlgorithm].Provider();
+            if (data.Length < provider.EncryptionAlgorithm.ExtraEncryptionDataSize) throw new ArgumentException("Provided data is too short", nameof(data));
+
             return provider.EncryptionAlgorithm.DecryptBytes(data.Span, _session.GetSlicedKey(provider.KeySize).Span);
         }
     }
