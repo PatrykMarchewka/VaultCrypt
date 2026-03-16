@@ -1,5 +1,6 @@
 using Newtonsoft.Json.Linq;
 using System;
+using System.Buffers.Binary;
 using System.Collections.Generic;
 using System.Linq;
 using System.Reflection;
@@ -114,6 +115,35 @@ namespace VaultCrypt.Tests
             salt ??= new byte[32];
             byte[] key = PasswordHelper.DeriveKey(password, salt, iterations);
             return CreateFilledSessionInstanceWithReader(key, version, vaultPath, encryptedFiles);
+        }
+
+        /// <summary>
+        /// Replaces values in <paramref name="session"/> with new ones read from <paramref name="vaultFS"/>
+        /// </summary>
+        /// <param name="session">Session to edit values of</param>
+        /// <param name="vaultFS">Stream to read new values from</param>
+        /// <param name="password">Password to decrypt data</param>
+        /// <returns>Session with new values</returns>
+        internal static IVaultSession SetVaultSessionFromStream(IVaultSession session, Stream vaultFS, byte[]? password = null)
+        {
+            vaultFS.Seek(0, SeekOrigin.Begin);
+
+            byte version = (byte)vaultFS.ReadByte();
+            IVaultReader reader =  CreateVaultRegistry(session).GetVaultReader(version);
+            byte[] salt = new byte[session.VAULT_READER.SaltSize];
+            vaultFS.Read(salt);
+            byte[] iterationBytes = new byte[4];
+            vaultFS.Read(iterationBytes);
+            int iterations = BinaryPrimitives.ReadInt32LittleEndian(iterationBytes);
+            NormalizedPath vaultPath = null!;
+            if (vaultFS is FileStream fs) vaultPath = NormalizedPath.From(fs.Name);
+            else vaultPath = NormalizedPath.From($"{Path.GetTempPath()}\\{Encoding.UTF8.GetString(RandomNumberGenerator.GetBytes(10))}.vlt");
+            //Create session clears EncryptedFilesList so we copy and then restore the copy via reflection
+            var encryptedFilesListCopy = session.ENCRYPTED_FILES.ToDictionary(item => item.Key, item => item.Value);
+            session.CreateSession(vaultPath, reader, password ??= new byte[16], salt, iterations);
+            typeof(VaultSession).GetProperty(nameof(VaultSession.ENCRYPTED_FILES))!.SetValue(session, encryptedFilesListCopy);
+
+            return session;
         }
 
         /// <summary>
