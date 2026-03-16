@@ -157,5 +157,95 @@ namespace VaultCrypt.Tests
             var registryConstructor = typeof(VaultRegistry).GetConstructor(BindingFlags.Instance | BindingFlags.NonPublic, new Type[] { typeof(IVaultSession) });
             return (VaultRegistry)registryConstructor!.Invoke(new object[] { session });
         }
+
+        /// <summary>
+        /// Creates vault file in temp folder with random name. Metadata is encrypted using AES-256-GCM with an empty 16 byte array as password<br/>
+        /// For compatibility it defaults to same values as <see cref="CreateFilledSessionInstance(byte[]?, NormalizedPath?, Dictionary{long, EncryptedFileInfo}?, IVaultReader?)"/>
+        /// Default vault file information:<br/>
+        /// Version (1 byte) = 0<br/>
+        /// Salt (32 bytes) = Array of zeroes<br/>
+        /// Iterations (4 bytes) = 1000 (Little endian)<br/>
+        /// Encrypted metadata offsets[IV (12 bytes), Tag (16 bytes), File count (2 bytes), Metadata offsets (4096 bytes)]<br/>
+        /// Password used to encrypt (16 bytes) = Array of zeroes
+        /// </summary>
+        /// <returns>Path to the file</returns>
+        internal static NormalizedPath CreateVaultFile(byte version = 0, byte[]? password = null, byte[]? salt = null, int iterations = 1000)
+        {
+            var path = NormalizedPath.From(Path.GetTempPath());
+            var fileName = Path.GetRandomFileName();
+            var provider = EncryptionAlgorithm.EncryptionAlgorithmInfo.AES256GCM.Provider();
+
+            //v0 = [version (1byte)][salt (32 bytes)][iterations (4 bytes)] + [metadata offsets (28 bytes for AES decryption + 2 bytes ushort number +  MetadataOffsetsSize (4KB (4096 bytes))]...
+            using FileStream fs = new FileStream($"{path}\\{fileName}.vlt", FileMode.CreateNew, FileAccess.Write);
+            fs.WriteByte(0);
+            fs.Write(salt ??= new byte[32]);
+            byte[] iterationBytes = new byte[4];
+            BinaryPrimitives.WriteInt32LittleEndian(iterationBytes, iterations);
+            fs.Write(iterationBytes);
+            var key = PasswordHelper.DeriveKey(password ??= new byte[16], salt ??= new byte[32], 1000)[..provider.KeySize];
+            byte[] encryptedEmptyMetadata = provider.EncryptionAlgorithm.EncryptBytes(new byte[sizeof(ushort) + 4096], key);
+            fs.Write(encryptedEmptyMetadata);
+
+            return NormalizedPath.From($"{path}\\{fileName}.vlt");
+        }
+
+        /// <summary>
+        /// Creates vault file in temp folder with random name by calling <see cref="CreateVaultFile"/>. Adds <paramref name="numberOfFiles"/> of randomly generated file encryption options inside.
+        /// <br/>
+        /// Simulates encrypted files by writing random bytes right after the encryption options
+        /// </summary>
+        /// <param name="numberOfFiles"></param>
+        /// <returns>Tuple containing path to the file and array of <see cref="EncryptionOptions.FileEncryptionOptions"/></returns>
+        internal static (NormalizedPath, EncryptionOptions.FileEncryptionOptions[]) CreateVaultFileWithEncryptedFileList(IVaultSession vaultSessionWithReader = null!, byte numberOfFiles = 1, byte[]? password = null, byte[]? salt = null, int iterations = 1000)
+        {
+            password ??= new byte[16];
+            salt ??= new byte[vaultSessionWithReader.VAULT_READER.SaltSize];
+            var key = PasswordHelper.DeriveKey(password, salt, iterations);
+            vaultSessionWithReader ??= CreateFilledSessionInstanceWithReader(key, 0);
+            var path = CreateVaultFile(0, password, salt);
+            var fileEncryptionOptions = new EncryptionOptions.FileEncryptionOptions[numberOfFiles];
+            var offsets = new long[numberOfFiles];
+            var service = new EncryptionOptionsService(vaultSessionWithReader);
+            var provider = EncryptionAlgorithm.EncryptionAlgorithmInfo.AES256GCM.Provider();
+
+
+            using FileStream fs = new FileStream(path!, FileMode.Open, FileAccess.ReadWrite);
+            SetVaultSessionFromStream(vaultSessionWithReader, fs, password);
+            //Replace the mocked list with real one
+            vaultSessionWithReader.ENCRYPTED_FILES.Clear();
+            for (int i = 0; i < numberOfFiles; i++)
+            {
+                fs.Seek(0, SeekOrigin.End);
+
+                //Add to encrypted files list
+                byte[] fileNameBytes = RandomNumberGenerator.GetBytes(100);
+                ulong fileSize = (ulong)RandomNumberGenerator.GetInt32(100);
+                byte algorithmID = (byte)RandomNumberGenerator.GetInt32(32);
+                vaultSessionWithReader.ENCRYPTED_FILES.Add(fs.Position, new EncryptedFileInfo(Encoding.UTF8.GetString(fileNameBytes), fileSize, EncryptionAlgorithm.GetEncryptionAlgorithmInfo[algorithmID]));
+
+                //Write encryption options
+                offsets[i] = fs.Position;
+                fileEncryptionOptions[i] = new EncryptionOptions.FileEncryptionOptions(version: 0, fileNameBytes, fileSize, algorithmID, chunked: false, chunkInformation: null);
+                byte[] encrypted = service.EncryptAndPadFileEncryptionOptions(fileEncryptionOptions[i]);
+                fs.Write(encrypted);
+
+                //Write the 'encrypted' file
+                fs.Write(RandomNumberGenerator.GetBytes((int)fileSize));
+            }
+
+            byte[] metadataOffsets = new byte[sizeof(ushort) + 4096];
+            BinaryPrimitives.WriteUInt16LittleEndian(metadataOffsets.AsSpan(), numberOfFiles);
+            Span<byte> offsetBytes = stackalloc byte[8];
+            for (int i = 0; i < numberOfFiles; i++)
+            {
+                BinaryPrimitives.WriteInt64LittleEndian(metadataOffsets.AsSpan(2 + (i * 8), 8), offsets[i]);
+            }
+            byte[] encryptedMetadataOffsets = provider.EncryptionAlgorithm.EncryptBytes(metadataOffsets, key[..provider.KeySize]);
+            //v0 = [version (1byte)][salt (32 bytes)][iterations (4 bytes)] + [metadata offsets (28 bytes for AES decryption + 2 bytes ushort number +  MetadataOffsetsSize (4KB (4096 bytes))]...
+            fs.Seek(1 + 32 + 4, SeekOrigin.Begin); //Seeking to where offsets are placed
+            fs.Write(encryptedMetadataOffsets);
+
+            return (path, fileEncryptionOptions);
+        }
     }
 }
