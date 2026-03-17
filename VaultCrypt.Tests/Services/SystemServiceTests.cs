@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
@@ -19,8 +19,9 @@ namespace VaultCrypt.Tests.Services
         [Fact]
         void CheckFreeSpaceDoesNotThrowForValidValues()
         {
-            var path = Path.GetTempFileName();
-            _service.CheckFreeSpace(NormalizedPath.From(path));
+            var path = TestsHelper.CreateTemporaryFile(0);
+            _service.CheckFreeSpace(NormalizedPath.From(path!));
+            File.Delete(path!);
         }
 
         [Fact]
