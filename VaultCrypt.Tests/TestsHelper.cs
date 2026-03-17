@@ -247,5 +247,23 @@ namespace VaultCrypt.Tests
 
             return (path, fileEncryptionOptions);
         }
+
+        /// <summary>
+        /// Returns KVP pointing to encrypted file from the <see cref="IVaultSession.ENCRYPTED_FILES"/> at <paramref name="position"/>
+        /// </summary>
+        /// <param name="position">Zero based indexed position of KVP</param>
+        /// <param name="vaultFS">Stream to vault</param>
+        /// <param name="vaultSessionWithReader">Vault session with reader tied to <paramref name="vaultFS"/></param>
+        /// <returns>KVP containing offset and information about encrypted file</returns>
+        public static KeyValuePair<long, EncryptedFileInfo> GetOffsetKVPFromVaultAtPosition(int position, Stream vaultFS, IVaultSession vaultSessionWithReader)
+        {
+            long[] offsets = vaultSessionWithReader.VAULT_READER.ReadMetadataOffsets(vaultFS);
+            long offsetToGet = offsets[position];
+            EncryptionOptionsService service = new EncryptionOptionsService(vaultSessionWithReader);
+            var fileEncryptionOptions = service.GetDecryptedFileEncryptionOptions(vaultFS, offsetToGet);
+            EncryptedFileInfo fileInfoToGet = new EncryptedFileInfo(Encoding.UTF8.GetString(fileEncryptionOptions.FileName), fileEncryptionOptions.FileSize, EncryptionAlgorithm.GetEncryptionAlgorithmInfo[fileEncryptionOptions.EncryptionAlgorithm]);
+
+            return new KeyValuePair<long, EncryptedFileInfo>(offsetToGet, fileInfoToGet);
+        }
     }
 }
