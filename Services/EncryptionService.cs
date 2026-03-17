@@ -15,7 +15,7 @@ namespace VaultCrypt.Services
         public Task Encrypt(EncryptionAlgorithm.EncryptionAlgorithmInfo algorithm, ushort chunkSizeInMB, NormalizedPath filePath, ProgressionContext context);
     }
 
-    internal class EncryptionService : IEncryptionService
+    public class EncryptionService : IEncryptionService
     {
         private readonly IFileService _fileService;
         private readonly IEncryptionOptionsService _encryptionOptionsService;
@@ -32,8 +32,9 @@ namespace VaultCrypt.Services
 
         public async Task Encrypt(EncryptionAlgorithm.EncryptionAlgorithmInfo algorithm, ushort chunkSizeInMB, NormalizedPath filePath, ProgressionContext context)
         {
+            ArgumentNullException.ThrowIfNull(algorithm);
             ArgumentOutOfRangeException.ThrowIfZero(chunkSizeInMB);
-            ArgumentNullException.ThrowIfNull(filePath);
+            ArgumentNullException.ThrowIfNullOrWhiteSpace(filePath);
             ArgumentNullException.ThrowIfNull(context);
 
             _systemService.CheckFreeSpace(filePath);
