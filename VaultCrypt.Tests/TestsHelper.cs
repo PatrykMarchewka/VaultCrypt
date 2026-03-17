@@ -20,11 +20,11 @@ namespace VaultCrypt.Tests
         /// </summary>
         /// <param name="size">Size of the file to create</param>
         /// <returns>Path to the temporary file</returns>
-        internal static string CreateTemporaryFile(int size)
+        internal static NormalizedPath CreateTemporaryFile(int size)
         {
             var path = Path.GetTempFileName();
             File.WriteAllBytes(path, RandomNumberGenerator.GetBytes(size));
-            return path;
+            return NormalizedPath.From(path);
         }
 
         /// <summary>
