@@ -18,7 +18,7 @@ namespace VaultCrypt.Tests.Services
         public EncryptionServiceTests()
         {
             _fileService = new VaultCrypt.Services.FileService();
-            _session = TestsHelper.CreateFilledSessionInstanceWithReader(); //TODO: Check if reader needed
+            _session = TestsHelper.CreateFilledSessionInstanceWithReader();
             _encryptionOptionsService = new VaultCrypt.Services.EncryptionOptionsService(_session);
             _systemService = new VaultCrypt.Services.SystemService(_session);
             _service = new VaultCrypt.Services.EncryptionService(_fileService, _encryptionOptionsService, _session, _systemService);

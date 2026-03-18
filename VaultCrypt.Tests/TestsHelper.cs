@@ -190,62 +190,88 @@ namespace VaultCrypt.Tests
         }
 
         /// <summary>
-        /// Creates vault file in temp folder with random name by calling <see cref="CreateVaultFile"/>. Adds <paramref name="numberOfFiles"/> of randomly generated file encryption options inside.
+        /// Creates vault file in temp folder with random name by calling <see cref="CreateVaultFile"/> and writes encrypted <paramref name="filesToEncrypt"/> to the vault.
         /// <br/>
-        /// Simulates encrypted files by writing random bytes right after the encryption options
+        /// <paramref name="filesToEncrypt"/> are encrypted using random encryption with ID between 1 and 32
+        /// <br/>
+        /// Additionally updates <paramref name="vaultSessionWithReader"/> with information from new vault
         /// </summary>
-        /// <param name="numberOfFiles"></param>
+        /// <param name="filesToEncrypt"></param>
+        /// <param name="vaultSessionWithReader"></param>
+        /// <param name="password"></param>
+        /// <param name="salt"></param>
+        /// <param name="iterations"></param>
         /// <returns>Tuple containing path to the file and array of <see cref="EncryptionOptions.FileEncryptionOptions"/></returns>
-        internal static (NormalizedPath, EncryptionOptions.FileEncryptionOptions[]) CreateVaultFileWithEncryptedFileList(IVaultSession vaultSessionWithReader = null!, byte numberOfFiles = 1, byte[]? password = null, byte[]? salt = null, int iterations = 1000)
+        internal static (NormalizedPath, EncryptionOptions.FileEncryptionOptions[]) CreateVaultFileWithEncryptedFileList(byte[][] filesToEncrypt, IVaultSession vaultSessionWithReader = null!, byte[]? password = null, byte[]? salt = null, int iterations = 1000)
         {
             password ??= new byte[16];
             salt ??= new byte[vaultSessionWithReader.VAULT_READER.SaltSize];
             var key = PasswordHelper.DeriveKey(password, salt, iterations);
             vaultSessionWithReader ??= CreateFilledSessionInstanceWithReader(key, 0);
             var path = CreateVaultFile(0, password, salt);
-            var fileEncryptionOptions = new EncryptionOptions.FileEncryptionOptions[numberOfFiles];
-            var offsets = new long[numberOfFiles];
+            var fileEncryptionOptions = new EncryptionOptions.FileEncryptionOptions[filesToEncrypt.Length];
+            var offsets = new long[filesToEncrypt.Length];
             var service = new EncryptionOptionsService(vaultSessionWithReader);
-            var provider = EncryptionAlgorithm.EncryptionAlgorithmInfo.AES256GCM.Provider();
 
 
             using FileStream fs = new FileStream(path!, FileMode.Open, FileAccess.ReadWrite);
             SetVaultSessionFromStream(vaultSessionWithReader, fs, password);
             //Replace the mocked list with real one
             vaultSessionWithReader.ENCRYPTED_FILES.Clear();
-            for (int i = 0; i < numberOfFiles; i++)
+            for (int i = 0; i < filesToEncrypt.Length; i++)
             {
                 fs.Seek(0, SeekOrigin.End);
 
                 //Add to encrypted files list
                 byte[] fileNameBytes = RandomNumberGenerator.GetBytes(100);
-                ulong fileSize = (ulong)RandomNumberGenerator.GetInt32(100);
-                byte algorithmID = (byte)RandomNumberGenerator.GetInt32(32);
-                vaultSessionWithReader.ENCRYPTED_FILES.Add(fs.Position, new EncryptedFileInfo(Encoding.UTF8.GetString(fileNameBytes), fileSize, EncryptionAlgorithm.GetEncryptionAlgorithmInfo[algorithmID]));
+                var algorithm = EncryptionAlgorithm.GetEncryptionAlgorithmInfo[(byte)RandomNumberGenerator.GetInt32(32)];
+
+                ulong fileSize = (ulong)(filesToEncrypt[i].Length + algorithm.Provider().EncryptionAlgorithm.ExtraEncryptionDataSize);
+                vaultSessionWithReader.ENCRYPTED_FILES.Add(fs.Position, new EncryptedFileInfo(Encoding.UTF8.GetString(fileNameBytes), fileSize, algorithm));
 
                 //Write encryption options
                 offsets[i] = fs.Position;
-                fileEncryptionOptions[i] = new EncryptionOptions.FileEncryptionOptions(version: 0, fileNameBytes, fileSize, algorithmID, chunked: false, chunkInformation: null);
+                fileEncryptionOptions[i] = new EncryptionOptions.FileEncryptionOptions(version: 0, fileNameBytes, fileSize, algorithm.ID, chunked: false, chunkInformation: null);
                 byte[] encrypted = service.EncryptAndPadFileEncryptionOptions(fileEncryptionOptions[i]);
                 fs.Write(encrypted);
 
-                //Write the 'encrypted' file
-                fs.Write(RandomNumberGenerator.GetBytes((int)fileSize));
+                //Write the encrypted file
+                fs.Write(algorithm.Provider().EncryptionAlgorithm.EncryptBytes(filesToEncrypt[i], key[..algorithm.Provider().KeySize]));
             }
 
             byte[] metadataOffsets = new byte[sizeof(ushort) + 4096];
-            BinaryPrimitives.WriteUInt16LittleEndian(metadataOffsets.AsSpan(), numberOfFiles);
+            BinaryPrimitives.WriteUInt16LittleEndian(metadataOffsets.AsSpan(), (ushort)filesToEncrypt.Length);
             Span<byte> offsetBytes = stackalloc byte[8];
-            for (int i = 0; i < numberOfFiles; i++)
+            for (int i = 0; i < filesToEncrypt.Length; i++)
             {
                 BinaryPrimitives.WriteInt64LittleEndian(metadataOffsets.AsSpan(2 + (i * 8), 8), offsets[i]);
             }
-            byte[] encryptedMetadataOffsets = provider.EncryptionAlgorithm.EncryptBytes(metadataOffsets, key[..provider.KeySize]);
+            byte[] encryptedMetadataOffsets = vaultSessionWithReader.VAULT_READER.VaultEncryption(metadataOffsets);
             //v0 = [version (1byte)][salt (32 bytes)][iterations (4 bytes)] + [metadata offsets (28 bytes for AES decryption + 2 bytes ushort number +  MetadataOffsetsSize (4KB (4096 bytes))]...
             fs.Seek(1 + 32 + 4, SeekOrigin.Begin); //Seeking to where offsets are placed
             fs.Write(encryptedMetadataOffsets);
 
             return (path, fileEncryptionOptions);
+        }
+
+        /// <summary>
+        /// Creates vault file in temp folder with random name by calling <see cref="CreateVaultFile"/>. Creates <paramref name="numberOfFiles"/> of randomly generated files to encrypt then calls <see cref="CreateVaultFileWithEncryptedFileList(byte[][], IVaultSession, byte[]?, byte[]?, int)"/>
+        /// <br/>
+        /// Each of randomly generated files is encrypted seperately using random encryption with ID between 1 and 32
+        /// <br/>
+        /// Additionally updates <paramref name="vaultSessionWithReader"/> with information from new vault
+        /// </summary>
+        /// <param name="numberOfFiles">Number of files to randomly generate to encrypt</param>
+        /// <returns>Tuple containing path to the file and array of <see cref="EncryptionOptions.FileEncryptionOptions"/></returns>
+        internal static (NormalizedPath, EncryptionOptions.FileEncryptionOptions[]) CreateVaultFileWithEncryptedFileList(byte numberOfFiles = 1, IVaultSession vaultSessionWithReader = null!, byte[]? password = null, byte[]? salt = null, int iterations = 1000)
+        {
+            byte[][] filesToEncrypt = new byte[numberOfFiles][];
+            for (int i = 0; i < numberOfFiles; i++)
+            {
+                int fileSize = RandomNumberGenerator.GetInt32(100);
+                filesToEncrypt[i] = RandomNumberGenerator.GetBytes(fileSize);
+            }
+            return CreateVaultFileWithEncryptedFileList(filesToEncrypt, vaultSessionWithReader, password, salt, iterations);
         }
 
         /// <summary>

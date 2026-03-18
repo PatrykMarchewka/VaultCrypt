@@ -133,7 +133,7 @@ namespace VaultCrypt.Tests.Services
         {
             _session.ENCRYPTED_FILES.Clear();
             byte expectedFileListCount = (byte)RandomNumberGenerator.GetInt32(10);
-            var vaultInformation = TestsHelper.CreateVaultFileWithEncryptedFileList(_session, expectedFileListCount);
+            var vaultInformation = TestsHelper.CreateVaultFileWithEncryptedFileList(expectedFileListCount, _session);
 
             using (FileStream fs = new FileStream(vaultInformation.Item1!, FileMode.Open, FileAccess.Read))
             {
@@ -159,7 +159,7 @@ namespace VaultCrypt.Tests.Services
         void TrimVaultTrimsVaultAndSavesItToAFile()
         {
             byte[] password = Encoding.UTF8.GetBytes("TrimVaultTrims");
-            (NormalizedPath, EncryptionOptions.FileEncryptionOptions[]) tuple = TestsHelper.CreateVaultFileWithEncryptedFileList(_session, 10, password);
+            (NormalizedPath, EncryptionOptions.FileEncryptionOptions[]) tuple = TestsHelper.CreateVaultFileWithEncryptedFileList(10, _session, password);
             long oldVaultSize = new FileInfo(tuple.Item1!).Length;
             //Trim vault uses vault provided at VaultSession.VAULTPATH where VaultSession is the one provided when creating service
             using (FileStream fs = new FileStream(tuple.Item1.Value, FileMode.Open, FileAccess.Read))
@@ -180,7 +180,7 @@ namespace VaultCrypt.Tests.Services
         void TrimVaultReturnsSameVaultIfThereIsNothingToTrim()
         {
             byte[] password = Encoding.UTF8.GetBytes("TrimVaultReturnsSameVaultIfThereIsNothingToTrim");
-            (NormalizedPath, EncryptionOptions.FileEncryptionOptions[]) tuple = TestsHelper.CreateVaultFileWithEncryptedFileList(_session, 10, password);
+            (NormalizedPath, EncryptionOptions.FileEncryptionOptions[]) tuple = TestsHelper.CreateVaultFileWithEncryptedFileList(10, _session, password);
             //Trim vault uses vault provided at VaultSession.VAULTPATH where VaultSession is the one provided when creating service
             using (FileStream fs = new FileStream(tuple.Item1.Value, FileMode.Open, FileAccess.Read))
             {
@@ -203,7 +203,7 @@ namespace VaultCrypt.Tests.Services
         [Fact]
         void DeleteFileFromVaultZeroesOutFile()
         {
-            (NormalizedPath, EncryptionOptions.FileEncryptionOptions[]) tuple = TestsHelper.CreateVaultFileWithEncryptedFileList(_session, 10);
+            (NormalizedPath, EncryptionOptions.FileEncryptionOptions[]) tuple = TestsHelper.CreateVaultFileWithEncryptedFileList(10, _session);
             var offset = _session.ENCRYPTED_FILES.First().Key;
             _service.DeleteFileFromVault(_session.ENCRYPTED_FILES.First(), new ProgressionContext());
 
@@ -222,7 +222,7 @@ namespace VaultCrypt.Tests.Services
         [Fact]
         void DeleteFileFromVaultTrimsVault()
         {
-            (NormalizedPath, EncryptionOptions.FileEncryptionOptions[]) tuple = TestsHelper.CreateVaultFileWithEncryptedFileList(_session, 10);
+            (NormalizedPath, EncryptionOptions.FileEncryptionOptions[]) tuple = TestsHelper.CreateVaultFileWithEncryptedFileList(10, _session);
             long oldVaultSize = new FileInfo(tuple.Item1!).Length;
 
             _service.DeleteFileFromVault(_session.ENCRYPTED_FILES.Last(), new ProgressionContext());
