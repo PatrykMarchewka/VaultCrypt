@@ -12,7 +12,7 @@ using VaultCrypt.Services;
 
 namespace VaultCrypt.ViewModels
 {
-    internal class EncryptFileViewModel : INotifyPropertyChanged, INavigated, IViewModel, INavigatingViewModel
+    public class EncryptFileViewModel : INotifyPropertyChanged, INavigated, IViewModel, INavigatingViewModel
     {
         private readonly IEncryptionService _encryptionService;
 
@@ -69,7 +69,7 @@ namespace VaultCrypt.ViewModels
             EncryptCommand = new RelayCommand(async _ => await Encrypt(filePath!), null!);
         }
 
-        private async Task Encrypt(NormalizedPath filePath)
+        public async Task Encrypt(NormalizedPath filePath)
         {
             var context = new ProgressionContext();
             NavigationRequested?.Invoke(new NavigateToProgressRequest(context));
@@ -87,5 +87,5 @@ namespace VaultCrypt.ViewModels
         public event Action<NavigationRequest> NavigationRequested = null!;
     }
 
-    internal record ChunkSizePreset(string Name, ushort SizeInMB);
+    public record ChunkSizePreset(string Name, ushort SizeInMB);
 }

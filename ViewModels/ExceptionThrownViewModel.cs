@@ -9,7 +9,7 @@ using VaultCrypt.Services;
 
 namespace VaultCrypt.ViewModels
 {
-    internal class ExceptionThrownViewModel : INotifyPropertyChanged, INavigated, IViewModel, INavigatingViewModel
+    public class ExceptionThrownViewModel : INotifyPropertyChanged, INavigated, IViewModel, INavigatingViewModel
     {
         private string _exceptionMessage = null!;
         public string ExceptionMessage

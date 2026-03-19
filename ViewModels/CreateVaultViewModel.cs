@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.ComponentModel;
 using System.Linq;
@@ -12,7 +12,7 @@ using VaultCrypt.Services;
 
 namespace VaultCrypt.ViewModels
 {
-    internal class CreateVaultViewModel : INotifyPropertyChanged, IViewModel, INavigatingViewModel
+    public class CreateVaultViewModel : INotifyPropertyChanged, IViewModel, INavigatingViewModel
     {
         private readonly IFileDialogService _fileDialogService;
         private readonly IVaultService _vaultService;
@@ -77,7 +77,7 @@ namespace VaultCrypt.ViewModels
         public ICommand SelectFolderCommand { get; }
         public ICommand CreateVaultCommand { get; }
 
-        internal CreateVaultViewModel(IFileDialogService fileDialogService, IVaultService vaultService)
+        public CreateVaultViewModel(IFileDialogService fileDialogService, IVaultService vaultService)
         {
             this._fileDialogService = fileDialogService;
             this._vaultService = vaultService;
@@ -88,7 +88,7 @@ namespace VaultCrypt.ViewModels
             CreateVaultCommand = new RelayCommand(_ => CreateVault());
         }
 
-        internal void SelectFolder()
+        public void SelectFolder()
         {
             string? path = _fileDialogService.OpenFolder("Select folder");
 
@@ -98,7 +98,7 @@ namespace VaultCrypt.ViewModels
             }
         }
 
-        internal void CreateVault()
+        public void CreateVault()
         {
             ValidationHelper.NotEmptyString(VaultFolder, "Vault folder");
             ValidationHelper.NotEmptyString(VaultName, "Vault name");
@@ -125,7 +125,7 @@ namespace VaultCrypt.ViewModels
         public event Action<NavigationRequest> NavigationRequested = null!;
     }
 
-    internal record IterationPreset(string Name, int Iterations);
+    public record IterationPreset(string Name, int Iterations);
 
 
 

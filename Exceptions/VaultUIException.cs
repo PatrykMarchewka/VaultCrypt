@@ -6,7 +6,7 @@ using System.Threading.Tasks;
 
 namespace VaultCrypt.Exceptions
 {
-    internal class VaultUIException : Exception
+    public class VaultUIException : Exception
     {
         internal VaultUIException(string message) : base(message) { }
     }

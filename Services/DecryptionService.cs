@@ -33,8 +33,8 @@ namespace VaultCrypt.Services
 
         public async Task Decrypt(long metadataOffset, NormalizedPath filePath, ProgressionContext context)
         {
-            ArgumentOutOfRangeException.ThrowIfNegative(metadataOffset);
-            ArgumentNullException.ThrowIfNull(filePath);
+            ArgumentOutOfRangeException.ThrowIfLessThan(metadataOffset, _session.VAULT_READER.MetadataOffsetsSize);
+            ArgumentNullException.ThrowIfNullOrWhiteSpace(filePath);
             ArgumentNullException.ThrowIfNull(context);
 
             await using FileStream vaultFS = new FileStream(_session.VAULTPATH!, FileMode.Open, FileAccess.Read);

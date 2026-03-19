@@ -10,7 +10,7 @@ using System.Windows.Input;
 
 namespace VaultCrypt.ViewModels
 {
-    internal class MainWindowViewModel : INotifyPropertyChanged, IViewModel
+    public class MainWindowViewModel : INotifyPropertyChanged, IViewModel
     {
         private IViewModel _currentView = null!;
         public IViewModel CurrentView
@@ -24,7 +24,7 @@ namespace VaultCrypt.ViewModels
             }
         }
 
-        internal MainWindowViewModel()
+        public MainWindowViewModel()
         {
 
         }

@@ -11,7 +11,7 @@ using VaultCrypt.Services;
 
 namespace VaultCrypt.ViewModels
 {
-    internal class PasswordInputViewModel : INotifyPropertyChanged, INavigated, IViewModel, INavigatingViewModel
+    public class PasswordInputViewModel : INotifyPropertyChanged, INavigated, IViewModel, INavigatingViewModel
     {
         private NormalizedPath? VaultPath;
 
@@ -29,22 +29,19 @@ namespace VaultCrypt.ViewModels
 
         public ICommand GoBackCommand { get; }
         public ICommand OpenVaultCommand { get; }
-        internal PasswordInputViewModel()
+        public PasswordInputViewModel()
         {
             GoBackCommand = new RelayCommand(_ => NavigationRequested?.Invoke(new NavigateToMainRequest()));
             OpenVaultCommand = new RelayCommand(_ => OpenVault());
         }
 
-        private void OpenVault()
+        public void OpenVault()
         {
             ValidationHelper.NotEmptySecureString(Password, "Password");
 
             NavigationRequested?.Invoke(new NavigateToOpenVaultRequest(Password, VaultPath!));
             this.Password.Clear();
         }
-
-        
-
 
         public void OnNavigatedTo(object? parameters)
         {
