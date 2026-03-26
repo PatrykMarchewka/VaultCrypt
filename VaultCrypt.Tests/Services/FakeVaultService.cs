@@ -19,7 +19,7 @@ namespace VaultCrypt.Tests.Services
 
         public void CreateVault(NormalizedPath folderPath, string vaultName, byte[] password, int iterations) => CreateVaultWasCalled = true;
 
-        public void DeleteFileFromVault(KeyValuePair<long, EncryptedFileInfo> FileMetadataEntry, ProgressionContext context) => DeleteFileFromVaultWasCalled = true;
+        public void DeleteFileFromVault(long offset, ProgressionContext context) => DeleteFileFromVaultWasCalled = true;
 
         public void RefreshEncryptedFilesList(Stream vaultFS) => RefreshEncryptedFilesListWasCalled = true;
 

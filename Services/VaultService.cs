@@ -14,7 +14,7 @@ namespace VaultCrypt.Services
         public void CreateVault(NormalizedPath folderPath, string vaultName, byte[] password, int iterations);
         public void CreateSessionFromFile(byte[] password, NormalizedPath path);
         public void TrimVault(ProgressionContext context);
-        public void DeleteFileFromVault(KeyValuePair<long, EncryptedFileInfo> FileMetadataEntry, ProgressionContext context);
+        public void DeleteFileFromVault(long offset, ProgressionContext context);
         public void RefreshEncryptedFilesList(Stream vaultFS);
     }
 
@@ -236,29 +236,29 @@ namespace VaultCrypt.Services
             context.Progress.Report(new ProgressStatus(fileListCount + 1, fileListCount + 1));
         }
 
-        public void DeleteFileFromVault(KeyValuePair<long, EncryptedFileInfo> FileMetadataEntry, ProgressionContext context)
+        public void DeleteFileFromVault(long offset, ProgressionContext context)
         {
-            ArgumentOutOfRangeException.ThrowIfNegative(FileMetadataEntry.Key);
+            ArgumentOutOfRangeException.ThrowIfNegative(offset);
             ArgumentNullException.ThrowIfNull(context);
 
 
             using FileStream vaultFS = new FileStream(_session.VAULTPATH!, FileMode.Open, FileAccess.ReadWrite);
             var fileList = _session.ENCRYPTED_FILES.ToList();
             //If the file is at the end, just trim the entire file, otherwise zero out the block
-            if (_session.ENCRYPTED_FILES.Last().Equals(FileMetadataEntry))
+            if (_session.ENCRYPTED_FILES.Last().Key == offset)
             {
-                vaultFS.SetLength(FileMetadataEntry.Key);
+                vaultFS.SetLength(offset);
             }
             else
             {
                 //Calculate length incase of partially written file
                 var encryptionMetadataSize = _session.VAULT_READER.EncryptionOptionsSize;
-                int currentKey = fileList.FindIndex(file => file.Key == FileMetadataEntry.Key);
+                int currentKey = fileList.FindIndex(file => file.Key == offset);
                 EncryptionOptions.FileEncryptionOptions encryptionOptions = null!;
                 ulong length = 0;
                 try
                 {
-                    encryptionOptions = _encryptionOptionsService.GetDecryptedFileEncryptionOptions(vaultFS, FileMetadataEntry.Key);
+                    encryptionOptions = _encryptionOptionsService.GetDecryptedFileEncryptionOptions(vaultFS, offset);
                     length = Math.Min(encryptionOptions.FileSize + (ulong)encryptionMetadataSize, (ulong)(fileList[currentKey + 1].Key - fileList[currentKey].Key));
                 }
                 catch (Exception)
@@ -271,9 +271,9 @@ namespace VaultCrypt.Services
                     if (encryptionOptions is not null) encryptionOptions.Dispose();
                 }
 
-                _fileService.ZeroOutPartOfFile(vaultFS, FileMetadataEntry.Key, length);
+                _fileService.ZeroOutPartOfFile(vaultFS, offset, length);
             }
-            _session.VAULT_READER.RemoveAndSaveMetadataOffsets(vaultFS, checked((ushort)fileList.FindIndex(file => file.Equals(FileMetadataEntry))));
+            _session.VAULT_READER.RemoveAndSaveMetadataOffsets(vaultFS, checked((ushort)fileList.FindIndex(file => file.Key == offset)));
             context.Progress.Report(new ProgressStatus(1, 1));
         }
     }

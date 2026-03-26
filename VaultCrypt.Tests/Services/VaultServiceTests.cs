@@ -205,7 +205,7 @@ namespace VaultCrypt.Tests.Services
         {
             (NormalizedPath, EncryptionOptions.FileEncryptionOptions[]) tuple = TestsHelper.CreateVaultFileWithEncryptedFileList(10, _session);
             var offset = _session.ENCRYPTED_FILES.First().Key;
-            _service.DeleteFileFromVault(_session.ENCRYPTED_FILES.First(), new ProgressionContext());
+            _service.DeleteFileFromVault(_session.ENCRYPTED_FILES.First().Key, new ProgressionContext());
 
             byte[] actual = new byte[_session.VAULT_READER.EncryptionOptionsSize];
             using (FileStream fs = new FileStream(tuple.Item1.Value, FileMode.Open, FileAccess.Read))
@@ -225,7 +225,7 @@ namespace VaultCrypt.Tests.Services
             (NormalizedPath, EncryptionOptions.FileEncryptionOptions[]) tuple = TestsHelper.CreateVaultFileWithEncryptedFileList(10, _session);
             long oldVaultSize = new FileInfo(tuple.Item1!).Length;
 
-            _service.DeleteFileFromVault(_session.ENCRYPTED_FILES.Last(), new ProgressionContext());
+            _service.DeleteFileFromVault(_session.ENCRYPTED_FILES.Last().Key, new ProgressionContext());
 
             long newVaultSize = new FileInfo(tuple.Item1!).Length;
 
@@ -237,13 +237,13 @@ namespace VaultCrypt.Tests.Services
         [Fact]
         void DeleteFileThrowsForNullValues()
         {
-            Assert.Throws<ArgumentNullException>(() => _service.DeleteFileFromVault(new KeyValuePair<long, EncryptedFileInfo>(1, null!), null!));
+            Assert.Throws<ArgumentNullException>(() => _service.DeleteFileFromVault(1, null!));
         }
 
         [Fact]
         void DeleteFileThrowsForNegativeValues()
         {
-            Assert.Throws<ArgumentOutOfRangeException>(() => _service.DeleteFileFromVault(new KeyValuePair<long, EncryptedFileInfo>(-1, null!), new ProgressionContext()));
+            Assert.Throws<ArgumentOutOfRangeException>(() => _service.DeleteFileFromVault(-1, new ProgressionContext()));
         }
     }
 }
