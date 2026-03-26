@@ -35,6 +35,7 @@ namespace VaultCrypt.Services
             ArgumentNullException.ThrowIfNull(algorithm);
             ArgumentOutOfRangeException.ThrowIfZero(chunkSizeInMB);
             ArgumentNullException.ThrowIfNullOrWhiteSpace(filePath);
+            if (new FileInfo(filePath!).Length == 0) throw new VaultException(VaultException.ErrorContext.Encrypt, VaultException.ErrorReason.EmptyFile);
             ArgumentNullException.ThrowIfNull(context);
 
             _systemService.CheckFreeSpace(filePath);
