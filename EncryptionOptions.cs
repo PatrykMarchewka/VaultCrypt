@@ -71,7 +71,7 @@ namespace VaultCrypt
                 try
                 {
                     int currentOffset = 0;
-                    buffer[currentOffset++] = 0;
+                    buffer[currentOffset++] = encryptionOptions.Version;
                     BinaryPrimitives.WriteUInt16LittleEndian(buffer.AsSpan(currentOffset, sizeof(ushort)), encryptionOptions.NameLength);
                     currentOffset += sizeof(ushort);
                     encryptionOptions.FileName.CopyTo(buffer.AsSpan(currentOffset));
