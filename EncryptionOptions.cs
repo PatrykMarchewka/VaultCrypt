@@ -167,20 +167,17 @@ namespace VaultCrypt
             private static FileEncryptionOptions DeserializeV0(ReadOnlySpan<byte> data)
             {
                 byte[] fileName = null!;
+                var spanReader = new SpanReader(data);
                 try
                 {
-                    int currentIndex = 0;
-                    byte version = data[currentIndex++];
-                    ushort nameLength = BinaryPrimitives.ReadUInt16LittleEndian(data.Slice(currentIndex, sizeof(ushort)));
-                    currentIndex += sizeof(ushort);
-                    fileName = data.Slice(currentIndex, nameLength).ToArray();
-                    currentIndex += nameLength;
-                    ulong fileSize = BinaryPrimitives.ReadUInt64LittleEndian(data.Slice(currentIndex, sizeof(ulong)));
-                    currentIndex += sizeof(ulong);
-                    byte encryptionAlgorithm = data[currentIndex++];
-                    bool chunked = data[currentIndex++] == 1 ? true : false;
+                    byte version = spanReader.ReadByte();
+                    ushort nameLength = spanReader.ReadUInt16();
+                    fileName = spanReader.ReadBytes(nameLength);
+                    ulong fileSize = spanReader.ReadUInt64();
+                    byte encryptionAlgorithm = spanReader.ReadByte();
+                    bool chunked = spanReader.ReadByte() == 1 ? true : false;
                     ChunkInformation? chunkInformation = null;
-                    if (chunked) chunkInformation = DeserializeChunkInformationV0(data[currentIndex..]);
+                    if (chunked) chunkInformation = DeserializeChunkInformationV0(spanReader);
                     return new FileEncryptionOptions(version, fileName.ToArray(), fileSize, encryptionAlgorithm, chunked, chunkInformation);
                 }
                 finally
@@ -189,13 +186,12 @@ namespace VaultCrypt
                 }
             }
 
-            private static ChunkInformation DeserializeChunkInformationV0(ReadOnlySpan<byte> chunkData)
+            private static ChunkInformation DeserializeChunkInformationV0(SpanReader chunkData)
             {
-                if (chunkData.Length < (sizeof(ushort) + sizeof(ushort) + sizeof(uint))) throw new ArgumentOutOfRangeException("Provided wrong chunk information length");
 
-                ushort chunkSize = BinaryPrimitives.ReadUInt16LittleEndian(chunkData.Slice(0, sizeof(ushort)));
-                ushort totalChunks = BinaryPrimitives.ReadUInt16LittleEndian(chunkData.Slice(sizeof(ushort), sizeof(ushort)));
-                uint finalChunkSize = BinaryPrimitives.ReadUInt32LittleEndian(chunkData.Slice(sizeof(ushort) + sizeof(ushort), sizeof(uint)));
+                ushort chunkSize = chunkData.ReadUInt16();
+                ushort totalChunks = chunkData.ReadUInt16();
+                uint finalChunkSize = chunkData.ReadUInt32();
                 return new ChunkInformation(chunkSize, totalChunks, finalChunkSize);
             }
         }
