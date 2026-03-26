@@ -16,6 +16,9 @@ namespace VaultCrypt
         /// Record holding information about file that is either encrypted or about to be
         /// <br/>
         /// V0 = [version][nameLength][fileName][fileSize][encryptionAlgorithm][chunked][chunkInformation]
+        /// <br/>
+        /// V1 = [version][nameLength][fileName][fileSize][encryptionAlgorithm][chunked][chunkInformation]
+        /// Change: ChunkInformation holds number of chunks as ULong instead of UShort
         /// </summary>
         public record FileEncryptionOptions : IDisposable
         {
@@ -25,7 +28,7 @@ namespace VaultCrypt
             public ulong FileSize { get; private set; } //Fixed 8 bytes, Size in bytes of encrypted file, with extra encryption metadata
             public byte EncryptionAlgorithm { get; private set; } //Fixed 1 byte, Encryption algorithm ID
             public bool IsChunked { get; private set; } //Fixed 1 byte, Whether file is chunked or not
-            public ChunkInformation? ChunkInformation { get; private set; } //Fixed 8 bytes (2 bytes chunk size + 2 bytes total chunks count + 4 bytes final chunk size = 8 bytes)
+            public ChunkInformation? ChunkInformation { get; private set; } //Fixed 14 bytes (2 bytes chunk size + 8 bytes total chunks count + 4 bytes final chunk size)
 
             public FileEncryptionOptions(byte version, byte[] fileName, ulong fileSize, byte algorithm, bool chunked, ChunkInformation? chunkInformation)
             {
@@ -119,11 +122,11 @@ namespace VaultCrypt
         public record ChunkInformation : IDisposable
         {
             public ushort ChunkSize { get; private set; } //Fixed 2 bytes, Chunk sizes in MB, without the extra encryption metadata
-            public ushort TotalChunks { get; private set; } //Fixed 2 bytes, Number of chunks counting from 1
+            public ulong TotalChunks { get; private set; } //Fixed 8 bytes, Number of chunks counting from 1
             public uint FinalChunkSize { get; private set; } //Fixed 4 bytes, Size in bytes of last chunk, without the extra encryption metadata
 
-            public const int ChunkInformationSize = (sizeof(ushort) + sizeof(ushort) + sizeof(uint)); //Size of ChunkInformation in bytes
-            public ChunkInformation(ushort chunkSize, ushort totalChunks, uint finalChunkSize)
+            public const int ChunkInformationSize = (sizeof(ushort) + sizeof(ulong) + sizeof(uint)); //Size of ChunkInformation in bytes
+            public ChunkInformation(ushort chunkSize, ulong totalChunks, uint finalChunkSize)
             {
                 this.ChunkSize = chunkSize;
                 this.TotalChunks = totalChunks;
@@ -132,10 +135,10 @@ namespace VaultCrypt
 
             public static byte[] SerializeChunkInformation(ChunkInformation chunkInformation)
             {
-                byte[] chunkBytes = new byte[8];
+                byte[] chunkBytes = new byte[14];
                 BinaryPrimitives.WriteUInt16LittleEndian(chunkBytes.AsSpan(0, 2), chunkInformation.ChunkSize);
-                BinaryPrimitives.WriteUInt16LittleEndian(chunkBytes.AsSpan(2, 2), chunkInformation.TotalChunks);
-                BinaryPrimitives.WriteUInt32LittleEndian(chunkBytes.AsSpan(4, 4), chunkInformation.FinalChunkSize);
+                BinaryPrimitives.WriteUInt64LittleEndian(chunkBytes.AsSpan(2, 8), chunkInformation.TotalChunks);
+                BinaryPrimitives.WriteUInt32LittleEndian(chunkBytes.AsSpan(10, 4), chunkInformation.FinalChunkSize);
                 return chunkBytes;
             }
 
@@ -160,6 +163,7 @@ namespace VaultCrypt
                 return version switch
                 {
                     0 => DeserializeV0(data),
+                    1 => DeserializeV1(data),
                     _ => throw new VaultException(VaultException.ErrorContext.EncryptionOptions, VaultException.ErrorReason.NoReader)
                 };
             }
@@ -186,6 +190,29 @@ namespace VaultCrypt
                 }
             }
 
+            private static FileEncryptionOptions DeserializeV1(ReadOnlySpan<byte> data)
+            {
+                byte[] fileName = null!;
+                var spanReader = new SpanReader(data);
+                try
+                {
+                    byte version = spanReader.ReadByte();
+                    ushort nameLength = spanReader.ReadUInt16();
+                    fileName = spanReader.ReadBytes(nameLength);
+                    ulong fileSize = spanReader.ReadUInt64();
+                    byte encryptionAlgorithm = spanReader.ReadByte();
+                    bool chunked = spanReader.ReadByte() == 1 ? true : false;
+                    ChunkInformation? chunkInformation = null;
+                    if (chunked) chunkInformation = DeserializeChunkInformationV1(spanReader);
+                    return new FileEncryptionOptions(version, fileName.ToArray(), fileSize, encryptionAlgorithm, chunked, chunkInformation);
+                }
+                finally
+                {
+                    if (fileName is not null) CryptographicOperations.ZeroMemory(fileName);
+                }
+            }
+
+
             private static ChunkInformation DeserializeChunkInformationV0(SpanReader chunkData)
             {
 
@@ -194,8 +221,14 @@ namespace VaultCrypt
                 uint finalChunkSize = chunkData.ReadUInt32();
                 return new ChunkInformation(chunkSize, totalChunks, finalChunkSize);
             }
-        }
 
-        
+            private static ChunkInformation DeserializeChunkInformationV1(SpanReader chunkData)
+            {
+                ushort chunkSize = chunkData.ReadUInt16();
+                ulong totalChunks = chunkData.ReadUInt64();
+                uint finalChunkSize = chunkData.ReadUInt32();
+                return new ChunkInformation(chunkSize, totalChunks, finalChunkSize);
+            }
+        }
     }
 }

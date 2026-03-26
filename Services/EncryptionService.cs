@@ -45,7 +45,7 @@ namespace VaultCrypt.Services
             {
                 FileInfo fileInfo = new FileInfo(filePath!);
                 options = _encryptionOptionsService.PrepareEncryptionOptions(fileInfo, algorithm, chunkSizeInMB);
-                int totalChunks = options.ChunkInformation != null ? options.ChunkInformation!.TotalChunks : 1;
+                ulong totalChunks = options.ChunkInformation != null ? options.ChunkInformation!.TotalChunks : 1;
                 int concurrentChunkCount = _systemService.CalculateConcurrency(options.IsChunked, chunkSizeInMB);
                 ReadOnlyMemory<byte> key = _session.GetSlicedKey(provider.KeySize);
                 await using FileStream vaultFS = new FileStream(_session.VAULTPATH!, FileMode.Open, FileAccess.ReadWrite);
@@ -73,7 +73,7 @@ namespace VaultCrypt.Services
             }
         }
 
-        private async Task EncryptChunks(Stream fileFS, Stream vaultFS, int totalChunks, int concurrentChunkCount, ushort chunkSizeInMB, EncryptionAlgorithm.IEncryptionAlgorithm encryptionAlgorithm, ReadOnlyMemory<byte> key, ProgressionContext context)
+        private async Task EncryptChunks(Stream fileFS, Stream vaultFS, ulong totalChunks, int concurrentChunkCount, ushort chunkSizeInMB, EncryptionAlgorithm.IEncryptionAlgorithm encryptionAlgorithm, ReadOnlyMemory<byte> key, ProgressionContext context)
         {
             ArgumentNullException.ThrowIfNull(fileFS);
             ArgumentNullException.ThrowIfNull(vaultFS);
@@ -84,9 +84,9 @@ namespace VaultCrypt.Services
             ArgumentNullException.ThrowIfNull(context);
 
             var tasks = new List<Task>();
-            var results = new ConcurrentDictionary<int, byte[]>();
-            int nextToWrite = 0;
-            int chunkIndex = 0;
+            var results = new ConcurrentDictionary<ulong, byte[]>();
+            ulong nextToWrite = 0;
+            ulong chunkIndex = 0;
             byte[] buffer = new byte[Math.Min((chunkSizeInMB * 1024 * 1024), fileFS.Length)];
 
             try
@@ -110,7 +110,7 @@ namespace VaultCrypt.Services
                     }
 
 
-                    int currentIndex = chunkIndex++;
+                    ulong currentIndex = chunkIndex++;
 
                     if (tasks.Any(task => task.IsFaulted)) throw new VaultException(VaultException.ErrorContext.Encrypt, VaultException.ErrorReason.TaskFaulted);
                     if (tasks.Count >= concurrentChunkCount)

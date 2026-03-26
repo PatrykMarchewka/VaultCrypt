@@ -15,7 +15,7 @@ namespace VaultCrypt.Tests.Services
         public bool ZeroOutPartOfFileWasCalled = false;
         public void CopyPartOfFile(Stream source, long offset, ulong length, Stream destination, long destinationOffset) => CopyPartOfFileWasCalled = true;
 
-        public void WriteReadyChunk(ConcurrentDictionary<int, byte[]> results, ref int nextToWrite, int currentIndex, Stream fileFS, object lockObject) => WriteReadyChunkWasCalled = true;
+        public void WriteReadyChunk(ConcurrentDictionary<ulong, byte[]> results, ref ulong nextToWrite, ulong currentIndex, Stream fileFS, object lockObject) => WriteReadyChunkWasCalled = true;
 
         public void ZeroOutPartOfFile(Stream stream, long offset, ulong length) => ZeroOutPartOfFileWasCalled = true;
     }

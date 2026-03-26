@@ -19,8 +19,8 @@ namespace VaultCrypt.Tests.Services
         {
             var bytes = new byte[] { 0, 1, 2 };
             var copy = (byte[])bytes.Clone();
-            int nextToWrite = 0;
-            var dictionary = new ConcurrentDictionary<int, byte[]>() { [0] = bytes };
+            ulong nextToWrite = 0;
+            var dictionary = new ConcurrentDictionary<ulong, byte[]>() { [0] = bytes };
             var stream = new MemoryStream();
 
             _service.WriteReadyChunk(dictionary, ref nextToWrite, 0, stream, new object());
@@ -34,24 +34,17 @@ namespace VaultCrypt.Tests.Services
         [Fact]
         void WriteReadyChunkThrowsForNullValues()
         {
-            int nextToWrite = 0;
+            ulong nextToWrite = 0;
             Assert.Throws<ArgumentNullException>(() => _service.WriteReadyChunk(null!, ref nextToWrite, 0, new MemoryStream(), new object()));
             Assert.Throws<ArgumentNullException>(() => _service.WriteReadyChunk(new(), ref nextToWrite, 0, null!, new object()));
             Assert.Throws<ArgumentNullException>(() => _service.WriteReadyChunk(new(), ref nextToWrite, 0, new MemoryStream(), null!));
         }
 
         [Fact]
-        void WriteReadyChunkThrowsForNegativeValues()
-        {
-            int nextToWrite = -1;
-            Assert.Throws<ArgumentOutOfRangeException>(() => _service.WriteReadyChunk(new ConcurrentDictionary<int, byte[]>(), ref nextToWrite, -1, new MemoryStream(), new object()));
-        }
-
-        [Fact]
         void WriteReadyChunkThrowsForMissingChunk()
         {
-            int nextToWrite = 0;
-            Assert.Throws<VaultException>(() => _service.WriteReadyChunk(new ConcurrentDictionary<int, byte[]>(), ref nextToWrite, 0, new MemoryStream(), new object()));
+            ulong nextToWrite = 0;
+            Assert.Throws<VaultException>(() => _service.WriteReadyChunk(new ConcurrentDictionary<ulong, byte[]>(), ref nextToWrite, 0, new MemoryStream(), new object()));
         }
 
         [Fact]

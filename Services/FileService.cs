@@ -12,14 +12,14 @@ namespace VaultCrypt.Services
 {
     public interface IFileService
     {
-        public void WriteReadyChunk(ConcurrentDictionary<int, byte[]> results, ref int nextToWrite, int currentIndex, Stream fileFS, object lockObject);
+        public void WriteReadyChunk(ConcurrentDictionary<ulong, byte[]> results, ref ulong nextToWrite, ulong currentIndex, Stream fileFS, object lockObject);
         public void ZeroOutPartOfFile(Stream stream, long offset, ulong length);
         public void CopyPartOfFile(Stream source, long offset, ulong length, Stream destination, long destinationOffset);
     }
 
     public class FileService : IFileService
     {
-        public void WriteReadyChunk(ConcurrentDictionary<int, byte[]> results, ref int nextToWrite, int currentIndex, Stream fileFS, object lockObject)
+        public void WriteReadyChunk(ConcurrentDictionary<ulong, byte[]> results, ref ulong nextToWrite, ulong currentIndex, Stream fileFS, object lockObject)
         {
             ArgumentNullException.ThrowIfNull(results);
             ArgumentOutOfRangeException.ThrowIfNegative(nextToWrite);

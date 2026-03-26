@@ -87,7 +87,7 @@ namespace VaultCrypt.Tests
             Assert.Null(_fileEncryptionOptions.ChunkInformation);
 
             Assert.Equal(0, copy.ChunkSize);
-            Assert.Equal(0, copy.TotalChunks);
+            Assert.Equal(0UL, copy.TotalChunks);
             Assert.Equal<uint>(0, copy.FinalChunkSize);
 
         }

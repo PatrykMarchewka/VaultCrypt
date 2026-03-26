@@ -49,12 +49,12 @@ namespace VaultCrypt.Services
                     chunkNumber--;
                     lastChunk = chunkSize;
                 }
-                chunkInformation = new EncryptionOptions.ChunkInformation(chunkSizeInMB, checked((ushort)chunkNumber), checked((uint)lastChunk));
+                chunkInformation = new EncryptionOptions.ChunkInformation(chunkSizeInMB, (ulong)chunkNumber, checked((uint)lastChunk));
             }
             short extraBytes = algorithm.Provider().EncryptionAlgorithm.ExtraEncryptionDataSize;
 
-            ulong fileSize = chunkInformation is null ? (ulong)(fileInfo.Length + extraBytes) : (ulong)(fileInfo.Length + (extraBytes * chunkInformation.TotalChunks));
-            return new EncryptionOptions.FileEncryptionOptions(0, fileName, fileSize, algorithm.ID, chunked, chunkInformation);
+            ulong fileSize = chunkInformation is null ? (ulong)(fileInfo.Length + extraBytes) : ((ulong)fileInfo.Length + ((ulong)extraBytes * chunkInformation.TotalChunks));
+            return new EncryptionOptions.FileEncryptionOptions(1, fileName, fileSize, algorithm.ID, chunked, chunkInformation);
         }
 
 

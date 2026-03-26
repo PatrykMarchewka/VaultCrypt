@@ -9,8 +9,8 @@ namespace VaultCrypt
 {
     public class ProgressionContext : INotifyPropertyChanged
     {
-        private int _completed;
-        public int Completed
+        private ulong _completed;
+        public ulong Completed
         {
             get => _completed;
             set
@@ -20,8 +20,8 @@ namespace VaultCrypt
                 OnPropertyChanged(nameof(Completed));
             }
         }
-        private int _total;
-        public int Total
+        private ulong _total;
+        public ulong Total
         {
             get => _total;
             set
@@ -50,17 +50,22 @@ namespace VaultCrypt
     }
     public record ProgressStatus
     {
-        public int Completed { get; }
-        public int Total { get; }
+        public ulong Completed { get; }
+        public ulong Total { get; }
 
-        public ProgressStatus(int completed, int total)
+        public ProgressStatus(ulong completed, ulong total)
         {
             ArgumentOutOfRangeException.ThrowIfNegative(completed);
-            ArgumentOutOfRangeException.ThrowIfNegativeOrZero(total);
+            ArgumentOutOfRangeException.ThrowIfZero(total);
             ArgumentOutOfRangeException.ThrowIfGreaterThan(completed, total);
 
             Completed = completed;
             Total = total;
+        }
+
+        public ProgressStatus(int completed, int total) : this((ulong) completed, (ulong)total)
+        {
+            ArgumentOutOfRangeException.ThrowIfNegative(total);
         }
     }
 }

@@ -1,4 +1,4 @@
-﻿using Org.BouncyCastle.Tls;
+using Org.BouncyCastle.Tls;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -29,7 +29,7 @@ namespace VaultCrypt.Tests.Services
             
             var actualOptions = _service.PrepareEncryptionOptions(fileInfo, encryptionAlgorithm, 1);
 
-            Assert.Equal(0, actualOptions.Version);
+            Assert.Equal(1, actualOptions.Version);
             Assert.Equal(Encoding.UTF8.GetBytes(fileInfo.Name), actualOptions.FileName);
             Assert.Equal(32UL + (ulong)encryptionAlgorithm.Provider().EncryptionAlgorithm.ExtraEncryptionDataSize, actualOptions.FileSize);
             Assert.Equal(encryptionAlgorithm.ID, actualOptions.EncryptionAlgorithm);
@@ -48,13 +48,13 @@ namespace VaultCrypt.Tests.Services
 
             var actualOptions = _service.PrepareEncryptionOptions(fileInfo, encryptionAlgorithm, 1);
 
-            Assert.Equal(0, actualOptions.Version);
+            Assert.Equal(1, actualOptions.Version);
             Assert.Equal(Encoding.UTF8.GetBytes(fileInfo.Name), actualOptions.FileName);
-            Assert.Equal((ulong)(fileSize + (encryptionAlgorithm.Provider().EncryptionAlgorithm.ExtraEncryptionDataSize * actualOptions.ChunkInformation!.TotalChunks)), actualOptions.FileSize);
+            Assert.Equal(((ulong)fileSize + ((ulong)encryptionAlgorithm.Provider().EncryptionAlgorithm.ExtraEncryptionDataSize * actualOptions.ChunkInformation!.TotalChunks)), actualOptions.FileSize);
             Assert.Equal(encryptionAlgorithm.ID, actualOptions.EncryptionAlgorithm);
             Assert.True(actualOptions.IsChunked);
             Assert.Equal(1, actualOptions.ChunkInformation!.ChunkSize);
-            Assert.Equal(2, actualOptions.ChunkInformation!.TotalChunks);
+            Assert.Equal(2UL, actualOptions.ChunkInformation!.TotalChunks);
             Assert.Equal(3U, actualOptions.ChunkInformation!.FinalChunkSize);
 
             fileInfo.Delete();

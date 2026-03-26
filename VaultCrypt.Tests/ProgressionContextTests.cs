@@ -42,7 +42,7 @@ namespace VaultCrypt.Tests
         [Fact]
         void CompletedChangesValue()
         {
-            int expected = 5;
+            ulong expected = 5;
             _progressionContext.Completed = expected;
 
             Assert.Equal(expected, _progressionContext.Completed);
@@ -73,7 +73,7 @@ namespace VaultCrypt.Tests
         [Fact]
         void TotalChangesValue()
         {
-            int expected = 5;
+            ulong expected = 5;
             _progressionContext.Total = expected;
 
             Assert.Equal(expected, _progressionContext.Total);
@@ -82,9 +82,9 @@ namespace VaultCrypt.Tests
         [Theory]
         [InlineData(1,2)]
         [InlineData(2,2)]
-        [InlineData(0, int.MaxValue)]
-        [InlineData(int.MaxValue, int.MaxValue)]
-        async Task CompletedAndTotalAreSetCorrectly(int completed, int total)
+        [InlineData(0, ulong.MaxValue)]
+        [InlineData(ulong.MaxValue, ulong.MaxValue)]
+        async Task CompletedAndTotalAreSetCorrectly(ulong completed, ulong total)
         {
             _progressionContext.Progress.Report(new ProgressStatus(completed, total));
 
