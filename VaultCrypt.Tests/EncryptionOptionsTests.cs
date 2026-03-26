@@ -17,7 +17,7 @@ namespace VaultCrypt.Tests
 
         private void CreateEncryptionOptionsWithChunkInformation()
         {
-            _fileEncryptionOptions = new EncryptionOptions.FileEncryptionOptions(0, Encoding.UTF8.GetBytes("EncryptionOptionsTestWithChunk"), 1234, 1, true, new EncryptionOptions.ChunkInformation(16, 24, 131));
+            _fileEncryptionOptions = new EncryptionOptions.FileEncryptionOptions(1, Encoding.UTF8.GetBytes("EncryptionOptionsTestWithChunk"), 1234, 1, true, new EncryptionOptions.ChunkInformation(16, 24, 131));
         }
 
         [Fact]
