@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Buffers.Binary;
 using System.Collections.Generic;
 using System.Linq;
@@ -298,13 +298,13 @@ namespace VaultCrypt.Tests
         public void VaultEncryptionAndVaultDecryptionWorkCorrectly()
         {
             var stream = new MemoryStream();
-            //Fill the beginning of stream with random values to simulate actual stream
+            //Fill the beginning of stream with random values to simulate actual stream, random length can be set to 0
             int randomOffset = RandomNumberGenerator.GetInt32(1000);
             for (int i = 0; i < randomOffset; i++)
             {
                 stream.WriteByte((byte)RandomNumberGenerator.GetInt32(byte.MaxValue));
             }
-            int randomLength = RandomNumberGenerator.GetInt32(1000); //Random size of the data to encrypt
+            int randomLength = RandomNumberGenerator.GetInt32(1, 1000); //Random size of the data to encrypt
             byte[] expectedDecrypted = new byte[randomLength];
             for (int i = 0; i < randomLength; i++)
             {
@@ -312,7 +312,7 @@ namespace VaultCrypt.Tests
             }
             byte[] actualEncrypted = Reader.VaultEncryption(expectedDecrypted);
             stream.Write(actualEncrypted);
-            //Fill the end of the stream with random values to simulate actual stream
+            //Fill the end of the stream with random values to simulate actual stream, random length can be set to 0
             int randomSuffixLength = RandomNumberGenerator.GetInt32(1000);
             for (int i = 0; i < randomSuffixLength; i++)
             {
