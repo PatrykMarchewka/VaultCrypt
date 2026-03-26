@@ -68,7 +68,7 @@ namespace VaultCrypt
             {
                 ArgumentNullException.ThrowIfNull(encryptionOptions);
 
-                int resultSize = sizeof(byte) + sizeof(ushort) + encryptionOptions.NameLength + sizeof(long) + sizeof(byte) + sizeof(byte);
+                int resultSize = sizeof(byte) + sizeof(ushort) + encryptionOptions.NameLength + sizeof(ulong) + sizeof(byte) + sizeof(byte);
                 if (encryptionOptions.IsChunked) resultSize += ChunkInformation.ChunkInformationSize;
                 byte[] buffer = new byte[resultSize];
                 try
