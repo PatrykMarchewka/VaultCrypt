@@ -25,22 +25,13 @@ namespace VaultCrypt.Tests
 
     }
 
-    public abstract class EncryptionAlgorithmTests<TSelf> where TSelf : EncryptionAlgorithmTests<TSelf>, new()
+    public class EncryptionAlgorithmSharedTests()
     {
         byte[] _key = RandomNumberGenerator.GetBytes(128);
         byte[] _data1 = RandomNumberGenerator.GetBytes(128);
         byte[] _data2 = RandomNumberGenerator.GetBytes(128);
 
-        
 
-        byte[] FlipSingleBit(byte[] data, int positionToFlip)
-        {
-            byte[] flipped = data;
-            flipped[positionToFlip] ^= 1 << 3;
-            return flipped;
-        }
-
-        #region Shared tests
         [Fact]
         void CalculateHMAC_SameOutput()
         {
@@ -62,6 +53,7 @@ namespace VaultCrypt.Tests
             Assert.Equal(result1, result2);
         }
 
+        [Fact]
         void CalculateHMAC_CorrectSize()
         {
             byte[] result = EncryptionAlgorithm.CalculateHMAC(this._key, this._data1);
@@ -69,6 +61,7 @@ namespace VaultCrypt.Tests
             Assert.Equal(64, result.Length);
         }
 
+        [Fact]
         void CalculateHMAC_NotEmpty()
         {
             byte[] empty = new byte[64];
@@ -202,7 +195,20 @@ namespace VaultCrypt.Tests
         {
             Assert.Equal(88, EncryptionAlgorithm.GetEncryptionAlgorithmInfo[id].Provider().EncryptionAlgorithm.ExtraEncryptionDataSize);
         }
-        #endregion
+    }
+
+    public abstract class EncryptionAlgorithmTests<TSelf> where TSelf : EncryptionAlgorithmTests<TSelf>, new()
+    {
+        byte[] _key = RandomNumberGenerator.GetBytes(128);
+        byte[] _data1 = RandomNumberGenerator.GetBytes(128);
+        byte[] _data2 = RandomNumberGenerator.GetBytes(128);
+
+        byte[] FlipSingleBit(byte[] data, int positionToFlip)
+        {
+            byte[] flipped = data;
+            flipped[positionToFlip] ^= 1 << 3;
+            return flipped;
+        }
 
 
         public abstract IEnumerable<object[]> _providers { get; }
