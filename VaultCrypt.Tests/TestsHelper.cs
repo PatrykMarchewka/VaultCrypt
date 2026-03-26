@@ -268,7 +268,7 @@ namespace VaultCrypt.Tests
             byte[][] filesToEncrypt = new byte[numberOfFiles][];
             for (int i = 0; i < numberOfFiles; i++)
             {
-                int fileSize = RandomNumberGenerator.GetInt32(100);
+                int fileSize = RandomNumberGenerator.GetInt32(1, 100);
                 filesToEncrypt[i] = RandomNumberGenerator.GetBytes(fileSize);
             }
             return CreateVaultFileWithEncryptedFileList(filesToEncrypt, vaultSessionWithReader, password, salt, iterations);
