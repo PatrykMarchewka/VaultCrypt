@@ -8,8 +8,9 @@ using System.Threading.Tasks;
 
 namespace VaultCrypt.Tests
 {
-    public class SpanReaderTests
+    public class SpanReadWriteTests
     {
+        #region SpanReader
         [Fact]
         void SpanReaderThrowsForEmptyData()
         {
@@ -30,7 +31,7 @@ namespace VaultCrypt.Tests
         [Fact]
         void ReadByteThrowsForTryingToReadOutsideData()
         {
-            Assert.Throws<ArgumentOutOfRangeException>(() =>
+            Assert.Throws<InvalidOperationException>(() =>
             {
                 SpanReader reader = new SpanReader(new byte[1]);
                 reader.ReadByte();
@@ -69,6 +70,26 @@ namespace VaultCrypt.Tests
         }
 
         [Fact]
+        void ReadBytesThrowForNegativeValues()
+        {
+            Assert.Throws<ArgumentOutOfRangeException>(() =>
+            {
+                SpanReader reader = new SpanReader(RandomNumberGenerator.GetBytes(10));
+                reader.ReadBytes(-1);
+            });
+        }
+
+        [Fact]
+        void ReadBytesThrowsForZeroValues()
+        {
+            Assert.Throws<ArgumentOutOfRangeException>(() =>
+            {
+                SpanReader reader = new SpanReader(RandomNumberGenerator.GetBytes(10));
+                reader.ReadBytes(0);
+            });
+        }
+
+        [Fact]
         void ReadUInt16ReadsCorrectlyAndAdvancesIndex()
         {
             int size = RandomNumberGenerator.GetInt32(2, 100);
@@ -88,7 +109,7 @@ namespace VaultCrypt.Tests
         {
             int size = RandomNumberGenerator.GetInt32(1, 2);
             byte[] randomData = RandomNumberGenerator.GetBytes(size);
-            Assert.Throws<ArgumentOutOfRangeException>(() =>
+            Assert.Throws<InvalidOperationException>(() =>
             {
                 SpanReader reader = new SpanReader(randomData);
                 reader.ReadUInt16();
@@ -115,7 +136,7 @@ namespace VaultCrypt.Tests
         {
             int size = RandomNumberGenerator.GetInt32(1, 4);
             byte[] randomData = RandomNumberGenerator.GetBytes(size);
-            Assert.Throws<ArgumentOutOfRangeException>(() =>
+            Assert.Throws<InvalidOperationException>(() =>
             {
                 SpanReader reader = new SpanReader(randomData);
                 reader.ReadUInt32();
@@ -142,7 +163,7 @@ namespace VaultCrypt.Tests
         {
             int size = RandomNumberGenerator.GetInt32(1, 8);
             byte[] randomData = RandomNumberGenerator.GetBytes(size);
-            Assert.Throws<ArgumentOutOfRangeException>(() =>
+            Assert.Throws<InvalidOperationException>(() =>
             {
                 SpanReader reader = new SpanReader(randomData);
                 reader.ReadUInt64();
@@ -181,6 +202,133 @@ namespace VaultCrypt.Tests
             Assert.Equal(expectedUlong, actualUlong);
             Assert.True(expectedBytes.SequenceEqual(actualBytes));
         }
+        #endregion
 
+        #region SpanWriter
+        [Fact]
+        void SpanWriterThrowsForEmptyData()
+        {
+            Assert.Throws<ArgumentException>(() => new SpanWriter(new byte[0]));
+        }
+
+        [Fact]
+        void WriteByteWritesCorrectlyAndAdvancesIndex()
+        {
+            byte[] oldBytes = new byte[10];
+            RandomNumberGenerator.Fill(oldBytes);
+            byte[] newBytes = new byte[10];
+            RandomNumberGenerator.Fill(newBytes);
+
+            SpanWriter writer = new SpanWriter(oldBytes);
+            for (int i = 0; i < newBytes.Length; i++)
+            {
+                writer.WriteByte(newBytes[i]);
+            }
+
+            Assert.True(oldBytes.SequenceEqual(newBytes));
+        }
+
+        [Fact]
+        void WriteByteThrowsForTryingToWriteOutsideData()
+        {
+            Assert.Throws<InvalidOperationException>(() =>
+            {
+                SpanWriter writer = new SpanWriter(new byte[1]);
+                writer.WriteByte(0);
+                writer.WriteByte(0);
+            });
+        }
+
+        [Fact]
+        void WriteSpanWritesCorrectlyAndAdvancesIndex()
+        {
+            byte[] oldBytes = new byte[10];
+            RandomNumberGenerator.Fill(oldBytes);
+            byte[] newBytes = new byte[10];
+            RandomNumberGenerator.Fill(newBytes);
+
+            SpanWriter writer = new SpanWriter(oldBytes);
+            writer.WriteSpan(newBytes);
+
+            Assert.True(oldBytes.SequenceEqual(newBytes));
+        }
+
+        [Fact]
+        void WriteSpanThrowsForTryingToWriteOutsideData()
+        {
+            Assert.Throws<InvalidOperationException>(() =>
+            {
+                SpanWriter writer = new SpanWriter(new byte[1]);
+                writer.WriteSpan(new byte[2]);
+            });
+        }
+
+        [Fact]
+        void WriteUInt16WritesCorrectlyAndAdvancesIndex()
+        {
+            ushort expected = (ushort)RandomNumberGenerator.GetInt32(ushort.MaxValue);
+            byte[] expectedBytes = BitConverter.GetBytes(expected);
+            byte[] actualBytes = new byte[sizeof(ushort)];
+            SpanWriter writer = new SpanWriter(actualBytes);
+            writer.WriteUInt16(expected);
+
+            Assert.True(expectedBytes.SequenceEqual(actualBytes));
+        }
+
+        [Fact]
+        void WriteUInt16ThrowsForTryingToWriteOutsideData()
+        {
+            Assert.Throws<InvalidOperationException>(() =>
+            {
+                SpanWriter writer = new SpanWriter(new byte[1]);
+                writer.WriteUInt16(1000);
+            });
+        }
+
+        [Fact]
+        void WriteUInt32WritesCorrectlyAndAdvancesIndex()
+        {
+            uint expected = (uint)RandomNumberGenerator.GetInt32(int.MaxValue);
+            byte[] expectedBytes = BitConverter.GetBytes(expected);
+            byte[] actualBytes = new byte[sizeof(uint)];
+            SpanWriter writer = new SpanWriter(actualBytes);
+            writer.WriteUInt32(expected);
+
+            Assert.True(expectedBytes.SequenceEqual(actualBytes));
+        }
+
+        [Fact]
+        void WriteUInt32ThrowsForTryingToWriteOutsideData()
+        {
+            Assert.Throws<InvalidOperationException>(() =>
+            {
+                SpanWriter writer = new SpanWriter(new byte[1]);
+                writer.WriteUInt32(1000);
+            });
+        }
+
+        [Fact]
+        void WriteUInt64WritesCorrectlyAndAdvancesIndex()
+        {
+            ulong expected = (ulong)RandomNumberGenerator.GetInt32(int.MaxValue);
+            byte[] expectedBytes = BitConverter.GetBytes(expected);
+            byte[] actualBytes = new byte[sizeof(ulong)];
+            SpanWriter writer = new SpanWriter(actualBytes);
+            writer.WriteUInt64(expected);
+
+            Assert.True(expectedBytes.SequenceEqual(actualBytes));
+        }
+
+        [Fact]
+        void WriteUInt64ThrowsForTryingToWriteOutsideData()
+        {
+            Assert.Throws<InvalidOperationException>(() =>
+            {
+                SpanWriter writer = new SpanWriter(new byte[1]);
+                writer.WriteUInt64(1000);
+            });
+        }
+
+        #endregion
     }
 }
