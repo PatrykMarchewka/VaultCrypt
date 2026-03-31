@@ -14,6 +14,7 @@
 	<AssemblyVersion>1.3.0</AssemblyVersion>
 	<Product>VaultCrypt</Product>
 	<Description>VaultCrypt is a desktop application allowing you to encrypt and store multiple files inside a single portable vault.</Description>
+	<AllowUnsafeBlocks>true</AllowUnsafeBlocks>
   </PropertyGroup>
 
   <ItemGroup>
