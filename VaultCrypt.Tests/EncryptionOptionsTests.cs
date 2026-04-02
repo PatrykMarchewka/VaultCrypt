@@ -42,20 +42,35 @@ namespace VaultCrypt.Tests
         [Fact]
         void EncryptionOptionsSerializeAndDeserializeCorrectlyNoChunk()
         {
-            var serialized = EncryptionOptions.FileEncryptionOptions.SerializeFileEncryptionOptions(_fileEncryptionOptions);
-            var deserialized = EncryptionOptions.FileEncryptionOptionsReader.Deserialize(serialized);
+            SecureBuffer.SecureLargeBuffer serialized = EncryptionOptions.FileEncryptionOptions.SerializeFileEncryptionOptions(_fileEncryptionOptions);
+            try
+            {
+                var deserialized = EncryptionOptions.FileEncryptionOptionsReader.Deserialize(serialized.AsSpan);
 
-            Assert.Equal(_fileEncryptionOptions, deserialized);
+                Assert.Equal(_fileEncryptionOptions, deserialized);
+            }
+            finally
+            {
+                serialized.Dispose();
+            }
+            
         }
 
         [Fact]
         void EncryptionOptionsSerializeAndDeserializeCorrectlyWithChunk()
         {
             CreateEncryptionOptionsWithChunkInformation();
-            var serialized = EncryptionOptions.FileEncryptionOptions.SerializeFileEncryptionOptions(_fileEncryptionOptions);
-            var deserialized = EncryptionOptions.FileEncryptionOptionsReader.Deserialize(serialized);
+            SecureBuffer.SecureLargeBuffer serialized = EncryptionOptions.FileEncryptionOptions.SerializeFileEncryptionOptions(_fileEncryptionOptions);
+            try
+            {
+                var deserialized = EncryptionOptions.FileEncryptionOptionsReader.Deserialize(serialized.AsSpan);
 
-            Assert.Equal(_fileEncryptionOptions, deserialized);
+                Assert.Equal(_fileEncryptionOptions, deserialized);
+            }
+            finally
+            {
+                serialized.Dispose();
+            }
         }
 
         [Fact]
