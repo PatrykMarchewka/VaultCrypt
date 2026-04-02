@@ -56,7 +56,9 @@ namespace VaultCrypt.Tests
             IVaultReader readerDefault = new FakeVaultReader();
 
             var session = (VaultSession)Activator.CreateInstance(typeof(VaultSession), nonPublic: true)!;
-            typeof(VaultSession).GetProperty(nameof(VaultSession.KEY))!.SetValue(session, key);
+            SecureBuffer.SecureKeyBuffer keyBuffer = new SecureBuffer.SecureKeyBuffer(PasswordHelper.KeySize);
+            key.CopyTo(keyBuffer.AsSpan);
+            typeof(VaultSession).GetProperty(nameof(VaultSession.KEY))!.SetValue(session, keyBuffer);
             typeof(VaultSession).GetProperty(nameof(VaultSession.VAULTPATH))!.SetValue(session, vaultPath ?? vaultPathDefault);
             typeof(VaultSession).GetProperty(nameof(VaultSession.ENCRYPTED_FILES))!.SetValue(session, encryptedFiles ?? encryptedFilesDefault);
             typeof(VaultSession).GetProperty(nameof(VaultSession.VAULT_READER))!.SetValue(session, vaultReader ?? readerDefault);
@@ -65,26 +67,7 @@ namespace VaultCrypt.Tests
         }
 
         /// <summary>
-        /// Creates instance of VaultSession and fills it with provided values or predetermined default ones using reflection to bypass private constructor and field setters <br/>
-        /// Created instance uses <see cref="FakeVaultReader"/> by default, you can pass your own reader or use <see cref="CreateFilledSessionInstanceWithReader(byte[]?, NormalizedPath?, Dictionary{long, EncryptedFileInfo}?)"/> instead
-        /// </summary>
-        /// <param name="password"></param>
-        /// <param name="salt"></param>
-        /// <param name="iterations"></param>
-        /// <param name="vaultPath"></param>
-        /// <param name="encryptedFiles"></param>
-        /// <param name="vaultReader"></param>
-        /// <returns></returns>
-        internal static VaultSession CreateFilledSessionInstance(byte[]? password = null, byte[]? salt = null, int iterations = 1000, NormalizedPath? vaultPath = null, Dictionary<long, EncryptedFileInfo>? encryptedFiles = null, IVaultReader? vaultReader = null)
-        {
-            password ??= new byte[16];
-            salt ??= new byte[32];
-            byte[] key = PasswordHelper.DeriveKey(password, salt, iterations);
-            return CreateFilledSessionInstance(key, vaultPath, encryptedFiles, vaultReader);
-        }
-
-        /// <summary>
-        /// Calls internal <see cref="CreateFilledSessionInstance(byte[]?, NormalizedPath?, Dictionary{long, EncryptedFileInfo}?, IVaultReader?)"/> and replaces fake reader with real one utilizing newest vault version
+        /// Calls internal <see cref="CreateFilledSessionInstance(ReadOnlySpan{byte}, NormalizedPath?, Dictionary{long, EncryptedFileInfo}?, IVaultReader?)"/> but replaces fake reader with real one utilizing newest vault version
         /// </summary>
         /// <param name="key"></param>
         /// <param name="vaultPath"></param>
@@ -112,7 +95,7 @@ namespace VaultCrypt.Tests
         {
             password ??= new byte[16];
             salt ??= new byte[32];
-            byte[] key = PasswordHelper.DeriveKey(password, salt, iterations);
+            ReadOnlySpan<byte> key = CreateKey(password, salt, iterations);
             return CreateFilledSessionInstanceWithReader(key, version, vaultPath, encryptedFiles);
         }
 
@@ -188,7 +171,7 @@ namespace VaultCrypt.Tests
             byte[] iterationBytes = new byte[4];
             BinaryPrimitives.WriteInt32LittleEndian(iterationBytes, iterations);
             fs.Write(iterationBytes);
-            var key = PasswordHelper.DeriveKey(password ??= new byte[16], salt ??= new byte[32], 1000)[..provider.KeySize];
+            ReadOnlySpan<byte> key = CreateKey(password, salt, iterations)[..provider.KeySize];
             byte[] encryptedEmptyMetadata = provider.EncryptionAlgorithm.EncryptBytes(new byte[sizeof(ushort) + 4096], key);
             fs.Write(encryptedEmptyMetadata);
 
@@ -212,7 +195,7 @@ namespace VaultCrypt.Tests
         {
             password ??= new byte[16];
             salt ??= new byte[vaultSessionWithReader.VAULT_READER.SaltSize];
-            var key = PasswordHelper.DeriveKey(password, salt, iterations);
+            ReadOnlySpan<byte> key = CreateKey(password, salt, iterations);
             vaultSessionWithReader ??= CreateFilledSessionInstanceWithReader(key, 0);
             var path = CreateVaultFile(0, password, salt);
             var fileEncryptionOptions = new EncryptionOptions.FileEncryptionOptions[filesToEncrypt.Length];
