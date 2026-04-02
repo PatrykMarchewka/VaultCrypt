@@ -110,7 +110,7 @@ namespace VaultCrypt.Tests
         }
     }
 
-    public class VaultV0ReaderTests : VaultReaderTests<VaultV0ReaderTests>
+    public class VaultV0ReaderTests : VaultReaderTests<VaultV0ReaderTests>, IDisposable
     {
         private readonly IVaultReader _reader;
         private readonly IVaultSession _session;
@@ -123,6 +123,10 @@ namespace VaultCrypt.Tests
             _reader = new VaultV0Reader(Session);
         }
 
+        public void Dispose()
+        {
+            _session.KEY.Dispose();
+        }
 
         [Fact]
         void ReadAndDecryptDataReturnsCorrectValues()
@@ -135,15 +139,14 @@ namespace VaultCrypt.Tests
             stream.Write(encrypted);
             var actualDecrypted = Reader.ReadAndDecryptData(stream, 0, 1052);
 
-            Assert.True(expectedDecrypted.SequenceEqual(actualDecrypted));
+            Assert.True(actualDecrypted.AsSpan.SequenceEqual(expectedDecrypted));
         }
     }
 
-    public abstract class VaultReaderTests<TSelf> where TSelf : VaultReaderTests<TSelf>, new()
+    public abstract class VaultReaderTests<TSelf> where TSelf : VaultReaderTests<TSelf>, IDisposable, new()
     {
         protected abstract IVaultReader Reader { get; }
         protected abstract IVaultSession Session { get; }
-
 
         [Fact]
         public void ReadSaltReturnsCorrectValues()
@@ -313,16 +316,31 @@ namespace VaultCrypt.Tests
             {
                 expectedDecrypted[i] = (byte)RandomNumberGenerator.GetInt32(byte.MaxValue);
             }
-            byte[] actualEncrypted = Reader.VaultEncryption(expectedDecrypted);
-            stream.Write(actualEncrypted);
-            //Fill the end of the stream with random values to simulate actual stream, random length can be set to 0
-            int randomSuffixLength = RandomNumberGenerator.GetInt32(1000);
-            for (int i = 0; i < randomSuffixLength; i++)
-            {
-                stream.WriteByte((byte)RandomNumberGenerator.GetInt32(byte.MaxValue));
-            }
 
-            byte[] actualDecrypted = Reader.ReadAndDecryptData(stream, randomOffset, actualEncrypted.Length);
+            SecureBuffer.SecureLargeBuffer actualEncrypted = null!;
+            SecureBuffer.SecureLargeBuffer actualDecrypted = null!;
+            try
+            {
+                actualEncrypted = Reader.VaultEncryption(expectedDecrypted);
+                stream.Write(actualEncrypted.AsSpan);
+
+                //Fill the end of the stream with random values to simulate actual stream, random length can be set to 0
+                int randomSuffixLength = RandomNumberGenerator.GetInt32(1000);
+                for (int i = 0; i < randomSuffixLength; i++)
+                {
+                    stream.WriteByte((byte)RandomNumberGenerator.GetInt32(byte.MaxValue));
+                }
+
+                actualDecrypted = Reader.ReadAndDecryptData(stream, randomOffset, actualEncrypted.Length);
+
+                Assert.True(actualDecrypted.AsSpan.SequenceEqual(expectedDecrypted));
+            }
+            finally
+            {
+                if (actualEncrypted is not null) actualEncrypted.Dispose();
+                if (actualDecrypted is not null) actualDecrypted.Dispose();
+            }
+            
         }
     }
 }

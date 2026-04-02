@@ -42,10 +42,10 @@ namespace VaultCrypt.Tests
             return new byte[0];
         }
 
-        public byte[] ReadAndDecryptData(Stream stream, long offset, int length)
+        public SecureBuffer.SecureLargeBuffer ReadAndDecryptData(Stream stream, long offset, int length)
         {
             ReadAndDecryptMetadataWasCalled = true;
-            return new byte[0];
+            return null!;
         }
 
         public int ReadIterationsNumber(Stream stream)
@@ -70,10 +70,10 @@ namespace VaultCrypt.Tests
 
         public void SaveMetadataOffsets(Stream stream, long[] offsets) => SaveMetadataOffsetsWasCalled = true;
 
-        public byte[] VaultEncryption(ReadOnlyMemory<byte> data)
+        public SecureBuffer.SecureLargeBuffer VaultEncryption(ReadOnlyMemory<byte> data)
         {
             VaultEncryptionWasCalled = true;
-            return new byte[0];
+            return null!;
         }
     }
 }
