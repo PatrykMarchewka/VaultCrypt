@@ -18,7 +18,10 @@ namespace VaultCrypt.Tests
         public static FakeVaultSession EmptyMockSession()
         {
             FakeVaultSession session = new();
-            session.KEY = new byte[4] { 0, 1, 0, 255 };
+            SecureBuffer.SecureKeyBuffer keyBuffer = new SecureBuffer.SecureKeyBuffer(PasswordHelper.KeySize);
+            byte[] key = new byte[4] { 0, 1, 0, 255 };
+            key.CopyTo(keyBuffer.AsSpan);
+            session.KEY = keyBuffer;
             session.VAULTPATH = NormalizedPath.From("C:\\FakeVaultSession\\");
             session.ENCRYPTED_FILES = new()
             {
@@ -31,10 +34,13 @@ namespace VaultCrypt.Tests
             return session;
         }
 
-        public static FakeVaultSession FilledMockSession(IEncryptionOptionsService encryptionOptionsService, byte vaultVersion = 0, byte[]? key = null, NormalizedPath? vaultPath = null, Dictionary<long, EncryptedFileInfo>? encryptedFiles = null)
+        public static FakeVaultSession FilledMockSession(IEncryptionOptionsService encryptionOptionsService, byte vaultVersion = 0, SecureBuffer.SecureKeyBuffer? key = null, NormalizedPath? vaultPath = null, Dictionary<long, EncryptedFileInfo>? encryptedFiles = null)
         {
             FakeVaultSession session = new();
-            session.KEY = key ??= new byte[2] { 0, 1 };
+            SecureBuffer.SecureKeyBuffer keyBuffer = new SecureBuffer.SecureKeyBuffer(PasswordHelper.KeySize);
+            byte[] keyBytes = new byte[4] { 0, 1, 0, 255 };
+            keyBytes.CopyTo(keyBuffer.AsSpan);
+            session.KEY = key ??= keyBuffer;
             session.VAULTPATH = vaultPath ??= NormalizedPath.From("D:\\FakeVaultSession\\");
             session.ENCRYPTED_FILES = encryptedFiles ??= new()
             {
@@ -48,7 +54,7 @@ namespace VaultCrypt.Tests
         }
 
 
-        public byte[] KEY { get; set; }
+        public SecureBuffer.SecureKeyBuffer KEY { get; set; }
 
         public NormalizedPath VAULTPATH { get; set; }
 
@@ -62,7 +68,7 @@ namespace VaultCrypt.Tests
 
         public void RasiseEncryptedFileListUpdated() => RaiseEncryptedFileListUpdatedWasCalled = true;
 
-        public ReadOnlyMemory<byte> GetSlicedKey(byte keySize)
+        public ReadOnlySpan<byte> GetSlicedKey(byte keySize)
         {
             GetSlicedKeyWasCalled = true;
             return new byte[0];
