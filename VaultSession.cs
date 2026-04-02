@@ -15,21 +15,21 @@ namespace VaultCrypt
 {
     public interface IVaultSession
     {
-        public byte[] KEY { get; }
+        public SecureBuffer.SecureKeyBuffer KEY { get; }
         public NormalizedPath VAULTPATH { get; }
         public Dictionary<long, EncryptedFileInfo> ENCRYPTED_FILES { get; }
         public IVaultReader VAULT_READER { get; }
         public event Action? EncryptedFilesListUpdated;
         public void CreateSession(NormalizedPath vaultPath, IVaultReader vaultReader, ReadOnlySpan<byte> password, ReadOnlySpan<byte> salt, int iterations);
         public void RasiseEncryptedFileListUpdated();
-        public ReadOnlyMemory<byte> GetSlicedKey(byte keySize);
+        public ReadOnlySpan<byte> GetSlicedKey(byte keySize);
         public void Dispose();
     }
 
     public class VaultSession : IDisposable, IVaultSession
     {
 
-        public byte[] KEY { get; private set; }
+        public SecureBuffer.SecureKeyBuffer KEY { get; private set; }
         public NormalizedPath VAULTPATH { get; private set; }
         public Dictionary<long, EncryptedFileInfo> ENCRYPTED_FILES { get; private set; }
         public IVaultReader VAULT_READER { get; private set; }
@@ -43,7 +43,7 @@ namespace VaultCrypt
         /// </summary>
         private VaultSession()
         {
-            KEY = Array.Empty<byte>();
+            KEY = new SecureBuffer.SecureKeyBuffer(PasswordHelper.KeySize);
             ENCRYPTED_FILES = new();
             VAULTPATH = NormalizedPath.From(string.Empty);
             VAULT_READER = null!;
@@ -51,7 +51,7 @@ namespace VaultCrypt
 
         public void CreateSession(NormalizedPath vaultPath, IVaultReader vaultReader, ReadOnlySpan<byte> password, ReadOnlySpan<byte> salt, int iterations)
         {
-            this.KEY = PasswordHelper.DeriveKey(password, salt, iterations);
+            PasswordHelper.DeriveKey(password, salt, iterations, this.KEY.AsSpan);
             this.VAULTPATH = vaultPath;
             this.ENCRYPTED_FILES.Clear();
             this.VAULT_READER = vaultReader;
@@ -62,10 +62,10 @@ namespace VaultCrypt
             this.EncryptedFilesListUpdated?.Invoke();
         }
 
-        public ReadOnlyMemory<byte> GetSlicedKey(byte keySize)
+        public ReadOnlySpan<byte> GetSlicedKey(byte keySize)
         {
-            if (keySize > this.KEY.Length) throw new ArgumentOutOfRangeException("Requested bigger slice than the length of entire key");
-            return this.KEY.AsMemory(0, keySize);
+            if (keySize > PasswordHelper.KeySize) throw new ArgumentOutOfRangeException("Requested bigger slice than the length of entire key");
+            return this.KEY.AsSpan[..keySize];
         }
 
         /// <summary>
@@ -73,9 +73,7 @@ namespace VaultCrypt
         /// </summary>
         public void Dispose()
         {
-            CryptographicOperations.ZeroMemory(KEY);
-            //Attempting to hide size of KEY by making it an empty array instead of zero-ed one
-            KEY = Array.Empty<byte>();
+            CryptographicOperations.ZeroMemory(this.KEY.AsSpan);
             ENCRYPTED_FILES.Clear();
             VAULTPATH = NormalizedPath.From(string.Empty);
             VAULT_READER = null!;

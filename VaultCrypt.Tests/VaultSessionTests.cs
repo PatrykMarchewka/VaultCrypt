@@ -21,8 +21,11 @@ namespace VaultCrypt.Tests
 
         private void SetKey(byte[] key)
         {
+            _session.KEY.Dispose();
+            SecureBuffer.SecureKeyBuffer keyBuffer = new SecureBuffer.SecureKeyBuffer(PasswordHelper.KeySize);
+            key.CopyTo(keyBuffer.AsSpan);
             //Reflection to set the key value despite being private
-            typeof(VaultSession).GetProperty(nameof(VaultSession.KEY))!.SetValue(_session, key);
+            typeof(VaultSession).GetProperty(nameof(VaultSession.KEY))!.SetValue(_session, keyBuffer);
         }
 
         [Fact]
@@ -40,7 +43,7 @@ namespace VaultCrypt.Tests
 
             Assert.Equal(vaultPath, _session.VAULTPATH);
             Assert.Equal(reader, _session.VAULT_READER);
-            Assert.Equal(precomputedKey, _session.KEY);
+            Assert.True(_session.KEY.AsSpan[..PasswordHelper.KeySize].SequenceEqual(precomputedKey));
             Assert.Empty(_session.ENCRYPTED_FILES);
         }
 
@@ -49,7 +52,7 @@ namespace VaultCrypt.Tests
         {
             _session.Dispose();
 
-            Assert.Equal(Array.Empty<byte>(), _session.KEY);
+            Assert.True(_session.KEY.AsSpan.SequenceEqual(new byte[_session.KEY.Length]));
             Assert.Empty(_session.ENCRYPTED_FILES);
             Assert.True(string.IsNullOrEmpty(_session.VAULTPATH) && _session.VAULTPATH is not null);
             Assert.Null(_session.VAULT_READER);
@@ -75,11 +78,11 @@ namespace VaultCrypt.Tests
         void GetSlicedKeyReturnsCorrectlySlicedKey()
         {
             SetKey(new byte[] { 0, 1, 2 });
-            var sliced = _session.GetSlicedKey(3).Span;
+            var sliced = _session.GetSlicedKey(3);
 
             for (int i = 0; i < 3; i++)
             {
-                Assert.Equal(_session.KEY[i], sliced[i]);
+                Assert.Equal(_session.KEY.AsSpan[i], sliced[i]);
             }
         }
     }

@@ -48,20 +48,23 @@ namespace VaultCrypt.Tests
         }
 
         [Fact]
-        void DeriveKeyOutputs128ByteKey()
+        void DeriveKeyOutputsSameKeyForSameInput()
         {
-            var key = PasswordHelper.DeriveKey(password, salt, 1);
+            Span<byte> key = stackalloc byte[PasswordHelper.KeySize];
+            Span<byte> key2 = stackalloc byte[PasswordHelper.KeySize];
+            PasswordHelper.DeriveKey(password, salt, 1, key);
+            PasswordHelper.DeriveKey(password, salt, 1, key2);
 
-            Assert.Equal(128, key.Length);
+            Assert.True(key.SequenceEqual(key2));
         }
 
         [Fact]
-        void DeriveKeyOutputsSameKeyForSameInput()
+        void DeriveKeyThrowsForTooSmallSpanSize()
         {
-            var key = PasswordHelper.DeriveKey(password, salt, 1);
-            var key2 = PasswordHelper.DeriveKey(password, salt, 1);
-
-            Assert.True(key.SequenceEqual(key2));
+            Assert.Throws<ArgumentOutOfRangeException>(() => {
+                Span<byte> key = stackalloc byte[PasswordHelper.KeySize - 1];
+                PasswordHelper.DeriveKey(password, salt, 1, key);
+            });
         }
 
         [Fact]
