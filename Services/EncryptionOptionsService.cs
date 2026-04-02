@@ -12,7 +12,7 @@ namespace VaultCrypt.Services
     public interface IEncryptionOptionsService
     {
         public EncryptionOptions.FileEncryptionOptions PrepareEncryptionOptions(FileInfo fileInfo, EncryptionAlgorithm.EncryptionAlgorithmInfo algorithm, ushort chunkSizeInMB);
-        public byte[] EncryptAndPadFileEncryptionOptions(EncryptionOptions.FileEncryptionOptions options);
+        public SecureBuffer.SecureLargeBuffer EncryptAndPadFileEncryptionOptions(EncryptionOptions.FileEncryptionOptions options);
         public EncryptionOptions.FileEncryptionOptions GetDecryptedFileEncryptionOptions(Stream vaultFS, long metadataOffset);
 
     }
@@ -58,14 +58,14 @@ namespace VaultCrypt.Services
         }
 
 
-        public byte[] EncryptAndPadFileEncryptionOptions(EncryptionOptions.FileEncryptionOptions options)
+        public SecureBuffer.SecureLargeBuffer EncryptAndPadFileEncryptionOptions(EncryptionOptions.FileEncryptionOptions options)
         {
             ArgumentNullException.ThrowIfNull(options);
 
             IVaultReader vaultReader = _session.VAULT_READER;
             short extraEncryptionDataSize = EncryptionAlgorithm.GetEncryptionAlgorithmInfo[vaultReader.VaultEncryptionAlgorithm].Provider().EncryptionAlgorithm.ExtraEncryptionDataSize;
-            byte[] encryptionOptionsBytes = null!;
-            byte[] paddedFileOptions = new byte[vaultReader.EncryptionOptionsSize - extraEncryptionDataSize];
+            SecureBuffer.SecureLargeBuffer encryptionOptionsBytes = null!;
+            SecureBuffer.SecureLargeBuffer paddedFileOptions = new SecureBuffer.SecureLargeBuffer(vaultReader.EncryptionOptionsSize - extraEncryptionDataSize);
             try
             {
                 encryptionOptionsBytes = EncryptionOptions.FileEncryptionOptions.SerializeFileEncryptionOptions(options);
@@ -73,26 +73,26 @@ namespace VaultCrypt.Services
                 {
                     throw new VaultException(VaultException.ErrorContext.EncryptionOptions, VaultException.ErrorReason.FileNameTooLong);
                 }
-                Buffer.BlockCopy(encryptionOptionsBytes, 0, paddedFileOptions, 0, encryptionOptionsBytes.Length);
+                encryptionOptionsBytes.AsSpan.CopyTo(paddedFileOptions.AsSpan);
             }
             finally
             {
-                if (encryptionOptionsBytes is not null) CryptographicOperations.ZeroMemory(encryptionOptionsBytes);
+                if (encryptionOptionsBytes is not null) encryptionOptionsBytes.Dispose();
             }
-            byte[] encryptedFileOptions = null!;
+            SecureBuffer.SecureLargeBuffer encryptedFileOptions = null!;
             try
             {
-                encryptedFileOptions = vaultReader.VaultEncryption(paddedFileOptions);
+                encryptedFileOptions = vaultReader.VaultEncryption(paddedFileOptions.AsMemory);
                 return encryptedFileOptions;
             }
             catch (Exception)
             {
-                if (encryptedFileOptions is not null) CryptographicOperations.ZeroMemory(encryptedFileOptions);
+                if (encryptedFileOptions is not null) encryptedFileOptions.Dispose();
                 throw;
             }
             finally
             {
-                CryptographicOperations.ZeroMemory(paddedFileOptions);
+                paddedFileOptions.Dispose();
             }
         }
         public EncryptionOptions.FileEncryptionOptions GetDecryptedFileEncryptionOptions(Stream vaultFS, long metadataOffset)
@@ -101,12 +101,12 @@ namespace VaultCrypt.Services
             ArgumentOutOfRangeException.ThrowIfNegative(metadataOffset);
 
             IVaultReader vaultReader = _session.VAULT_READER;
-            byte[] decryptedMetadata = null!;
+            SecureBuffer.SecureLargeBuffer decryptedMetadata = null!;
             EncryptionOptions.FileEncryptionOptions fileEncryptionOptions = null!;
             try
             {
                 decryptedMetadata = vaultReader.ReadAndDecryptData(vaultFS, metadataOffset, vaultReader.EncryptionOptionsSize);
-                fileEncryptionOptions = EncryptionOptions.FileEncryptionOptionsReader.Deserialize(decryptedMetadata);
+                fileEncryptionOptions = EncryptionOptions.FileEncryptionOptionsReader.Deserialize(decryptedMetadata.AsSpan);
             }
             catch (Exception)
             {
@@ -115,7 +115,7 @@ namespace VaultCrypt.Services
             }
             finally
             {
-                if (decryptedMetadata is not null) CryptographicOperations.ZeroMemory(decryptedMetadata);
+                if (decryptedMetadata is not null) decryptedMetadata.Dispose();
             }
             return fileEncryptionOptions;
         }
