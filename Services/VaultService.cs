@@ -57,7 +57,7 @@ namespace VaultCrypt.Services
             IVaultReader reader = _registry.GetVaultReader(VaultSession.NewestVaultVersion);
             byte[] salt = null!;
             byte[] vaultHeader = null!;
-            byte[] encryptedMetadata = null!;
+            SecureBuffer.SecureLargeBuffer encryptedMetadata = null!;
             try
             {
                 salt = PasswordHelper.GenerateRandomSalt(reader.SaltSize);
@@ -67,14 +67,14 @@ namespace VaultCrypt.Services
                 using (FileStream vaultFS = new FileStream(vaultPath!, FileMode.Create, FileAccess.Write))
                 {
                     vaultFS.Write(vaultHeader);
-                    vaultFS.Write(encryptedMetadata);
+                    vaultFS.Write(encryptedMetadata.AsSpan);
                 }
             }
             finally
             {
                 if (salt is not null) CryptographicOperations.ZeroMemory(salt);
                 if (vaultHeader is not null) CryptographicOperations.ZeroMemory(vaultHeader);
-                if (encryptedMetadata is not null) CryptographicOperations.ZeroMemory(encryptedMetadata);
+                if (encryptedMetadata is not null) encryptedMetadata.Dispose();
             }
         }
 
