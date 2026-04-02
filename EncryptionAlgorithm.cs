@@ -102,8 +102,8 @@ namespace VaultCrypt
         {
             public short ExtraEncryptionDataSize { get; }
             public EncryptedOutputOrder EncryptedOutputOrder { get; }
-            public byte[] EncryptBytes(ReadOnlySpan<byte> data, ReadOnlySpan<byte> key);
-            public byte[] DecryptBytes(ReadOnlySpan<byte> data, ReadOnlySpan<byte> key);
+            public SecureBuffer.SecureLargeBuffer EncryptBytes(ReadOnlySpan<byte> data, ReadOnlySpan<byte> key);
+            public SecureBuffer.SecureLargeBuffer DecryptBytes(ReadOnlySpan<byte> data, ReadOnlySpan<byte> key);
         }
 
         private interface AESAlgorithm : IEncryptionAlgorithm;
@@ -119,19 +119,18 @@ namespace VaultCrypt
         {
             public short ExtraEncryptionDataSize => 28;
             public EncryptedOutputOrder EncryptedOutputOrder => EncryptedOutputOrder.IV_Tag_Data;
-            public byte[] EncryptBytes(ReadOnlySpan<byte> data, ReadOnlySpan<byte> key)
+            public SecureBuffer.SecureLargeBuffer EncryptBytes(ReadOnlySpan<byte> data, ReadOnlySpan<byte> key)
             {
                 if (data.IsEmpty) throw new ArgumentException("Provided empty data", nameof(data));
                 if (key.IsEmpty) throw new ArgumentException("Provided empty key", nameof(key));
 
-
                 byte ivLength = 12;
                 byte authenticationLength = 16;
-                byte[] encrypted = new byte[ivLength + authenticationLength + data.Length];
+                SecureBuffer.SecureLargeBuffer encrypted = new SecureBuffer.SecureLargeBuffer(ivLength + authenticationLength + data.Length);
 
-                Span<byte> iv = encrypted.AsSpan(0, ivLength);
-                Span<byte> authentication = encrypted.AsSpan(ivLength, authenticationLength);
-                Span<byte> output = encrypted.AsSpan(ivLength + authenticationLength);
+                Span<byte> iv = encrypted.AsSpan[..ivLength];
+                Span<byte> authentication = encrypted.AsSpan.Slice(ivLength, authenticationLength);
+                Span<byte> output = encrypted.AsSpan[(ivLength + authenticationLength)..];
                 try
                 {
                     RandomNumberGenerator.Fill(iv);
@@ -143,7 +142,7 @@ namespace VaultCrypt
                 }
                 catch (Exception)
                 {
-                    CryptographicOperations.ZeroMemory(encrypted);
+                    encrypted.Dispose();
                     throw;
                 }
             }
@@ -155,7 +154,7 @@ namespace VaultCrypt
             /// <param name="key"></param>
             /// <returns></returns>
             /// <exception cref="VaultException">Thrown when decryption failed</exception>
-            public byte[] DecryptBytes(ReadOnlySpan<byte> data, ReadOnlySpan<byte> key)
+            public SecureBuffer.SecureLargeBuffer DecryptBytes(ReadOnlySpan<byte> data, ReadOnlySpan<byte> key)
             {
                 if (data.IsEmpty) throw new ArgumentException("Provided empty data", nameof(data));
                 if (key.IsEmpty) throw new ArgumentException("Provided empty key", nameof(key));
@@ -164,16 +163,16 @@ namespace VaultCrypt
                 ReadOnlySpan<byte> tag = data.Slice(12, 16);
                 ReadOnlySpan<byte> encryptedData = data.Slice(28);
 
-                byte[] decrypted = new byte[encryptedData.Length];
+                SecureBuffer.SecureLargeBuffer decrypted = new SecureBuffer.SecureLargeBuffer(encryptedData.Length);
                 try
                 {
                     using System.Security.Cryptography.AesGcm aesGcm = new System.Security.Cryptography.AesGcm(key, 16);
-                    aesGcm.Decrypt(iv, encryptedData, tag, decrypted);
+                    aesGcm.Decrypt(iv, encryptedData, tag, decrypted.AsSpan);
                     return decrypted;
                 }
                 catch (Exception)
                 {
-                    CryptographicOperations.ZeroMemory(decrypted);
+                    decrypted.Dispose();
                     throw;
                 }
             }
@@ -185,18 +184,18 @@ namespace VaultCrypt
         {
             public short ExtraEncryptionDataSize => 28;
             public EncryptedOutputOrder EncryptedOutputOrder => EncryptedOutputOrder.IV_Tag_Data;
-            public byte[] EncryptBytes(ReadOnlySpan<byte> data, ReadOnlySpan<byte> key)
+            public SecureBuffer.SecureLargeBuffer EncryptBytes(ReadOnlySpan<byte> data, ReadOnlySpan<byte> key)
             {
                 if (data.IsEmpty) throw new ArgumentException("Provided empty data", nameof(data));
                 if (key.IsEmpty) throw new ArgumentException("Provided empty key", nameof(key));
 
                 byte ivLength = 12;
                 byte authenticationLength = 16;
-                byte[] encrypted = new byte[ivLength + authenticationLength + data.Length];
+                SecureBuffer.SecureLargeBuffer encrypted = new SecureBuffer.SecureLargeBuffer(ivLength + authenticationLength + data.Length);
 
-                Span<byte> iv = encrypted.AsSpan(0, ivLength);
-                Span<byte> authentication = encrypted.AsSpan(ivLength, authenticationLength);
-                Span<byte> output = encrypted.AsSpan(ivLength + authenticationLength);
+                Span<byte> iv = encrypted.AsSpan[..ivLength];
+                Span<byte> authentication = encrypted.AsSpan.Slice(ivLength, authenticationLength);
+                Span<byte> output = encrypted.AsSpan[(ivLength + authenticationLength)..];
                 try
                 {
                     RandomNumberGenerator.Fill(iv);
@@ -208,12 +207,12 @@ namespace VaultCrypt
                 }
                 catch (Exception)
                 {
-                    CryptographicOperations.ZeroMemory(encrypted);
+                    encrypted.Dispose();
                     throw;
                 }
             }
 
-            public byte[] DecryptBytes(ReadOnlySpan<byte> data, ReadOnlySpan<byte> key)
+            public SecureBuffer.SecureLargeBuffer DecryptBytes(ReadOnlySpan<byte> data, ReadOnlySpan<byte> key)
             {
                 if (data.IsEmpty) throw new ArgumentException("Provided empty data", nameof(data));
                 if (key.IsEmpty) throw new ArgumentException("Provided empty key", nameof(key));
@@ -222,16 +221,16 @@ namespace VaultCrypt
                 ReadOnlySpan<byte> tag = data.Slice(12, 16);
                 ReadOnlySpan<byte> encryptedData = data.Slice(28);
 
-                byte[] decrypted = new byte[encryptedData.Length];
+                SecureBuffer.SecureLargeBuffer decrypted = new SecureBuffer.SecureLargeBuffer(encryptedData.Length);
                 try
                 {
                     using System.Security.Cryptography.AesCcm aesCcm = new System.Security.Cryptography.AesCcm(key);
-                    aesCcm.Decrypt(iv, encryptedData, tag, decrypted);
+                    aesCcm.Decrypt(iv, encryptedData, tag, decrypted.AsSpan);
                     return decrypted;
                 }
                 catch (Exception)
                 {
-                    CryptographicOperations.ZeroMemory(decrypted);
+                    decrypted.Dispose();
                     throw;
                 }
             }
@@ -241,18 +240,18 @@ namespace VaultCrypt
         {
             public short ExtraEncryptionDataSize => 28;
             public EncryptedOutputOrder EncryptedOutputOrder => EncryptedOutputOrder.IV_Tag_Data;
-            public byte[] EncryptBytes(ReadOnlySpan<byte> data, ReadOnlySpan<byte> key)
+            public SecureBuffer.SecureLargeBuffer EncryptBytes(ReadOnlySpan<byte> data, ReadOnlySpan<byte> key)
             {
                 if (data.IsEmpty) throw new ArgumentException("Provided empty data", nameof(data));
                 if (key.IsEmpty) throw new ArgumentException("Provided empty key", nameof(key));
 
                 byte ivLength = 12;
                 byte authenticationLength = 16;
-                byte[] encrypted = new byte[ivLength + authenticationLength + data.Length];
+                SecureBuffer.SecureLargeBuffer encrypted = new SecureBuffer.SecureLargeBuffer(ivLength + authenticationLength + data.Length);
 
-                Span<byte> iv = encrypted.AsSpan(0, ivLength);
-                Span<byte> authentication = encrypted.AsSpan(ivLength, authenticationLength);
-                Span<byte> output = encrypted.AsSpan(ivLength + authenticationLength);
+                Span<byte> iv = encrypted.AsSpan[..ivLength];
+                Span<byte> authentication = encrypted.AsSpan.Slice(ivLength, authenticationLength);
+                Span<byte> output = encrypted.AsSpan[(ivLength + authenticationLength)..];
                 try
                 {
                     RandomNumberGenerator.Fill(iv);
@@ -264,12 +263,12 @@ namespace VaultCrypt
                 }
                 catch (Exception)
                 {
-                    CryptographicOperations.ZeroMemory(encrypted);
+                    encrypted.Dispose();
                     throw;
                 }
             }
 
-            public byte[] DecryptBytes(ReadOnlySpan<byte> data, ReadOnlySpan<byte> key)
+            public SecureBuffer.SecureLargeBuffer DecryptBytes(ReadOnlySpan<byte> data, ReadOnlySpan<byte> key)
             {
                 if (data.IsEmpty) throw new ArgumentException("Provided empty data", nameof(data));
                 if (key.IsEmpty) throw new ArgumentException("Provided empty key", nameof(key));
@@ -278,16 +277,16 @@ namespace VaultCrypt
                 ReadOnlySpan<byte> tag = data.Slice(12, 16);
                 ReadOnlySpan<byte> encryptedData = data.Slice(28);
 
-                byte[] decrypted = new byte[encryptedData.Length];
+                SecureBuffer.SecureLargeBuffer decrypted = new SecureBuffer.SecureLargeBuffer(encryptedData.Length);
                 try
                 {
                     using System.Security.Cryptography.ChaCha20Poly1305 chaCha20 = new System.Security.Cryptography.ChaCha20Poly1305(key);
-                    chaCha20.Decrypt(iv, encryptedData, tag, decrypted);
+                    chaCha20.Decrypt(iv, encryptedData, tag, decrypted.AsSpan);
                     return decrypted;
                 }
                 catch (Exception)
                 {
-                    CryptographicOperations.ZeroMemory(decrypted);
+                    decrypted.Dispose();
                     throw;
                 }
             }
@@ -297,16 +296,16 @@ namespace VaultCrypt
         {
             public short ExtraEncryptionDataSize => 28;
             public EncryptedOutputOrder EncryptedOutputOrder => EncryptedOutputOrder.IV_Data_Tag;
-            public byte[] EncryptBytes(ReadOnlySpan<byte> data, ReadOnlySpan<byte> key)
+            public SecureBuffer.SecureLargeBuffer EncryptBytes(ReadOnlySpan<byte> data, ReadOnlySpan<byte> key)
             {
                 if (data.IsEmpty) throw new ArgumentException("Provided empty data", nameof(data));
                 if (key.IsEmpty) throw new ArgumentException("Provided empty key", nameof(key));
 
                 byte[] iv = new byte[12];
                 byte authenticationLength = 16;
-                byte[] encrypted = new byte[iv.Length + data.Length + authenticationLength];
+                SecureBuffer.SecureLargeBuffer encrypted = new SecureBuffer.SecureLargeBuffer(iv.Length + data.Length + authenticationLength);
 
-                Span<byte> output = encrypted.AsSpan(iv.Length, data.Length + authenticationLength);
+                Span<byte> output = encrypted.AsSpan.Slice(iv.Length, data.Length + authenticationLength);
                 try
                 {
                     RandomNumberGenerator.Fill(iv);
@@ -315,12 +314,12 @@ namespace VaultCrypt
                     cipher.Init(true, parameters);
                     int length = cipher.ProcessBytes(data, output);
                     cipher.DoFinal(output.Slice(length));
-                    Buffer.BlockCopy(iv, 0, encrypted, 0, iv.Length);
+                    iv.AsSpan().CopyTo(encrypted.AsSpan);
                     return encrypted;
                 }
                 catch (Exception)
                 {
-                    CryptographicOperations.ZeroMemory(encrypted);
+                    encrypted.Dispose();
                     throw;
                 }
                 finally
@@ -329,7 +328,7 @@ namespace VaultCrypt
                 }
             }
 
-            public byte[] DecryptBytes(ReadOnlySpan<byte> data, ReadOnlySpan<byte> key)
+            public SecureBuffer.SecureLargeBuffer DecryptBytes(ReadOnlySpan<byte> data, ReadOnlySpan<byte> key)
             {
                 if (data.IsEmpty) throw new ArgumentException("Provided empty data", nameof(data));
                 if (key.IsEmpty) throw new ArgumentException("Provided empty key", nameof(key));
@@ -338,24 +337,29 @@ namespace VaultCrypt
                 byte authenticationLength = 16;
                 ReadOnlySpan<byte> encryptedData = data[12..];
 
-                byte[] decrypted = new byte[encryptedData.Length];
+                SecureBuffer.SecureLargeBuffer decryptedWithTag = new SecureBuffer.SecureLargeBuffer(encryptedData.Length);
+                SecureBuffer.SecureLargeBuffer decrypted = new SecureBuffer.SecureLargeBuffer(encryptedData.Length - authenticationLength);
                 byte[] ivBytes = iv.ToArray();
                 try
                 {
                     var cipher = new EaxBlockCipher(new AesEngine());
                     var parameters = new AeadParameters(new KeyParameter(key), authenticationLength * 8, ivBytes);
                     cipher.Init(false, parameters);
-                    int length = cipher.ProcessBytes(encryptedData, decrypted);
-                    cipher.DoFinal(decrypted, length);
-                    return decrypted[..^authenticationLength];
+                    int length = cipher.ProcessBytes(encryptedData, decryptedWithTag.AsSpan);
+                    cipher.DoFinal(decryptedWithTag.AsSpan.Slice(length));
+
+                    decryptedWithTag.AsSpan[..^authenticationLength].CopyTo(decrypted.AsSpan);
+                    return decrypted;
                 }
                 catch (Exception)
                 {
-                    CryptographicOperations.ZeroMemory(decrypted);
+                    
+                    decrypted.Dispose();
                     throw;
                 }
                 finally
                 {
+                    decryptedWithTag.Dispose();
                     CryptographicOperations.ZeroMemory(ivBytes);
                 }
             }
@@ -366,18 +370,19 @@ namespace VaultCrypt
             public short ExtraEncryptionDataSize => 76;
             public EncryptedOutputOrder EncryptedOutputOrder => EncryptedOutputOrder.IV_Data_Tag;
 
-            public byte[] EncryptBytes(ReadOnlySpan<byte> data, ReadOnlySpan<byte> key)
+            public SecureBuffer.SecureLargeBuffer EncryptBytes(ReadOnlySpan<byte> data, ReadOnlySpan<byte> key)
             {
                 if (data.IsEmpty) throw new ArgumentException("Provided empty data", nameof(data));
                 if (key.IsEmpty) throw new ArgumentException("Provided empty key", nameof(key));
 
                 byte ivLength = 12;
                 byte authenticationLength = 64;
-                byte[] encrypted = new byte[ivLength + data.Length + authenticationLength];
 
-                Span<byte> iv = encrypted.AsSpan(0, ivLength);
-                Span<byte> authentication = encrypted.AsSpan(ivLength + data.Length, authenticationLength);
-                Span<byte> output = encrypted.AsSpan(ivLength, data.Length);
+                SecureBuffer.SecureLargeBuffer encrypted = new SecureBuffer.SecureLargeBuffer(ivLength + data.Length + authenticationLength);
+
+                Span<byte> iv = encrypted.AsSpan[..ivLength];
+                Span<byte> authentication = encrypted.AsSpan.Slice(ivLength + data.Length, authenticationLength);
+                Span<byte> output = encrypted.AsSpan.Slice(ivLength, data.Length);
                 try
                 {
                     RandomNumberGenerator.Fill(iv);
@@ -400,12 +405,12 @@ namespace VaultCrypt
                 }
                 catch (Exception)
                 {
-                    CryptographicOperations.ZeroMemory(encrypted);
+                    encrypted.Dispose();
                     throw;
                 }
             }
 
-            public byte[] DecryptBytes(ReadOnlySpan<byte> data, ReadOnlySpan<byte> key)
+            public SecureBuffer.SecureLargeBuffer DecryptBytes(ReadOnlySpan<byte> data, ReadOnlySpan<byte> key)
             {
                 if (data.IsEmpty) throw new ArgumentException("Provided empty data", nameof(data));
                 if (key.IsEmpty) throw new ArgumentException("Provided empty key", nameof(key));
@@ -414,7 +419,7 @@ namespace VaultCrypt
                 ReadOnlySpan<byte> encryptedData = data[12..^64];
                 ReadOnlySpan<byte> tag = data[^64..];
 
-                byte[] decrypted = new byte[encryptedData.Length];
+                SecureBuffer.SecureLargeBuffer decrypted = new SecureBuffer.SecureLargeBuffer(encryptedData.Length);
                 byte[] calculatedTag = new byte[64];
                 try
                 {
@@ -423,12 +428,12 @@ namespace VaultCrypt
                     var cipher = new KCtrBlockCipher(new TwofishEngine());
                     var parameters = new ParametersWithIV(new KeyParameter(key), iv);
                     cipher.Init(false, parameters);
-                    cipher.ProcessBytes(encryptedData, decrypted);
+                    cipher.ProcessBytes(encryptedData, decrypted.AsSpan);
                     return decrypted;
                 }
                 catch (Exception)
                 {
-                    CryptographicOperations.ZeroMemory(decrypted);
+                    decrypted.Dispose();
                     throw;
                 }
                 finally
@@ -450,18 +455,18 @@ namespace VaultCrypt
             public short ExtraEncryptionDataSize => 76;
             public EncryptedOutputOrder EncryptedOutputOrder => EncryptedOutputOrder.IV_Data_Tag;
 
-            public byte[] EncryptBytes(ReadOnlySpan<byte> data, ReadOnlySpan<byte> key)
+            public SecureBuffer.SecureLargeBuffer EncryptBytes(ReadOnlySpan<byte> data, ReadOnlySpan<byte> key)
             {
                 if (data.IsEmpty) throw new ArgumentException("Provided empty data", nameof(data));
                 if (key.IsEmpty) throw new ArgumentException("Provided empty key", nameof(key));
 
                 byte ivLength = 12;
                 byte authenticationLength = 64;
-                byte[] encrypted = new byte[ivLength + data.Length + authenticationLength];
+                SecureBuffer.SecureLargeBuffer encrypted = new SecureBuffer.SecureLargeBuffer(ivLength + data.Length + authenticationLength);
 
-                Span<byte> iv = encrypted.AsSpan(0, ivLength);
-                Span<byte> authentication = encrypted.AsSpan(ivLength + data.Length, authenticationLength);
-                Span<byte> output = encrypted.AsSpan(ivLength, data.Length);
+                Span<byte> iv = encrypted.AsSpan[..ivLength];
+                Span<byte> authentication = encrypted.AsSpan.Slice(ivLength + data.Length, authenticationLength);
+                Span<byte> output = encrypted.AsSpan.Slice(ivLength, data.Length);
                 try
                 {
                     RandomNumberGenerator.Fill(iv);
@@ -483,12 +488,12 @@ namespace VaultCrypt
                 }
                 catch (Exception)
                 {
-                    CryptographicOperations.ZeroMemory(encrypted);
+                    encrypted.Dispose();
                     throw;
                 }
             }
 
-            public byte[] DecryptBytes(ReadOnlySpan<byte> data, ReadOnlySpan<byte> key)
+            public SecureBuffer.SecureLargeBuffer DecryptBytes(ReadOnlySpan<byte> data, ReadOnlySpan<byte> key)
             {
                 if (data.IsEmpty) throw new ArgumentException("Provided empty data", nameof(data));
                 if (key.IsEmpty) throw new ArgumentException("Provided empty key", nameof(key));
@@ -497,7 +502,7 @@ namespace VaultCrypt
                 ReadOnlySpan<byte> encryptedData = data[12..^64];
                 ReadOnlySpan<byte> tag = data[^64..];
 
-                byte[] decrypted = new byte[encryptedData.Length];
+                SecureBuffer.SecureLargeBuffer decrypted = new SecureBuffer.SecureLargeBuffer(encryptedData.Length);
                 byte[] calculatedTag = new byte[64];
                 try
                 {
@@ -506,12 +511,12 @@ namespace VaultCrypt
                     var cipher = new KCtrBlockCipher(new ThreefishEngine(blockSizeInBits));
                     var parameters = new ParametersWithIV(new KeyParameter(key), iv);
                     cipher.Init(false, parameters);
-                    cipher.ProcessBytes(encryptedData, decrypted);
+                    cipher.ProcessBytes(encryptedData, decrypted.AsSpan);
                     return decrypted;
                 }
                 catch (Exception)
                 {
-                    CryptographicOperations.ZeroMemory(decrypted);
+                    decrypted.Dispose();
                     throw;
                 }
                 finally
@@ -525,16 +530,16 @@ namespace VaultCrypt
         {
             public short ExtraEncryptionDataSize => 28;
             public EncryptedOutputOrder EncryptedOutputOrder => EncryptedOutputOrder.IV_Data_Tag;
-            public byte[] EncryptBytes(ReadOnlySpan<byte> data, ReadOnlySpan<byte> key)
+            public SecureBuffer.SecureLargeBuffer EncryptBytes(ReadOnlySpan<byte> data, ReadOnlySpan<byte> key)
             {
                 if (data.IsEmpty) throw new ArgumentException("Provided empty data", nameof(data));
                 if (key.IsEmpty) throw new ArgumentException("Provided empty key", nameof(key));
 
                 byte[] iv = new byte[12];
                 byte authenticationLength = 16;
-                byte[] encrypted = new byte[iv.Length + data.Length + authenticationLength];
+                SecureBuffer.SecureLargeBuffer encrypted = new SecureBuffer.SecureLargeBuffer(iv.Length + data.Length + authenticationLength);
 
-                Span<byte> output = encrypted.AsSpan(iv.Length, data.Length + authenticationLength);
+                Span<byte> output = encrypted.AsSpan.Slice(iv.Length, data.Length + authenticationLength);
                 try
                 {
                     RandomNumberGenerator.Fill(iv);
@@ -543,12 +548,12 @@ namespace VaultCrypt
                     cipher.Init(true, parameters);
                     int length = cipher.ProcessBytes(data, output);
                     cipher.DoFinal(output.Slice(length));
-                    Buffer.BlockCopy(iv, 0, encrypted, 0, iv.Length);
+                    iv.AsSpan().CopyTo(encrypted.AsSpan);
                     return encrypted;
                 }
                 catch (Exception)
                 {
-                    CryptographicOperations.ZeroMemory(encrypted);
+                    encrypted.Dispose();
                     throw;
                 }
                 finally
@@ -557,7 +562,7 @@ namespace VaultCrypt
                 }
             }
 
-            public byte[] DecryptBytes(ReadOnlySpan<byte> data, ReadOnlySpan<byte> key)
+            public SecureBuffer.SecureLargeBuffer DecryptBytes(ReadOnlySpan<byte> data, ReadOnlySpan<byte> key)
             {
                 if (data.IsEmpty) throw new ArgumentException("Provided empty data", nameof(data));
                 if (key.IsEmpty) throw new ArgumentException("Provided empty key", nameof(key));
@@ -566,24 +571,27 @@ namespace VaultCrypt
                 byte authenticationLength = 16;
                 ReadOnlySpan<byte> encryptedData = data[12..];
 
-                byte[] decrypted = new byte[encryptedData.Length];
+                SecureBuffer.SecureLargeBuffer decryptedWithTag = new SecureBuffer.SecureLargeBuffer(encryptedData.Length);
+                SecureBuffer.SecureLargeBuffer decrypted = new SecureBuffer.SecureLargeBuffer(encryptedData.Length - authenticationLength);
                 byte[] ivBytes = iv.ToArray();
                 try
                 {
                     var cipher = new GcmBlockCipher(new SerpentEngine());
                     var parameters = new AeadParameters(new KeyParameter(key), authenticationLength * 8, ivBytes);
                     cipher.Init(false, parameters);
-                    int length = cipher.ProcessBytes(encryptedData, decrypted);
-                    cipher.DoFinal(decrypted, length);
-                    return decrypted[..^authenticationLength];
+                    int length = cipher.ProcessBytes(encryptedData, decryptedWithTag.AsSpan);
+                    cipher.DoFinal(decryptedWithTag.AsSpan.Slice(length));
+                    decryptedWithTag.AsSpan[..^authenticationLength].CopyTo(decrypted.AsSpan);
+                    return decrypted;
                 }
                 catch (Exception)
                 {
-                    CryptographicOperations.ZeroMemory(decrypted);
+                    decrypted.Dispose();
                     throw;
                 }
                 finally
                 {
+                    decryptedWithTag.Dispose();
                     CryptographicOperations.ZeroMemory(ivBytes);
                 }
             }
@@ -593,18 +601,18 @@ namespace VaultCrypt
         {
             public short ExtraEncryptionDataSize => 76;
             public EncryptedOutputOrder EncryptedOutputOrder => EncryptedOutputOrder.IV_Data_Tag;
-            public byte[] EncryptBytes(ReadOnlySpan<byte> data, ReadOnlySpan<byte> key)
+            public SecureBuffer.SecureLargeBuffer EncryptBytes(ReadOnlySpan<byte> data, ReadOnlySpan<byte> key)
             {
                 if (data.IsEmpty) throw new ArgumentException("Provided empty data", nameof(data));
                 if (key.IsEmpty) throw new ArgumentException("Provided empty key", nameof(key));
 
                 byte ivLength = 12;
                 byte authenticationLength = 64;
-                byte[] encrypted = new byte[ivLength + data.Length + authenticationLength];
+                SecureBuffer.SecureLargeBuffer encrypted = new SecureBuffer.SecureLargeBuffer(ivLength + data.Length + authenticationLength);
 
-                Span<byte> iv = encrypted.AsSpan(0, ivLength);
-                Span<byte> authentication = encrypted.AsSpan(ivLength + data.Length, authenticationLength);
-                Span<byte> output = encrypted.AsSpan(ivLength, data.Length);
+                Span<byte> iv = encrypted.AsSpan[..ivLength];
+                Span<byte> authentication = encrypted.AsSpan.Slice(ivLength + data.Length, authenticationLength);
+                Span<byte> output = encrypted.AsSpan.Slice(ivLength, data.Length);
                 try
                 {
                     RandomNumberGenerator.Fill(iv);
@@ -626,12 +634,12 @@ namespace VaultCrypt
                 }
                 catch (Exception)
                 {
-                    CryptographicOperations.ZeroMemory(encrypted);
+                    encrypted.Dispose();
                     throw;
                 }
             }
 
-            public byte[] DecryptBytes(ReadOnlySpan<byte> data, ReadOnlySpan<byte> key)
+            public SecureBuffer.SecureLargeBuffer DecryptBytes(ReadOnlySpan<byte> data, ReadOnlySpan<byte> key)
             {
                 if (data.IsEmpty) throw new ArgumentException("Provided empty data", nameof(data));
                 if (key.IsEmpty) throw new ArgumentException("Provided empty key", nameof(key));
@@ -640,7 +648,7 @@ namespace VaultCrypt
                 ReadOnlySpan<byte> encryptedData = data[12..^64];
                 ReadOnlySpan<byte> tag = data[^64..];
 
-                byte[] decrypted = new byte[encryptedData.Length];
+                SecureBuffer.SecureLargeBuffer decrypted = new SecureBuffer.SecureLargeBuffer(encryptedData.Length);
                 byte[] calculatedTag = new byte[64];
                 try
                 {
@@ -649,12 +657,12 @@ namespace VaultCrypt
                     var cipher = new KCtrBlockCipher(new SerpentEngine());
                     var parameters = new ParametersWithIV(new KeyParameter(key), iv);
                     cipher.Init(false, parameters);
-                    cipher.ProcessBytes(encryptedData, decrypted);
+                    cipher.ProcessBytes(encryptedData, decrypted.AsSpan);
                     return decrypted;
                 }
                 catch (Exception)
                 {
-                    CryptographicOperations.ZeroMemory(decrypted);
+                    decrypted.Dispose();
                     throw;
                 }
                 finally
@@ -668,16 +676,16 @@ namespace VaultCrypt
         {
             public short ExtraEncryptionDataSize => 28;
             public EncryptedOutputOrder EncryptedOutputOrder => EncryptedOutputOrder.IV_Data_Tag;
-            public byte[] EncryptBytes(ReadOnlySpan<byte> data, ReadOnlySpan<byte> key)
+            public SecureBuffer.SecureLargeBuffer EncryptBytes(ReadOnlySpan<byte> data, ReadOnlySpan<byte> key)
             {
                 if (data.IsEmpty) throw new ArgumentException("Provided empty data", nameof(data));
                 if (key.IsEmpty) throw new ArgumentException("Provided empty key", nameof(key));
 
                 byte[] iv = new byte[12];
                 byte authenticationLength = 16;
-                byte[] encrypted = new byte[iv.Length + data.Length + authenticationLength];
+                SecureBuffer.SecureLargeBuffer encrypted = new SecureBuffer.SecureLargeBuffer(iv.Length + data.Length + authenticationLength);
 
-                Span<byte> output = encrypted.AsSpan(iv.Length, data.Length + authenticationLength);
+                Span<byte> output = encrypted.AsSpan.Slice(iv.Length, data.Length + authenticationLength);
                 try
                 {
                     RandomNumberGenerator.Fill(iv);
@@ -686,12 +694,12 @@ namespace VaultCrypt
                     cipher.Init(true, parameters);
                     int length = cipher.ProcessBytes(data, output);
                     cipher.DoFinal(output.Slice(length));
-                    Buffer.BlockCopy(iv, 0, encrypted, 0, iv.Length);
+                    iv.AsSpan().CopyTo(encrypted.AsSpan);
                     return encrypted;
                 }
                 catch (Exception)
                 {
-                    CryptographicOperations.ZeroMemory(encrypted);
+                    encrypted.Dispose();
                     throw;
                 }
                 finally
@@ -700,7 +708,7 @@ namespace VaultCrypt
                 }
             }
 
-            public byte[] DecryptBytes(ReadOnlySpan<byte> data, ReadOnlySpan<byte> key)
+            public SecureBuffer.SecureLargeBuffer DecryptBytes(ReadOnlySpan<byte> data, ReadOnlySpan<byte> key)
             {
                 if (data.IsEmpty) throw new ArgumentException("Provided empty data", nameof(data));
                 if (key.IsEmpty) throw new ArgumentException("Provided empty key", nameof(key));
@@ -709,24 +717,27 @@ namespace VaultCrypt
                 byte authenticationLength = 16;
                 ReadOnlySpan<byte> encryptedData = data[12..];
 
-                byte[] decrypted = new byte[encryptedData.Length];
+                SecureBuffer.SecureLargeBuffer decryptedWithTag = new SecureBuffer.SecureLargeBuffer(encryptedData.Length);
+                SecureBuffer.SecureLargeBuffer decrypted = new SecureBuffer.SecureLargeBuffer(encryptedData.Length - authenticationLength);
                 byte[] ivBytes = iv.ToArray();
                 try
                 {
                     var cipher = new GcmBlockCipher(new CamelliaEngine());
                     var parameters = new AeadParameters(new KeyParameter(key), authenticationLength * 8, ivBytes);
                     cipher.Init(false, parameters);
-                    int length = cipher.ProcessBytes(encryptedData, decrypted);
-                    cipher.DoFinal(decrypted, length);
-                    return decrypted[..^authenticationLength];
+                    int length = cipher.ProcessBytes(encryptedData, decryptedWithTag.AsSpan);
+                    cipher.DoFinal(decryptedWithTag.AsSpan.Slice(length));
+                    decryptedWithTag.AsSpan[..^authenticationLength].CopyTo(decrypted.AsSpan);
+                    return decrypted;
                 }
                 catch (Exception)
                 {
-                    CryptographicOperations.ZeroMemory(decrypted);
+                    decrypted.Dispose();
                     throw;
                 }
                 finally
                 {
+                    decryptedWithTag.Dispose();
                     CryptographicOperations.ZeroMemory(ivBytes);
                 }
             }
@@ -736,16 +747,16 @@ namespace VaultCrypt
         {
             public short ExtraEncryptionDataSize => 28;
             public EncryptedOutputOrder EncryptedOutputOrder => EncryptedOutputOrder.IV_Data_Tag;
-            public byte[] EncryptBytes(ReadOnlySpan<byte> data, ReadOnlySpan<byte> key)
+            public SecureBuffer.SecureLargeBuffer EncryptBytes(ReadOnlySpan<byte> data, ReadOnlySpan<byte> key)
             {
                 if (data.IsEmpty) throw new ArgumentException("Provided empty data", nameof(data));
                 if (key.IsEmpty) throw new ArgumentException("Provided empty key", nameof(key));
 
                 byte[] iv = new byte[12];
                 byte authenticationLength = 16;
-                byte[] encrypted = new byte[iv.Length + data.Length + authenticationLength];
+                SecureBuffer.SecureLargeBuffer encrypted = new SecureBuffer.SecureLargeBuffer(iv.Length + data.Length + authenticationLength);
 
-                Span<byte> output = encrypted.AsSpan(iv.Length, data.Length + authenticationLength);
+                Span<byte> output = encrypted.AsSpan.Slice(iv.Length, data.Length + authenticationLength);
                 try
                 {
                     RandomNumberGenerator.Fill(iv);
@@ -754,12 +765,12 @@ namespace VaultCrypt
                     cipher.Init(true, parameters);
                     int length = cipher.ProcessBytes(data, output);
                     cipher.DoFinal(output.Slice(length));
-                    Buffer.BlockCopy(iv, 0, encrypted, 0, iv.Length);
+                    iv.AsSpan().CopyTo(encrypted.AsSpan);
                     return encrypted;
                 }
                 catch (Exception)
                 {
-                    CryptographicOperations.ZeroMemory(encrypted);
+                    encrypted.Dispose();
                     throw;
                 }
                 finally
@@ -768,7 +779,7 @@ namespace VaultCrypt
                 }
             }
 
-            public byte[] DecryptBytes(ReadOnlySpan<byte> data, ReadOnlySpan<byte> key)
+            public SecureBuffer.SecureLargeBuffer DecryptBytes(ReadOnlySpan<byte> data, ReadOnlySpan<byte> key)
             {
                 if (data.IsEmpty) throw new ArgumentException("Provided empty data", nameof(data));
                 if (key.IsEmpty) throw new ArgumentException("Provided empty key", nameof(key));
@@ -777,24 +788,27 @@ namespace VaultCrypt
                 byte authenticationLength = 16;
                 ReadOnlySpan<byte> encryptedData = data[12..];
 
-                byte[] decrypted = new byte[encryptedData.Length];
+                SecureBuffer.SecureLargeBuffer decryptedWithTag = new SecureBuffer.SecureLargeBuffer(encryptedData.Length);
+                SecureBuffer.SecureLargeBuffer decrypted = new SecureBuffer.SecureLargeBuffer(encryptedData.Length - authenticationLength);
                 byte[] ivBytes = iv.ToArray();
                 try
                 {
                     var cipher = new OcbBlockCipher(new CamelliaEngine(), new CamelliaEngine());
                     var parameters = new AeadParameters(new KeyParameter(key), authenticationLength * 8, ivBytes);
                     cipher.Init(false, parameters);
-                    int length = cipher.ProcessBytes(encryptedData, decrypted);
-                    cipher.DoFinal(decrypted, length);
-                    return decrypted[..^authenticationLength];
+                    int length = cipher.ProcessBytes(encryptedData, decryptedWithTag.AsSpan);
+                    cipher.DoFinal(decryptedWithTag.AsSpan.Slice(length));
+                    decryptedWithTag.AsSpan[..^authenticationLength].CopyTo(decrypted.AsSpan);
+                    return decrypted;
                 }
                 catch (Exception)
                 {
-                    CryptographicOperations.ZeroMemory(decrypted);
+                    decrypted.Dispose();
                     throw;
                 }
                 finally
                 {
+                    decryptedWithTag.Dispose();
                     CryptographicOperations.ZeroMemory(ivBytes);
                 }
             }
@@ -804,18 +818,18 @@ namespace VaultCrypt
         {
             public short ExtraEncryptionDataSize => 76;
             public EncryptedOutputOrder EncryptedOutputOrder => EncryptedOutputOrder.IV_Data_Tag;
-            public byte[] EncryptBytes(ReadOnlySpan<byte> data, ReadOnlySpan<byte> key)
+            public SecureBuffer.SecureLargeBuffer EncryptBytes(ReadOnlySpan<byte> data, ReadOnlySpan<byte> key)
             {
                 if (data.IsEmpty) throw new ArgumentException("Provided empty data", nameof(data));
                 if (key.IsEmpty) throw new ArgumentException("Provided empty key", nameof(key));
 
                 byte ivLength = 12;
                 byte authenticationLength = 64;
-                byte[] encrypted = new byte[ivLength + data.Length + authenticationLength];
+                SecureBuffer.SecureLargeBuffer encrypted = new SecureBuffer.SecureLargeBuffer(ivLength + data.Length + authenticationLength);
 
-                Span<byte> iv = encrypted.AsSpan(0, ivLength);
-                Span<byte> authentication = encrypted.AsSpan(ivLength + data.Length, authenticationLength);
-                Span<byte> output = encrypted.AsSpan(ivLength, data.Length);
+                Span<byte> iv = encrypted.AsSpan[..ivLength];
+                Span<byte> authentication = encrypted.AsSpan.Slice(ivLength + data.Length, authenticationLength);
+                Span<byte> output = encrypted.AsSpan.Slice(ivLength, data.Length);
                 try
                 {
                     RandomNumberGenerator.Fill(iv);
@@ -837,12 +851,12 @@ namespace VaultCrypt
                 }
                 catch (Exception)
                 {
-                    CryptographicOperations.ZeroMemory(encrypted);
+                    encrypted.Dispose();
                     throw;
                 }
             }
 
-            public byte[] DecryptBytes(ReadOnlySpan<byte> data, ReadOnlySpan<byte> key)
+            public SecureBuffer.SecureLargeBuffer DecryptBytes(ReadOnlySpan<byte> data, ReadOnlySpan<byte> key)
             {
                 if (data.IsEmpty) throw new ArgumentException("Provided empty data", nameof(data));
                 if (key.IsEmpty) throw new ArgumentException("Provided empty key", nameof(key));
@@ -851,7 +865,7 @@ namespace VaultCrypt
                 ReadOnlySpan<byte> encryptedData = data[12..^64];
                 ReadOnlySpan<byte> tag = data[^64..];
 
-                byte[] decrypted = new byte[encryptedData.Length];
+                SecureBuffer.SecureLargeBuffer decrypted = new SecureBuffer.SecureLargeBuffer(encryptedData.Length);
                 byte[] calculatedTag = new byte[64];
                 try
                 {
@@ -860,12 +874,12 @@ namespace VaultCrypt
                     var cipher = new KCtrBlockCipher(new CamelliaEngine());
                     var parameters = new ParametersWithIV(new KeyParameter(key), iv);
                     cipher.Init(false, parameters);
-                    cipher.ProcessBytes(encryptedData, decrypted);
+                    cipher.ProcessBytes(encryptedData, decrypted.AsSpan);
                     return decrypted;
                 }
                 catch (Exception)
                 {
-                    CryptographicOperations.ZeroMemory(decrypted);
+                    decrypted.Dispose();
                     throw;
                 }
                 finally
@@ -879,18 +893,18 @@ namespace VaultCrypt
         {
             public short ExtraEncryptionDataSize => 88;
             public EncryptedOutputOrder EncryptedOutputOrder => EncryptedOutputOrder.IV_Data_Tag;
-            public byte[] EncryptBytes(ReadOnlySpan<byte> data, ReadOnlySpan<byte> key)
+            public SecureBuffer.SecureLargeBuffer EncryptBytes(ReadOnlySpan<byte> data, ReadOnlySpan<byte> key)
             {
                 if (data.IsEmpty) throw new ArgumentException("Provided empty data", nameof(data));
                 if (key.IsEmpty) throw new ArgumentException("Provided empty key", nameof(key));
 
                 byte ivLength = 24;
                 byte authenticationLength = 64;
-                byte[] encrypted = new byte[ivLength + data.Length + authenticationLength];
+                SecureBuffer.SecureLargeBuffer encrypted = new SecureBuffer.SecureLargeBuffer(ivLength + data.Length + authenticationLength);
 
-                Span<byte> iv = encrypted.AsSpan(0, ivLength);
-                Span<byte> authentication = encrypted.AsSpan(ivLength + data.Length, authenticationLength);
-                Span<byte> output = encrypted.AsSpan(ivLength, data.Length);
+                Span<byte> iv = encrypted.AsSpan[..ivLength];
+                Span<byte> authentication = encrypted.AsSpan.Slice(ivLength + data.Length, authenticationLength);
+                Span<byte> output = encrypted.AsSpan.Slice(ivLength, data.Length);
                 try
                 {
                     RandomNumberGenerator.Fill(iv);
@@ -912,12 +926,12 @@ namespace VaultCrypt
                 }
                 catch (Exception)
                 {
-                    CryptographicOperations.ZeroMemory(encrypted);
+                    encrypted.Dispose();
                     throw;
                 }
             }
 
-            public byte[] DecryptBytes(ReadOnlySpan<byte> data, ReadOnlySpan<byte> key)
+            public SecureBuffer.SecureLargeBuffer DecryptBytes(ReadOnlySpan<byte> data, ReadOnlySpan<byte> key)
             {
                 if (data.IsEmpty) throw new ArgumentException("Provided empty data", nameof(data));
                 if (key.IsEmpty) throw new ArgumentException("Provided empty key", nameof(key));
@@ -926,7 +940,7 @@ namespace VaultCrypt
                 ReadOnlySpan<byte> encryptedData = data[24..^64];
                 ReadOnlySpan<byte> tag = data[^64..];
 
-                byte[] decrypted = new byte[encryptedData.Length];
+                SecureBuffer.SecureLargeBuffer decrypted = new SecureBuffer.SecureLargeBuffer(encryptedData.Length);
                 byte[] calculatedTag = new byte[64];
                 try
                 {
@@ -935,12 +949,12 @@ namespace VaultCrypt
                     var cipher = new XSalsa20Engine();
                     var parameters = new ParametersWithIV(new KeyParameter(key), iv);
                     cipher.Init(false, parameters);
-                    cipher.ProcessBytes(encryptedData, decrypted);
+                    cipher.ProcessBytes(encryptedData, decrypted.AsSpan);
                     return decrypted;
                 }
                 catch (Exception)
                 {
-                    CryptographicOperations.ZeroMemory(decrypted);
+                    decrypted.Dispose();
                     throw;
                 }
                 finally
