@@ -64,44 +64,45 @@ namespace VaultCrypt
                 return hash.ToHashCode();
             }
 
-            public static byte[] SerializeFileEncryptionOptions(FileEncryptionOptions encryptionOptions)
+            private static void WriteFileEncryptionOptionsToSpan(FileEncryptionOptions encryptionOptions, Span<byte> span)
+            {
+                SpanWriter bufferSpan = new SpanWriter(span);
+                bufferSpan.WriteByte(encryptionOptions.Version);
+                bufferSpan.WriteUInt16(encryptionOptions.NameLength);
+                bufferSpan.WriteSpan(encryptionOptions.FileName);
+                bufferSpan.WriteUInt64(encryptionOptions.FileSize);
+                bufferSpan.WriteByte(encryptionOptions.EncryptionAlgorithm);
+                bufferSpan.WriteByte(encryptionOptions.IsChunked ? (byte)1 : (byte)0);
+                if (encryptionOptions.IsChunked)
+                {
+                    SecureBuffer.SecureLargeBuffer chunkInfo = null!;
+                    try
+                    {
+                        chunkInfo = ChunkInformation.SerializeChunkInformation(encryptionOptions.ChunkInformation!);
+                        bufferSpan.WriteSpan(chunkInfo.AsSpan);
+                    }
+                    finally
+                    {
+                        if (chunkInfo is not null) chunkInfo.Dispose();
+                    }
+                }
+            }
+
+            public static SecureBuffer.SecureLargeBuffer SerializeFileEncryptionOptions(FileEncryptionOptions encryptionOptions)
             {
                 ArgumentNullException.ThrowIfNull(encryptionOptions);
 
                 int resultSize = sizeof(byte) + sizeof(ushort) + encryptionOptions.NameLength + sizeof(ulong) + sizeof(byte) + sizeof(byte);
                 if (encryptionOptions.IsChunked) resultSize += ChunkInformation.ChunkInformationSize;
-                byte[] buffer = new byte[resultSize];
+                SecureBuffer.SecureLargeBuffer buffer = new SecureBuffer.SecureLargeBuffer(resultSize);
                 try
                 {
-                    int currentOffset = 0;
-                    buffer[currentOffset++] = encryptionOptions.Version;
-                    BinaryPrimitives.WriteUInt16LittleEndian(buffer.AsSpan(currentOffset, sizeof(ushort)), encryptionOptions.NameLength);
-                    currentOffset += sizeof(ushort);
-                    encryptionOptions.FileName.CopyTo(buffer.AsSpan(currentOffset));
-                    currentOffset += encryptionOptions.NameLength;
-                    BinaryPrimitives.WriteUInt64LittleEndian(buffer.AsSpan(currentOffset, sizeof(long)), encryptionOptions.FileSize);
-                    currentOffset += sizeof(long);
-                    buffer[currentOffset++] = ((byte)encryptionOptions.EncryptionAlgorithm);
-                    buffer[currentOffset++] = encryptionOptions.IsChunked ? (byte)1 : (byte)0;
-
-                    if (encryptionOptions.IsChunked)
-                    {
-                        byte[] chunkInfo = null!;
-                        try
-                        {
-                            chunkInfo = ChunkInformation.SerializeChunkInformation(encryptionOptions.ChunkInformation!);
-                            Buffer.BlockCopy(chunkInfo, 0, buffer, currentOffset, chunkInfo.Length);
-                        }
-                        finally
-                        {
-                            if (chunkInfo is not null) CryptographicOperations.ZeroMemory(chunkInfo);
-                        }
-                    }
+                    WriteFileEncryptionOptionsToSpan(encryptionOptions, buffer.AsSpan);
                     return buffer;
                 }
                 catch (Exception)
                 {
-                    CryptographicOperations.ZeroMemory(buffer);
+                    buffer.Dispose();
                     throw;
                 }
             }
@@ -133,12 +134,12 @@ namespace VaultCrypt
                 this.FinalChunkSize = finalChunkSize;
             }
 
-            public static byte[] SerializeChunkInformation(ChunkInformation chunkInformation)
+            public static SecureBuffer.SecureLargeBuffer SerializeChunkInformation(ChunkInformation chunkInformation)
             {
-                byte[] chunkBytes = new byte[14];
-                BinaryPrimitives.WriteUInt16LittleEndian(chunkBytes.AsSpan(0, 2), chunkInformation.ChunkSize);
-                BinaryPrimitives.WriteUInt64LittleEndian(chunkBytes.AsSpan(2, 8), chunkInformation.TotalChunks);
-                BinaryPrimitives.WriteUInt32LittleEndian(chunkBytes.AsSpan(10, 4), chunkInformation.FinalChunkSize);
+                SecureBuffer.SecureLargeBuffer chunkBytes = new SecureBuffer.SecureLargeBuffer(14);
+                BinaryPrimitives.WriteUInt16LittleEndian(chunkBytes.AsSpan.Slice(0, 2), chunkInformation.ChunkSize);
+                BinaryPrimitives.WriteUInt64LittleEndian(chunkBytes.AsSpan.Slice(2, 8), chunkInformation.TotalChunks);
+                BinaryPrimitives.WriteUInt32LittleEndian(chunkBytes.AsSpan.Slice(10, 4), chunkInformation.FinalChunkSize);
                 return chunkBytes;
             }
 
@@ -170,46 +171,30 @@ namespace VaultCrypt
 
             private static FileEncryptionOptions DeserializeV0(ReadOnlySpan<byte> data)
             {
-                byte[] fileName = null!;
                 var spanReader = new SpanReader(data);
-                try
-                {
-                    byte version = spanReader.ReadByte();
-                    ushort nameLength = spanReader.ReadUInt16();
-                    fileName = spanReader.ReadBytes(nameLength);
-                    ulong fileSize = spanReader.ReadUInt64();
-                    byte encryptionAlgorithm = spanReader.ReadByte();
-                    bool chunked = spanReader.ReadByte() == 1 ? true : false;
-                    ChunkInformation? chunkInformation = null;
-                    if (chunked) chunkInformation = DeserializeChunkInformationV0(spanReader);
-                    return new FileEncryptionOptions(version, fileName.ToArray(), fileSize, encryptionAlgorithm, chunked, chunkInformation);
-                }
-                finally
-                {
-                    if (fileName is not null) CryptographicOperations.ZeroMemory(fileName);
-                }
+                byte version = spanReader.ReadByte();
+                ushort nameLength = spanReader.ReadUInt16();
+                byte[] fileName = spanReader.ReadBytes(nameLength);
+                ulong fileSize = spanReader.ReadUInt64();
+                byte encryptionAlgorithm = spanReader.ReadByte();
+                bool chunked = spanReader.ReadByte() == 1 ? true : false;
+                ChunkInformation? chunkInformation = null;
+                if (chunked) chunkInformation = DeserializeChunkInformationV0(spanReader);
+                return new FileEncryptionOptions(version, fileName, fileSize, encryptionAlgorithm, chunked, chunkInformation);
             }
 
             private static FileEncryptionOptions DeserializeV1(ReadOnlySpan<byte> data)
             {
-                byte[] fileName = null!;
                 var spanReader = new SpanReader(data);
-                try
-                {
-                    byte version = spanReader.ReadByte();
-                    ushort nameLength = spanReader.ReadUInt16();
-                    fileName = spanReader.ReadBytes(nameLength);
-                    ulong fileSize = spanReader.ReadUInt64();
-                    byte encryptionAlgorithm = spanReader.ReadByte();
-                    bool chunked = spanReader.ReadByte() == 1 ? true : false;
-                    ChunkInformation? chunkInformation = null;
-                    if (chunked) chunkInformation = DeserializeChunkInformationV1(spanReader);
-                    return new FileEncryptionOptions(version, fileName.ToArray(), fileSize, encryptionAlgorithm, chunked, chunkInformation);
-                }
-                finally
-                {
-                    if (fileName is not null) CryptographicOperations.ZeroMemory(fileName);
-                }
+                byte version = spanReader.ReadByte();
+                ushort nameLength = spanReader.ReadUInt16();
+                byte[] fileName = spanReader.ReadBytes(nameLength);
+                ulong fileSize = spanReader.ReadUInt64();
+                byte encryptionAlgorithm = spanReader.ReadByte();
+                bool chunked = spanReader.ReadByte() == 1 ? true : false;
+                ChunkInformation? chunkInformation = null;
+                if (chunked) chunkInformation = DeserializeChunkInformationV1(spanReader);
+                return new FileEncryptionOptions(version, fileName, fileSize, encryptionAlgorithm, chunked, chunkInformation);
             }
 
 

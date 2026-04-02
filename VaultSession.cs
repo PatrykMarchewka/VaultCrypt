@@ -15,21 +15,21 @@ namespace VaultCrypt
 {
     public interface IVaultSession
     {
-        public byte[] KEY { get; }
+        public SecureBuffer.SecureKeyBuffer KEY { get; }
         public NormalizedPath VAULTPATH { get; }
         public Dictionary<long, EncryptedFileInfo> ENCRYPTED_FILES { get; }
         public IVaultReader VAULT_READER { get; }
         public event Action? EncryptedFilesListUpdated;
         public void CreateSession(NormalizedPath vaultPath, IVaultReader vaultReader, ReadOnlySpan<byte> password, ReadOnlySpan<byte> salt, int iterations);
         public void RasiseEncryptedFileListUpdated();
-        public ReadOnlyMemory<byte> GetSlicedKey(byte keySize);
+        public ReadOnlySpan<byte> GetSlicedKey(byte keySize);
         public void Dispose();
     }
 
     public class VaultSession : IDisposable, IVaultSession
     {
 
-        public byte[] KEY { get; private set; }
+        public SecureBuffer.SecureKeyBuffer KEY { get; private set; }
         public NormalizedPath VAULTPATH { get; private set; }
         public Dictionary<long, EncryptedFileInfo> ENCRYPTED_FILES { get; private set; }
         public IVaultReader VAULT_READER { get; private set; }
@@ -43,7 +43,7 @@ namespace VaultCrypt
         /// </summary>
         private VaultSession()
         {
-            KEY = Array.Empty<byte>();
+            KEY = new SecureBuffer.SecureKeyBuffer(PasswordHelper.KeySize);
             ENCRYPTED_FILES = new();
             VAULTPATH = NormalizedPath.From(string.Empty);
             VAULT_READER = null!;
@@ -51,7 +51,7 @@ namespace VaultCrypt
 
         public void CreateSession(NormalizedPath vaultPath, IVaultReader vaultReader, ReadOnlySpan<byte> password, ReadOnlySpan<byte> salt, int iterations)
         {
-            this.KEY = PasswordHelper.DeriveKey(password, salt, iterations);
+            PasswordHelper.DeriveKey(password, salt, iterations, this.KEY.AsSpan);
             this.VAULTPATH = vaultPath;
             this.ENCRYPTED_FILES.Clear();
             this.VAULT_READER = vaultReader;
@@ -62,10 +62,10 @@ namespace VaultCrypt
             this.EncryptedFilesListUpdated?.Invoke();
         }
 
-        public ReadOnlyMemory<byte> GetSlicedKey(byte keySize)
+        public ReadOnlySpan<byte> GetSlicedKey(byte keySize)
         {
-            if (keySize > this.KEY.Length) throw new ArgumentOutOfRangeException("Requested bigger slice than the length of entire key");
-            return this.KEY.AsMemory(0, keySize);
+            if (keySize > PasswordHelper.KeySize) throw new ArgumentOutOfRangeException("Requested bigger slice than the length of entire key");
+            return this.KEY.AsSpan[..keySize];
         }
 
         /// <summary>
@@ -73,9 +73,7 @@ namespace VaultCrypt
         /// </summary>
         public void Dispose()
         {
-            CryptographicOperations.ZeroMemory(KEY);
-            //Attempting to hide size of KEY by making it an empty array instead of zero-ed one
-            KEY = Array.Empty<byte>();
+            CryptographicOperations.ZeroMemory(this.KEY.AsSpan);
             ENCRYPTED_FILES.Clear();
             VAULTPATH = NormalizedPath.From(string.Empty);
             VAULT_READER = null!;
@@ -208,7 +206,7 @@ namespace VaultCrypt
         /// <returns>Decrypted information</returns>
         /// <exception cref="ArgumentNullException">Thrown when <paramref name="stream"/> is set to null</exception>
         /// <exception cref="ArgumentOutOfRangeException">Thrown when <paramref name="offset"/> or <paramref name="length"/> is negative or zero</exception>
-        public byte[] ReadAndDecryptData(Stream stream, long offset, int length);
+        public SecureBuffer.SecureLargeBuffer ReadAndDecryptData(Stream stream, long offset, int length);
 
         /// <summary>
         /// Encrypts <paramref name="data"/> using <see cref="VaultEncryptionAlgorithm"/>
@@ -216,7 +214,7 @@ namespace VaultCrypt
         /// <param name="data">Data to encrypt</param>
         /// <returns>Encrypted information</returns>
         /// <exception cref="ArgumentException">Thrown when <paramref name="data"/> is empty</exception>
-        public byte[] VaultEncryption(ReadOnlyMemory<byte> data);
+        public SecureBuffer.SecureLargeBuffer VaultEncryption(ReadOnlyMemory<byte> data);
 
     }
 
@@ -350,18 +348,18 @@ namespace VaultCrypt
         {
             ArgumentNullException.ThrowIfNull(stream);
 
-            byte[] decrypted = null!;
+            SecureBuffer.SecureLargeBuffer decrypted = null!;
             long[] offsets = null!;
             try
             {
                 decrypted = ReadMetadataOffsetsBytes(stream);
-                ushort fileCount = BinaryPrimitives.ReadUInt16LittleEndian(decrypted);
+                ushort fileCount = BinaryPrimitives.ReadUInt16LittleEndian(decrypted.AsSpan);
 
                 offsets = new long[fileCount];
                 for (int i = 0; i < fileCount; i++)
                 {
                     int readOffset = sizeof(ushort) + (i * sizeof(long));
-                    offsets[i] = BinaryPrimitives.ReadInt64LittleEndian(decrypted.AsSpan(readOffset, sizeof(long)));
+                    offsets[i] = BinaryPrimitives.ReadInt64LittleEndian(decrypted.AsSpan.Slice(readOffset, sizeof(long)));
                 }
                 return offsets;
             }
@@ -372,23 +370,23 @@ namespace VaultCrypt
             }
             finally
             {
-                if (decrypted is not null) CryptographicOperations.ZeroMemory(decrypted);
+                if (decrypted is not null) decrypted.Dispose();
             }
 
         }
 
-        private byte[] ReadMetadataOffsetsBytes(Stream stream)
+        private SecureBuffer.SecureLargeBuffer ReadMetadataOffsetsBytes(Stream stream)
         {
             stream.Seek(sizeof(byte) + SaltSize + sizeof(int), SeekOrigin.Begin);
-            byte[] buffer = new byte[EncryptionAlgorithm.GetEncryptionAlgorithmInfo[VaultEncryptionAlgorithm].Provider().EncryptionAlgorithm.ExtraEncryptionDataSize + sizeof(ushort) + MetadataOffsetsSize]; //Example: extra data (28 bytes for AES) + number of files (ushort) + max metadata offsets size
+            SecureBuffer.SecureLargeBuffer buffer = new SecureBuffer.SecureLargeBuffer(EncryptionAlgorithm.GetEncryptionAlgorithmInfo[VaultEncryptionAlgorithm].Provider().EncryptionAlgorithm.ExtraEncryptionDataSize + sizeof(ushort) + MetadataOffsetsSize); //Example: extra data (28 bytes for AES) + number of files (ushort) + max metadata offsets size
             try
             {
-                stream.ReadExactly(buffer);
-                return VaultDecryption(buffer);
+                stream.ReadExactly(buffer.AsSpan);
+                return VaultDecryption(buffer.AsMemory);
             }
             finally
             {
-                CryptographicOperations.ZeroMemory(buffer);
+                buffer.Dispose();
             }
         }
 
@@ -472,17 +470,17 @@ namespace VaultCrypt
             ArgumentNullException.ThrowIfNull(offsets);
 
             byte[] offsetsBytes = null!;
-            byte[] encryptedMetadataOffsets = null!;
+            SecureBuffer.SecureLargeBuffer encryptedMetadataOffsets = null!;
             try
             {
                 offsetsBytes = PrepareMetadataOffsets(offsets);
                 encryptedMetadataOffsets = PadMetadataOffsetsAndEncrypt(offsetsBytes);
-                WriteMetadataOffsets(stream, encryptedMetadataOffsets);
+                WriteMetadataOffsets(stream, encryptedMetadataOffsets.AsSpan);
             }
             finally
             {
                 if (offsetsBytes is not null) CryptographicOperations.ZeroMemory(offsetsBytes);
-                if (encryptedMetadataOffsets is not null) CryptographicOperations.ZeroMemory(encryptedMetadataOffsets);
+                if (encryptedMetadataOffsets is not null) encryptedMetadataOffsets.Dispose();
             }
         }
 
@@ -491,10 +489,10 @@ namespace VaultCrypt
         /// </summary>
         /// <param name="metadataOffsets"></param>
         /// <returns></returns>
-        private byte[] PadMetadataOffsetsAndEncrypt(byte[] metadataOffsets)
+        private SecureBuffer.SecureLargeBuffer PadMetadataOffsetsAndEncrypt(byte[] metadataOffsets)
         {
             byte[] paddedMetadataOffsets = new byte[sizeof(ushort) + MetadataOffsetsSize]; //2 bytes ushort for number of currently attached offsets
-            byte[] encryptedMetadataOffsets = null!;
+            SecureBuffer.SecureLargeBuffer encryptedMetadataOffsets = null!;
             try
             {
                 Buffer.BlockCopy(metadataOffsets, 0, paddedMetadataOffsets, 0, metadataOffsets.Length);
@@ -503,7 +501,7 @@ namespace VaultCrypt
             }
             catch (Exception)
             {
-                if (encryptedMetadataOffsets is not null) CryptographicOperations.ZeroMemory(encryptedMetadataOffsets);
+                if (encryptedMetadataOffsets is not null) encryptedMetadataOffsets.Dispose();
                 throw;
             }
             finally
@@ -512,7 +510,7 @@ namespace VaultCrypt
             }
         }
 
-        private void WriteMetadataOffsets(Stream stream, byte[] encryptedMetadataOffsets)
+        private void WriteMetadataOffsets(Stream stream, ReadOnlySpan<byte> encryptedMetadataOffsets)
         {
             stream.Seek(sizeof(byte) + SaltSize + sizeof(int), SeekOrigin.Begin); //1 byte for version + bytes for salt + 4 bytes for iterations
             stream.Write(encryptedMetadataOffsets);
@@ -528,22 +526,22 @@ namespace VaultCrypt
         /// <returns>Decrypted data</returns>
         /// <exception cref="ArgumentNullException">Thrown when provided <paramref name="stream"/> is null</exception>
         /// <exception cref="ArgumentOutOfRangeException">Thrown when provided <paramref name="offset"/>, <paramref name="length"/> are set to negative, or <paramref name="length"/> is set to 0 </exception>
-        public byte[] ReadAndDecryptData(Stream stream, long offset, int length)
+        public SecureBuffer.SecureLargeBuffer ReadAndDecryptData(Stream stream, long offset, int length)
         {
             ArgumentNullException.ThrowIfNull(stream);
             ArgumentOutOfRangeException.ThrowIfNegative(offset);
             ArgumentOutOfRangeException.ThrowIfNegativeOrZero(length);
 
-            byte[] buffer = new byte[length];
+            SecureBuffer.SecureLargeBuffer buffer = new SecureBuffer.SecureLargeBuffer(length);
             try
             {
                 stream.Seek(offset, SeekOrigin.Begin);
-                stream.ReadExactly(buffer, 0, length);
-                return VaultDecryption(buffer);
+                stream.ReadExactly(buffer.AsSpan);
+                return VaultDecryption(buffer.AsMemory);
             }
             finally
             {
-                CryptographicOperations.ZeroMemory(buffer);
+                buffer.Dispose();
             }
         }
 
@@ -553,22 +551,22 @@ namespace VaultCrypt
         /// <param name="data">Data to encrypt</param>
         /// <returns>Encrypted data</returns>
         /// <exception cref="ArgumentException">Thrown when provided empty data</exception>
-        public byte[] VaultEncryption(ReadOnlyMemory<byte> data)
+        public SecureBuffer.SecureLargeBuffer VaultEncryption(ReadOnlyMemory<byte> data)
         {
             if (data.IsEmpty) throw new ArgumentException("Provided empty data", nameof(data));
 
             var provider = EncryptionAlgorithm.GetEncryptionAlgorithmInfo[VaultEncryptionAlgorithm].Provider();
-            return provider.EncryptionAlgorithm.EncryptBytes(data.Span, _session.GetSlicedKey(provider.KeySize).Span);
+            return provider.EncryptionAlgorithm.EncryptBytes(data.Span, _session.GetSlicedKey(provider.KeySize));
         }
 
-        private byte[] VaultDecryption(ReadOnlyMemory<byte> data)
+        private SecureBuffer.SecureLargeBuffer VaultDecryption(ReadOnlyMemory<byte> data)
         {
             if (data.IsEmpty) throw new ArgumentException("Provided empty data", nameof(data));
 
             var provider = EncryptionAlgorithm.GetEncryptionAlgorithmInfo[VaultEncryptionAlgorithm].Provider();
             if (data.Length < provider.EncryptionAlgorithm.ExtraEncryptionDataSize) throw new ArgumentException("Provided data is too short", nameof(data));
 
-            return provider.EncryptionAlgorithm.DecryptBytes(data.Span, _session.GetSlicedKey(provider.KeySize).Span);
+            return provider.EncryptionAlgorithm.DecryptBytes(data.Span, _session.GetSlicedKey(provider.KeySize));
         }
     }
 

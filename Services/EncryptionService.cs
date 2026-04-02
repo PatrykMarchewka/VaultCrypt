@@ -48,25 +48,24 @@ namespace VaultCrypt.Services
                 options = _encryptionOptionsService.PrepareEncryptionOptions(fileInfo, algorithm, chunkSizeInMB);
                 ulong totalChunks = options.ChunkInformation != null ? options.ChunkInformation!.TotalChunks : 1;
                 int concurrentChunkCount = _systemService.CalculateConcurrency(options.IsChunked, chunkSizeInMB);
-                ReadOnlyMemory<byte> key = _session.GetSlicedKey(provider.KeySize);
                 await using FileStream vaultFS = new FileStream(_session.VAULTPATH!, FileMode.Open, FileAccess.ReadWrite);
                 await using FileStream fileFS = new FileStream(filePath!, FileMode.Open, FileAccess.Read);
                 _session.VAULT_READER.AddAndSaveMetadataOffsets(vaultFS, vaultFS.Seek(0, SeekOrigin.End));
 
-                byte[] paddedFileOptions = null!;
+                SecureBuffer.SecureLargeBuffer paddedFileOptions = null!;
                 try
                 {
                     paddedFileOptions = _encryptionOptionsService.EncryptAndPadFileEncryptionOptions(options);
                     //Seek to the end of file to make sure its saved at the end and not after metadata data
                     vaultFS.Seek(0, SeekOrigin.End);
-                    vaultFS.Write(paddedFileOptions);
+                    vaultFS.Write(paddedFileOptions.AsSpan);
 
                 }
                 finally
                 {
-                    if (paddedFileOptions is not null) CryptographicOperations.ZeroMemory(paddedFileOptions);
+                    if (paddedFileOptions is not null) paddedFileOptions.Dispose();
                 }
-                await EncryptChunks(fileFS, vaultFS, totalChunks, concurrentChunkCount, chunkSizeInMB, provider.EncryptionAlgorithm, key, context);
+                await EncryptChunks(fileFS, vaultFS, totalChunks, concurrentChunkCount, chunkSizeInMB, provider, context);
             }
             finally
             {
@@ -74,22 +73,21 @@ namespace VaultCrypt.Services
             }
         }
 
-        private async Task EncryptChunks(Stream fileFS, Stream vaultFS, ulong totalChunks, int concurrentChunkCount, ushort chunkSizeInMB, EncryptionAlgorithm.IEncryptionAlgorithm encryptionAlgorithm, ReadOnlyMemory<byte> key, ProgressionContext context)
+        private async Task EncryptChunks(Stream fileFS, Stream vaultFS, ulong totalChunks, int concurrentChunkCount, ushort chunkSizeInMB, EncryptionAlgorithm.IEncryptionAlgorithmProvider provider, ProgressionContext context)
         {
             ArgumentNullException.ThrowIfNull(fileFS);
             ArgumentNullException.ThrowIfNull(vaultFS);
             ArgumentOutOfRangeException.ThrowIfNegativeOrZero(totalChunks);
             ArgumentOutOfRangeException.ThrowIfNegativeOrZero(concurrentChunkCount);
             ArgumentOutOfRangeException.ThrowIfZero(chunkSizeInMB);
-            if (key.IsEmpty) throw new ArgumentException("Provided empty key", nameof(key));
+            if(_session.KEY.AsSpan.IsEmpty) throw new InvalidOperationException("Provided empty key");
             ArgumentNullException.ThrowIfNull(context);
 
             var tasks = new List<Task>();
-            var results = new ConcurrentDictionary<ulong, byte[]>();
+            var results = new ConcurrentDictionary<ulong, SecureBuffer.SecureLargeBuffer>();
             ulong nextToWrite = 0;
             ulong chunkIndex = 0;
-            byte[] buffer = new byte[Math.Min((chunkSizeInMB * 1024 * 1024), fileFS.Length)];
-
+            SecureBuffer.SecureLargeBuffer buffer = new SecureBuffer.SecureLargeBuffer((int)Math.Min((chunkSizeInMB * 1024 * 1024), fileFS.Length));
             try
             {
                 //Object created to stop multiple threads for trying to write into vault file
@@ -97,19 +95,13 @@ namespace VaultCrypt.Services
                 while (chunkIndex < totalChunks)
                 {
                     context.CancellationToken.ThrowIfCancellationRequested();
-                    byte[] chunk = null!;
-                    try
-                    {
-                        int bytesRead = await fileFS.ReadAsync(buffer);
-                        chunk = new byte[bytesRead];
-                        Buffer.BlockCopy(buffer, 0, chunk, 0, bytesRead);
 
-                    }
-                    finally
-                    {
-                        CryptographicOperations.ZeroMemory(buffer);
-                    }
+                    int bytesRead = await fileFS.ReadAsync(buffer.AsMemory);
+                    if (bytesRead == 0) throw new VaultException(VaultException.ErrorContext.Encrypt, VaultException.ErrorReason.EndOfFile);
 
+                    //Creating a copy of buffer to avoid race conditions
+                    SecureBuffer.SecureLargeBuffer chunkCopy = new SecureBuffer.SecureLargeBuffer(bytesRead);
+                    buffer.AsSpan[..bytesRead].CopyTo(chunkCopy.AsSpan);
 
                     ulong currentIndex = chunkIndex++;
 
@@ -123,18 +115,28 @@ namespace VaultCrypt.Services
                     tasks.Add(Task.Run(() =>
                     {
                         context.CancellationToken.ThrowIfCancellationRequested();
-                        byte[] encrypted = null!;
+                        SecureBuffer.SecureLargeBuffer encryptedChunk = null!;
                         try
                         {
-                            encrypted = encryptionAlgorithm.EncryptBytes(chunk, key.Span);
-                            results.TryAdd(currentIndex, encrypted);
+                            encryptedChunk = provider.EncryptionAlgorithm.EncryptBytes(chunkCopy.AsSpan, _session.KEY.AsSpan[..provider.KeySize]);
+                            results.TryAdd(currentIndex, encryptedChunk);
                         }
                         finally
                         {
-                            if (chunk is not null) CryptographicOperations.ZeroMemory(chunk);
-                            //encrypted field gets cleaned in FileHelper.WriteReadyChunk after writing
+                            if (chunkCopy is not null) chunkCopy.Dispose();
                         }
-                        _fileService.WriteReadyChunk(results, ref nextToWrite, currentIndex, vaultFS, writeLock);
+
+                        try
+                        {
+                            _fileService.WriteReadyChunk(results, ref nextToWrite, currentIndex, vaultFS, writeLock);
+                        }
+                        catch (Exception)
+                        {
+                            //Encrypted chunk usually gets cleaned in IFileService.WriteReadyChunk after writing, clean here if it throws
+                            encryptedChunk.Dispose();
+                            throw;
+                        }
+                        
                         //Reporting current index + 1 because currentIndex is zero based while user gets to see 1 based indexing
                         context.Progress.Report(new ProgressStatus(currentIndex + 1, totalChunks));
                     }));
@@ -143,9 +145,10 @@ namespace VaultCrypt.Services
             }
             finally
             {
+                if (buffer is not null) buffer.Dispose();
                 foreach (var result in results.Values)
                 {
-                    CryptographicOperations.ZeroMemory(result);
+                    result.Dispose();
                 }
                 results.Clear();
             }

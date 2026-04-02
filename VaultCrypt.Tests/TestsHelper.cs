@@ -1,4 +1,3 @@
-using Newtonsoft.Json.Linq;
 using System;
 using System.Buffers.Binary;
 using System.Collections.Generic;
@@ -57,7 +56,9 @@ namespace VaultCrypt.Tests
             IVaultReader readerDefault = new FakeVaultReader();
 
             var session = (VaultSession)Activator.CreateInstance(typeof(VaultSession), nonPublic: true)!;
-            typeof(VaultSession).GetProperty(nameof(VaultSession.KEY))!.SetValue(session, key);
+            SecureBuffer.SecureKeyBuffer keyBuffer = new SecureBuffer.SecureKeyBuffer(PasswordHelper.KeySize);
+            key.CopyTo(keyBuffer.AsSpan);
+            typeof(VaultSession).GetProperty(nameof(VaultSession.KEY))!.SetValue(session, keyBuffer);
             typeof(VaultSession).GetProperty(nameof(VaultSession.VAULTPATH))!.SetValue(session, vaultPath ?? vaultPathDefault);
             typeof(VaultSession).GetProperty(nameof(VaultSession.ENCRYPTED_FILES))!.SetValue(session, encryptedFiles ?? encryptedFilesDefault);
             typeof(VaultSession).GetProperty(nameof(VaultSession.VAULT_READER))!.SetValue(session, vaultReader ?? readerDefault);
@@ -66,26 +67,7 @@ namespace VaultCrypt.Tests
         }
 
         /// <summary>
-        /// Creates instance of VaultSession and fills it with provided values or predetermined default ones using reflection to bypass private constructor and field setters <br/>
-        /// Created instance uses <see cref="FakeVaultReader"/> by default, you can pass your own reader or use <see cref="CreateFilledSessionInstanceWithReader(byte[]?, NormalizedPath?, Dictionary{long, EncryptedFileInfo}?)"/> instead
-        /// </summary>
-        /// <param name="password"></param>
-        /// <param name="salt"></param>
-        /// <param name="iterations"></param>
-        /// <param name="vaultPath"></param>
-        /// <param name="encryptedFiles"></param>
-        /// <param name="vaultReader"></param>
-        /// <returns></returns>
-        internal static VaultSession CreateFilledSessionInstance(byte[]? password = null, byte[]? salt = null, int iterations = 1000, NormalizedPath? vaultPath = null, Dictionary<long, EncryptedFileInfo>? encryptedFiles = null, IVaultReader? vaultReader = null)
-        {
-            password ??= new byte[16];
-            salt ??= new byte[32];
-            byte[] key = PasswordHelper.DeriveKey(password, salt, iterations);
-            return CreateFilledSessionInstance(key, vaultPath, encryptedFiles, vaultReader);
-        }
-
-        /// <summary>
-        /// Calls internal <see cref="CreateFilledSessionInstance(byte[]?, NormalizedPath?, Dictionary{long, EncryptedFileInfo}?, IVaultReader?)"/> and replaces fake reader with real one utilizing newest vault version
+        /// Calls internal <see cref="CreateFilledSessionInstance(ReadOnlySpan{byte}, NormalizedPath?, Dictionary{long, EncryptedFileInfo}?, IVaultReader?)"/> but replaces fake reader with real one utilizing newest vault version
         /// </summary>
         /// <param name="key"></param>
         /// <param name="vaultPath"></param>
@@ -113,7 +95,7 @@ namespace VaultCrypt.Tests
         {
             password ??= new byte[16];
             salt ??= new byte[32];
-            byte[] key = PasswordHelper.DeriveKey(password, salt, iterations);
+            ReadOnlySpan<byte> key = CreateKey(password, salt, iterations);
             return CreateFilledSessionInstanceWithReader(key, version, vaultPath, encryptedFiles);
         }
 
@@ -146,6 +128,13 @@ namespace VaultCrypt.Tests
             return session;
         }
 
+        internal static ReadOnlySpan<byte> CreateKey(byte[]? password = null, byte[]? salt = null, int iterations = 1000)
+        {
+            Span<byte> key = new byte[PasswordHelper.KeySize];
+            PasswordHelper.DeriveKey(password ??= new byte[16], salt ??= new byte[32], iterations, key);
+            return key;
+        }
+
         /// <summary>
         /// Creates empty instance of VaultRegistry using reflection to bypass private constructor
         /// </summary>
@@ -160,13 +149,12 @@ namespace VaultCrypt.Tests
 
         /// <summary>
         /// Creates vault file in temp folder with random name. Metadata is encrypted using AES-256-GCM with an empty 16 byte array as password<br/>
-        /// For compatibility it defaults to same values as <see cref="CreateFilledSessionInstance(byte[]?, NormalizedPath?, Dictionary{long, EncryptedFileInfo}?, IVaultReader?)"/>
         /// Default vault file information:<br/>
         /// Version (1 byte) = 0<br/>
+        /// Password (16 bytes) = Array of zeroes<br/>
         /// Salt (32 bytes) = Array of zeroes<br/>
-        /// Iterations (4 bytes) = 1000 (Little endian)<br/>
+        /// Iterations = 1000<br/>
         /// Encrypted metadata offsets[IV (12 bytes), Tag (16 bytes), File count (2 bytes), Metadata offsets (4096 bytes)]<br/>
-        /// Password used to encrypt (16 bytes) = Array of zeroes
         /// </summary>
         /// <returns>Path to the file</returns>
         internal static NormalizedPath CreateVaultFile(byte version = 0, byte[]? password = null, byte[]? salt = null, int iterations = 1000)
@@ -176,16 +164,27 @@ namespace VaultCrypt.Tests
             var provider = EncryptionAlgorithm.EncryptionAlgorithmInfo.AES256GCM.Provider();
 
             //v0 = [version (1byte)][salt (32 bytes)][iterations (4 bytes)] + [metadata offsets (28 bytes for AES decryption + 2 bytes ushort number +  MetadataOffsetsSize (4KB (4096 bytes))]...
+            int saltSize = 32;
+            int metadataOffsetsSize = sizeof(ushort) + 4096;
             using FileStream fs = new FileStream($"{path}\\{fileName}.vlt", FileMode.CreateNew, FileAccess.Write);
+            //Write vault header information
             fs.WriteByte(0);
-            fs.Write(salt ??= new byte[32]);
-            byte[] iterationBytes = new byte[4];
+            fs.Write(salt ??= new byte[saltSize]);
+            byte[] iterationBytes = new byte[sizeof(int)];
             BinaryPrimitives.WriteInt32LittleEndian(iterationBytes, iterations);
             fs.Write(iterationBytes);
-            var key = PasswordHelper.DeriveKey(password ??= new byte[16], salt ??= new byte[32], 1000)[..provider.KeySize];
-            byte[] encryptedEmptyMetadata = provider.EncryptionAlgorithm.EncryptBytes(new byte[sizeof(ushort) + 4096], key);
-            fs.Write(encryptedEmptyMetadata);
-
+            ReadOnlySpan<byte> key = CreateKey(password, salt, iterations)[..provider.KeySize];
+            //Write metadata
+            SecureBuffer.SecureLargeBuffer encryptedEmptyMetadata = null!;
+            try
+            {
+                encryptedEmptyMetadata = provider.EncryptionAlgorithm.EncryptBytes(new byte[metadataOffsetsSize], key);
+                fs.Write(encryptedEmptyMetadata.AsSpan);
+            }
+            finally
+            {
+                if(encryptedEmptyMetadata is not null) encryptedEmptyMetadata.Dispose();
+            }
             return NormalizedPath.From($"{path}\\{fileName}.vlt");
         }
 
@@ -206,7 +205,7 @@ namespace VaultCrypt.Tests
         {
             password ??= new byte[16];
             salt ??= new byte[vaultSessionWithReader.VAULT_READER.SaltSize];
-            var key = PasswordHelper.DeriveKey(password, salt, iterations);
+            ReadOnlySpan<byte> key = CreateKey(password, salt, iterations);
             vaultSessionWithReader ??= CreateFilledSessionInstanceWithReader(key, 0);
             var path = CreateVaultFile(0, password, salt);
             var fileEncryptionOptions = new EncryptionOptions.FileEncryptionOptions[filesToEncrypt.Length];
@@ -232,11 +231,14 @@ namespace VaultCrypt.Tests
                 //Write encryption options
                 offsets[i] = fs.Position;
                 fileEncryptionOptions[i] = new EncryptionOptions.FileEncryptionOptions(version: 0, fileNameBytes, fileSize, algorithm.ID, chunked: false, chunkInformation: null);
-                byte[] encrypted = service.EncryptAndPadFileEncryptionOptions(fileEncryptionOptions[i]);
-                fs.Write(encrypted);
+                SecureBuffer.SecureLargeBuffer encryptedFileEncryptionOptions = service.EncryptAndPadFileEncryptionOptions(fileEncryptionOptions[i]);
+                fs.Write(encryptedFileEncryptionOptions.AsSpan);
+                encryptedFileEncryptionOptions.Dispose();
 
                 //Write the encrypted file
-                fs.Write(algorithm.Provider().EncryptionAlgorithm.EncryptBytes(filesToEncrypt[i], key[..algorithm.Provider().KeySize]));
+                SecureBuffer.SecureLargeBuffer encryptedFile = algorithm.Provider().EncryptionAlgorithm.EncryptBytes(filesToEncrypt[i], key[..algorithm.Provider().KeySize]);
+                fs.Write(encryptedFile.AsSpan);
+                encryptedFile.Dispose();
             }
 
             byte[] metadataOffsets = new byte[sizeof(ushort) + 4096];
@@ -246,10 +248,11 @@ namespace VaultCrypt.Tests
             {
                 BinaryPrimitives.WriteInt64LittleEndian(metadataOffsets.AsSpan(2 + (i * 8), 8), offsets[i]);
             }
-            byte[] encryptedMetadataOffsets = vaultSessionWithReader.VAULT_READER.VaultEncryption(metadataOffsets);
+            SecureBuffer.SecureLargeBuffer encryptedMetadataOffsets = vaultSessionWithReader.VAULT_READER.VaultEncryption(metadataOffsets);
             //v0 = [version (1byte)][salt (32 bytes)][iterations (4 bytes)] + [metadata offsets (28 bytes for AES decryption + 2 bytes ushort number +  MetadataOffsetsSize (4KB (4096 bytes))]...
             fs.Seek(1 + 32 + 4, SeekOrigin.Begin); //Seeking to where offsets are placed
-            fs.Write(encryptedMetadataOffsets);
+            fs.Write(encryptedMetadataOffsets.AsSpan);
+            encryptedMetadataOffsets.Dispose();
 
             return (path, fileEncryptionOptions);
         }

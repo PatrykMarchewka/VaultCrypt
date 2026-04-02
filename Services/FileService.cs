@@ -12,14 +12,14 @@ namespace VaultCrypt.Services
 {
     public interface IFileService
     {
-        public void WriteReadyChunk(ConcurrentDictionary<ulong, byte[]> results, ref ulong nextToWrite, ulong currentIndex, Stream fileFS, object lockObject);
+        public void WriteReadyChunk(ConcurrentDictionary<ulong, SecureBuffer.SecureLargeBuffer> results, ref ulong nextToWrite, ulong currentIndex, Stream fileFS, object lockObject);
         public void ZeroOutPartOfFile(Stream stream, long offset, ulong length);
         public void CopyPartOfFile(Stream source, long offset, ulong length, Stream destination, long destinationOffset);
     }
 
     public class FileService : IFileService
     {
-        public void WriteReadyChunk(ConcurrentDictionary<ulong, byte[]> results, ref ulong nextToWrite, ulong currentIndex, Stream fileFS, object lockObject)
+        public void WriteReadyChunk(ConcurrentDictionary<ulong, SecureBuffer.SecureLargeBuffer> results, ref ulong nextToWrite, ulong currentIndex, Stream fileFS, object lockObject)
         {
             ArgumentNullException.ThrowIfNull(results);
             ArgumentOutOfRangeException.ThrowIfNegative(nextToWrite);
@@ -28,7 +28,7 @@ namespace VaultCrypt.Services
             ArgumentNullException.ThrowIfNull(lockObject);
             lock (lockObject)
             {
-                byte[] ready;
+                SecureBuffer.SecureLargeBuffer ready = null!;
                 while (nextToWrite != currentIndex)
                 {
                     Monitor.Wait(lockObject);
@@ -37,11 +37,11 @@ namespace VaultCrypt.Services
                 if (!results.TryRemove(nextToWrite, out ready!)) throw new VaultException(VaultException.ErrorContext.WriteToFile, VaultException.ErrorReason.MissingChunk);
                 try
                 {
-                    fileFS.Write(ready, 0, ready.Length);
+                    fileFS.Write(ready.AsSpan);
                 }
                 finally
                 {
-                    CryptographicOperations.ZeroMemory(ready);
+                    ready.Dispose();
                 }
                 nextToWrite++;
 

@@ -34,6 +34,7 @@ namespace VaultCrypt
         protected override void OnExit(ExitEventArgs args)
         {
             VaultSession.CurrentSession.Dispose();
+            VaultSession.CurrentSession.KEY.Dispose();
             base.OnExit(args);
         }
     }

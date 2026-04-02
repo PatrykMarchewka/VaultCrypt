@@ -17,18 +17,29 @@ namespace VaultCrypt.Tests.Services
         [Fact]
         void WriteReadyChunkWritesToStream()
         {
-            var bytes = new byte[] { 0, 1, 2 };
-            var copy = (byte[])bytes.Clone();
-            ulong nextToWrite = 0;
-            var dictionary = new ConcurrentDictionary<ulong, byte[]>() { [0] = bytes };
-            var stream = new MemoryStream();
+            SecureBuffer.SecureLargeBuffer buffer = new SecureBuffer.SecureLargeBuffer(100);
+            SecureBuffer.SecureLargeBuffer copy = new SecureBuffer.SecureLargeBuffer(100);
+            try
+            {
+                RandomNumberGenerator.Fill(buffer.AsSpan);
+                buffer.AsSpan.CopyTo(copy.AsSpan);
+                ulong nextToWrite = 0;
+                var dictionary = new ConcurrentDictionary<ulong, SecureBuffer.SecureLargeBuffer>() { [0] = buffer };
+                var stream = new MemoryStream();
 
-            _service.WriteReadyChunk(dictionary, ref nextToWrite, 0, stream, new object());
-            //Checking if the data got zeroed after writing
-            Assert.True(bytes.SequenceEqual(new byte[bytes.Length]));
+                _service.WriteReadyChunk(dictionary, ref nextToWrite, 0, stream, new object());
+                //Checking if the data got disposed after writing
+                Assert.Throws<ObjectDisposedException>(() => buffer.AsMemory);
 
-            var result = stream.ToArray();
-            Assert.True(copy.SequenceEqual(result));
+                var result = stream.ToArray();
+                Assert.True(copy.AsSpan.SequenceEqual(result));
+            }
+            finally
+            {
+                buffer.Dispose();
+                copy.Dispose();
+            }
+            
         }
 
         [Fact]
@@ -44,7 +55,7 @@ namespace VaultCrypt.Tests.Services
         void WriteReadyChunkThrowsForMissingChunk()
         {
             ulong nextToWrite = 0;
-            Assert.Throws<VaultException>(() => _service.WriteReadyChunk(new ConcurrentDictionary<ulong, byte[]>(), ref nextToWrite, 0, new MemoryStream(), new object()));
+            Assert.Throws<VaultException>(() => _service.WriteReadyChunk(new ConcurrentDictionary<ulong, SecureBuffer.SecureLargeBuffer>(), ref nextToWrite, 0, new MemoryStream(), new object()));
         }
 
         [Fact]
