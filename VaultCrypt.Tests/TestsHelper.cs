@@ -1,4 +1,3 @@
-using Newtonsoft.Json.Linq;
 using System;
 using System.Buffers.Binary;
 using System.Collections.Generic;
@@ -144,6 +143,13 @@ namespace VaultCrypt.Tests
             typeof(VaultSession).GetProperty(nameof(VaultSession.ENCRYPTED_FILES))!.SetValue(session, encryptedFilesListCopy);
 
             return session;
+        }
+
+        internal static ReadOnlySpan<byte> CreateKey(byte[]? password = null, byte[]? salt = null, int iterations = 1000)
+        {
+            Span<byte> key = new byte[PasswordHelper.KeySize];
+            PasswordHelper.DeriveKey(password ??= new byte[16], salt ??= new byte[32], iterations, key);
+            return key;
         }
 
         /// <summary>
