@@ -1,6 +1,7 @@
-﻿using System;
+using System;
 using System.Buffers;
 using System.Collections.Generic;
+using System.ComponentModel;
 using System.Linq;
 using System.Runtime.InteropServices;
 using System.Runtime.Versioning;
@@ -117,11 +118,11 @@ namespace VaultCrypt
             {
                 if (OperatingSystem.IsWindows())
                 {
-                    if (!VirtualLock(_pointer, (nuint)_length)) throw new SecurityException($"Error while locking memory on Windows: {Marshal.GetLastWin32Error()}");
+                    if (!VirtualLock(_pointer, (nuint)_length)) throw new SecurityException($"Error while locking memory on Windows: {Marshal.GetLastWin32Error()} - {new Win32Exception(Marshal.GetLastWin32Error()).Message}");
                 }
                 else if(OperatingSystem.IsMacOS() || OperatingSystem.IsLinux())
                 {
-                    if (mlock(_pointer, (nuint)_length) != 0) throw new SecurityException($"Error while locking memory on Mac/Linux: {Marshal.GetLastWin32Error()}");
+                    if (mlock(_pointer, (nuint)_length) != 0) throw new SecurityException($"Error while locking memory on Mac/Linux: {Marshal.GetLastWin32Error()} - {new Win32Exception(Marshal.GetLastWin32Error()).Message}");
                 }
                 else
                 {
@@ -138,11 +139,11 @@ namespace VaultCrypt
             {
                 if (OperatingSystem.IsWindows())
                 {
-                    if (!VirtualUnlock(_pointer, (nuint)_length)) throw new SecurityException($"Error while unlocking memory on Windows: {Marshal.GetLastWin32Error()}");
+                    if (!VirtualUnlock(_pointer, (nuint)_length)) throw new SecurityException($"Error while unlocking memory on Windows: {Marshal.GetLastWin32Error()} - {new Win32Exception(Marshal.GetLastWin32Error()).Message}");
                 }
                 else if (OperatingSystem.IsMacOS() || OperatingSystem.IsLinux())
                 {
-                    if (munlock(_pointer, (nuint)_length) != 0) throw new SecurityException($"Error while unlocking memory on Mac/Linux: {Marshal.GetLastWin32Error()}");
+                    if (munlock(_pointer, (nuint)_length) != 0) throw new SecurityException($"Error while unlocking memory on Mac/Linux: {Marshal.GetLastWin32Error()} - {new Win32Exception(Marshal.GetLastWin32Error()).Message}");
                 }
                 else
                 {
