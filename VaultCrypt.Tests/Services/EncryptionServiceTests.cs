@@ -65,39 +65,46 @@ namespace VaultCrypt.Tests.Services
         async Task EncryptEncryptsAndSavesToVaultChunked(EncryptionAlgorithm.EncryptionAlgorithmInfo algorithm)
         {
             var vaultPath = TestsHelper.CreateVaultFile();
-
-            FileInfo vaultInfo = new FileInfo(vaultPath!);
-            long vaultFileSize = vaultInfo.Length;
-            using (FileStream vaultFS = new FileStream(vaultPath!, FileMode.Open, FileAccess.ReadWrite))
-            {
-                
-                TestsHelper.SetVaultSessionFromStream(_session, vaultFS);
-            }
-            int oneMBBytes = (1024 * 1024);
             //Create a massive file to make sure that after encryption the chunks modify EncryptedFileInfo.FileSize value
+            int oneMBBytes = (1024 * 1024);
             var fileToEncrypt = TestsHelper.CreateTemporaryFile(RandomNumberGenerator.GetInt32(oneMBBytes * 400 + 1, oneMBBytes * 500));
 
-            await _service.Encrypt(algorithm, 1, fileToEncrypt, new ProgressionContext());
-
-            vaultInfo.Refresh();
-            long newVaultFileSize = vaultInfo.Length;
-            FileInfo expectedFileInfo = new FileInfo(fileToEncrypt!);
-            EncryptedFileInfo expectedEncryptedFileInfo = new EncryptedFileInfo(expectedFileInfo.Name, (ulong)(expectedFileInfo.Length + algorithm.Provider().EncryptionAlgorithm.ExtraEncryptionDataSize), algorithm);
-            EncryptedFileInfo actualEncryptedFileInfo = null!;
-            using (FileStream vaultFS = new FileStream(vaultPath!, FileMode.Open, FileAccess.ReadWrite))
+            try
             {
+                FileInfo vaultInfo = new FileInfo(vaultPath!);
+                long vaultFileSize = vaultInfo.Length;
+                using (FileStream vaultFS = new FileStream(vaultPath!, FileMode.Open, FileAccess.ReadWrite))
+                {
 
-                actualEncryptedFileInfo = TestsHelper.GetOffsetKVPFromVaultAtPosition(0, vaultFS, _session).Value;
+                    TestsHelper.SetVaultSessionFromStream(_session, vaultFS);
+                }
+                await _service.Encrypt(algorithm, chunkSizeInMB: 1, fileToEncrypt, new ProgressionContext());
+
+                vaultInfo.Refresh();
+                long newVaultFileSize = vaultInfo.Length;
+                FileInfo expectedFileInfo = new FileInfo(fileToEncrypt!);
+                EncryptedFileInfo expectedEncryptedFileInfo = new EncryptedFileInfo(expectedFileInfo.Name, (ulong)(expectedFileInfo.Length + algorithm.Provider().EncryptionAlgorithm.ExtraEncryptionDataSize), algorithm);
+                EncryptedFileInfo actualEncryptedFileInfo = null!;
+                using (FileStream vaultFS = new FileStream(vaultPath!, FileMode.Open, FileAccess.ReadWrite))
+                {
+
+                    actualEncryptedFileInfo = TestsHelper.GetOffsetKVPFromVaultAtPosition(0, vaultFS, _session).Value;
+                }
+
+                Assert.Equal(expectedEncryptedFileInfo.FileName, actualEncryptedFileInfo.FileName);
+                Assert.True(expectedEncryptedFileInfo.FileSize != actualEncryptedFileInfo.FileSize); //We cant predict how many chunks will be created, however with how many are created due to file they should generate atleast 1KB extra shifting the fileSize output
+                Assert.Equal(expectedEncryptedFileInfo.EncryptionAlgorithm, actualEncryptedFileInfo.EncryptionAlgorithm);
+
+                Assert.True((vaultFileSize + expectedFileInfo.Length + algorithm.Provider().EncryptionAlgorithm.ExtraEncryptionDataSize + _session.VAULT_READER.EncryptionOptionsSize) < newVaultFileSize); //We cant predict how many chunks will be created so we just assert that the final file size is bigger than one chunk encrypt
+
             }
-
-            Assert.Equal(expectedEncryptedFileInfo.FileName, actualEncryptedFileInfo.FileName);
-            Assert.True(expectedEncryptedFileInfo.FileSize != actualEncryptedFileInfo.FileSize); //We cant predict how many chunks will be created, however with how many are created due to file they should generate atleast 1KB extra shifting the fileSize output
-            Assert.Equal(expectedEncryptedFileInfo.EncryptionAlgorithm, actualEncryptedFileInfo.EncryptionAlgorithm);
-
-            Assert.True((vaultFileSize + expectedFileInfo.Length + algorithm.Provider().EncryptionAlgorithm.ExtraEncryptionDataSize + _session.VAULT_READER.EncryptionOptionsSize) < newVaultFileSize); //We cant predict how many chunks will be created so we just assert that the final file size is bigger than one chunk encrypt
-
-            File.Delete(vaultPath!);
-            File.Delete(fileToEncrypt!);
+            finally
+            {
+                File.Delete(vaultPath!);
+                File.Delete(fileToEncrypt!);
+                //Session dispose here to prevent issues with allocating too much memory as XUnit cleans only after ALL theory tests finish
+                _session.Dispose();
+            }
         }
 
         [Theory]
@@ -107,34 +114,42 @@ namespace VaultCrypt.Tests.Services
             var vaultPath = TestsHelper.CreateVaultFile();
             FileInfo vaultInfo = new FileInfo(vaultPath!);
             long vaultFileSize = vaultInfo.Length;
-            using (FileStream vaultFS = new FileStream(vaultPath!, FileMode.Open, FileAccess.ReadWrite))
-            {
-
-                TestsHelper.SetVaultSessionFromStream(_session, vaultFS);
-            }
             var fileToEncrypt = TestsHelper.CreateTemporaryFile(RandomNumberGenerator.GetInt32(1, (1024 * 1024) - 1));
-
-            await _service.Encrypt(algorithm, 1, fileToEncrypt, new ProgressionContext());
-
-            vaultInfo.Refresh();
-            long newVaultFileSize = vaultInfo.Length;
-            FileInfo expectedFileInfo = new FileInfo(fileToEncrypt!);
-            EncryptedFileInfo expectedEncryptedFileInfo = new EncryptedFileInfo(expectedFileInfo.Name, (ulong)(expectedFileInfo.Length + algorithm.Provider().EncryptionAlgorithm.ExtraEncryptionDataSize), algorithm);
-            EncryptedFileInfo actualEncryptedFileInfo = null!;
-            using (FileStream vaultFS = new FileStream(vaultPath!, FileMode.Open, FileAccess.ReadWrite))
+            try
             {
+                using (FileStream vaultFS = new FileStream(vaultPath!, FileMode.Open, FileAccess.ReadWrite))
+                {
 
-                actualEncryptedFileInfo = TestsHelper.GetOffsetKVPFromVaultAtPosition(0, vaultFS, _session).Value;
+                    TestsHelper.SetVaultSessionFromStream(_session, vaultFS);
+                }
+                
+
+                await _service.Encrypt(algorithm, 1, fileToEncrypt, new ProgressionContext());
+
+                vaultInfo.Refresh();
+                long newVaultFileSize = vaultInfo.Length;
+                FileInfo expectedFileInfo = new FileInfo(fileToEncrypt!);
+                EncryptedFileInfo expectedEncryptedFileInfo = new EncryptedFileInfo(expectedFileInfo.Name, (ulong)(expectedFileInfo.Length + algorithm.Provider().EncryptionAlgorithm.ExtraEncryptionDataSize), algorithm);
+                EncryptedFileInfo actualEncryptedFileInfo = null!;
+                using (FileStream vaultFS = new FileStream(vaultPath!, FileMode.Open, FileAccess.ReadWrite))
+                {
+
+                    actualEncryptedFileInfo = TestsHelper.GetOffsetKVPFromVaultAtPosition(0, vaultFS, _session).Value;
+                }
+
+                Assert.Equal(expectedEncryptedFileInfo.FileName, actualEncryptedFileInfo.FileName);
+                Assert.Equal(expectedEncryptedFileInfo.FileSize, actualEncryptedFileInfo.FileSize);
+                Assert.Equal(expectedEncryptedFileInfo.EncryptionAlgorithm, actualEncryptedFileInfo.EncryptionAlgorithm);
+
+                Assert.Equal((vaultFileSize + expectedFileInfo.Length + algorithm.Provider().EncryptionAlgorithm.ExtraEncryptionDataSize + _session.VAULT_READER.EncryptionOptionsSize), newVaultFileSize);
             }
-
-            Assert.Equal(expectedEncryptedFileInfo.FileName, actualEncryptedFileInfo.FileName);
-            Assert.Equal(expectedEncryptedFileInfo.FileSize, actualEncryptedFileInfo.FileSize);
-            Assert.Equal(expectedEncryptedFileInfo.EncryptionAlgorithm, actualEncryptedFileInfo.EncryptionAlgorithm);
-
-            Assert.Equal((vaultFileSize + expectedFileInfo.Length + algorithm.Provider().EncryptionAlgorithm.ExtraEncryptionDataSize + _session.VAULT_READER.EncryptionOptionsSize), newVaultFileSize);
-
-            File.Delete(vaultPath!);
-            File.Delete(fileToEncrypt!);
+            finally
+            {
+                File.Delete(vaultPath!);
+                File.Delete(fileToEncrypt!);
+                //Session dispose here to prevent issues with allocating too much memory as XUnit cleans only after ALL theory tests finish
+                _session.Dispose();
+            }
         }
 
         [Fact]
