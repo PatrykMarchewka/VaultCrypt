@@ -12,7 +12,7 @@ namespace VaultCrypt.Services
     public interface IVaultService
     {
         public void CreateVault(NormalizedPath folderPath, string vaultName, byte[] password, int iterations);
-        public void CreateSessionFromFile(byte[] password, NormalizedPath path);
+        public void CreateSessionFromFile(ReadOnlySpan<byte> password, NormalizedPath path);
         public void TrimVault(ProgressionContext context);
         public void DeleteFileFromVault(long offset, ProgressionContext context);
         public void RefreshEncryptedFilesList(Stream vaultFS);
@@ -83,9 +83,10 @@ namespace VaultCrypt.Services
         /// </summary>
         /// <param name="password">Password to unlock the vault with</param>
         /// <param name="path">Path to the vault with extension</param>
-        public void CreateSessionFromFile(byte[] password, NormalizedPath path)
+        /// <exception cref="ArgumentNullException">Thrown when <paramref name="path"/> is set to null</exception>
+        /// <exception cref="ArgumentException">Thrown when <paramref name="password"/> is empty or <paramref name="path"/> is empty or set to whitespace only characters</exception>
+        public void CreateSessionFromFile(ReadOnlySpan<byte> password, NormalizedPath path)
         {
-            ArgumentNullException.ThrowIfNull(password);
             if(password.Length == 0) { throw new ArgumentException("Provided empty password"); }
             ArgumentNullException.ThrowIfNullOrWhiteSpace(path);
 
