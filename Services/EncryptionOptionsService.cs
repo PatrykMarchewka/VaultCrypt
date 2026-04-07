@@ -30,7 +30,8 @@ namespace VaultCrypt.Services
             ArgumentNullException.ThrowIfNull(fileInfo);
             ArgumentOutOfRangeException.ThrowIfZero(chunkSizeInMB);
 
-            byte[] fileName = Encoding.UTF8.GetBytes(fileInfo.Name);
+            SecureBuffer.SecureLargeBuffer fileName = new SecureBuffer.SecureLargeBuffer(Encoding.UTF8.GetByteCount(fileInfo.Name));
+            Encoding.UTF8.GetBytes(fileInfo.Name, fileName.AsSpan);
             bool chunked = false;
             EncryptionOptions.ChunkInformation? chunkInformation = null;
 
