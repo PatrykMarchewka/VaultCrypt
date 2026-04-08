@@ -115,7 +115,7 @@ namespace VaultCrypt
         private interface XSalsa20Algorithm : IEncryptionAlgorithm;
 
 
-        public class AesGcm : AESAlgorithm
+        private class AesGcm : AESAlgorithm
         {
             public short ExtraEncryptionDataSize => 28;
             public EncryptedOutputOrder EncryptedOutputOrder => EncryptedOutputOrder.IV_Tag_Data;
@@ -180,7 +180,7 @@ namespace VaultCrypt
 
 
 
-        public class AesCcm : AESAlgorithm
+        private class AesCcm : AESAlgorithm
         {
             public short ExtraEncryptionDataSize => 28;
             public EncryptedOutputOrder EncryptedOutputOrder => EncryptedOutputOrder.IV_Tag_Data;
@@ -236,7 +236,7 @@ namespace VaultCrypt
             }
         }
 
-        public class ChaCha20Poly1305 : ChaCha20Algorithm
+        private class ChaCha20Poly1305 : ChaCha20Algorithm
         {
             public short ExtraEncryptionDataSize => 28;
             public EncryptedOutputOrder EncryptedOutputOrder => EncryptedOutputOrder.IV_Tag_Data;
@@ -292,7 +292,7 @@ namespace VaultCrypt
             }
         }
 
-        public class AesEax : AESAlgorithm
+        private class AesEax : AESAlgorithm
         {
             public short ExtraEncryptionDataSize => 28;
             public EncryptedOutputOrder EncryptedOutputOrder => EncryptedOutputOrder.IV_Data_Tag;
@@ -365,7 +365,7 @@ namespace VaultCrypt
             }
         }
 
-        public class TwofishCtr : TwoFishAlgorithm
+        private class TwofishCtr : TwoFishAlgorithm
         {
             public short ExtraEncryptionDataSize => 76;
             public EncryptedOutputOrder EncryptedOutputOrder => EncryptedOutputOrder.IV_Data_Tag;
@@ -443,7 +443,7 @@ namespace VaultCrypt
             }
         }
 
-        public class ThreefishCtr : ThreeFishAlgorithm
+        private class ThreefishCtr : ThreeFishAlgorithm
         {
             public ThreefishCtr(int blockSizeInBits)
             {
@@ -526,7 +526,7 @@ namespace VaultCrypt
             }
         }
 
-        public class SerpentGcm : SerpentAlgorithm
+        private class SerpentGcm : SerpentAlgorithm
         {
             public short ExtraEncryptionDataSize => 28;
             public EncryptedOutputOrder EncryptedOutputOrder => EncryptedOutputOrder.IV_Data_Tag;
@@ -597,7 +597,7 @@ namespace VaultCrypt
             }
         }
 
-        public class SerpentCtr : SerpentAlgorithm
+        private class SerpentCtr : SerpentAlgorithm
         {
             public short ExtraEncryptionDataSize => 76;
             public EncryptedOutputOrder EncryptedOutputOrder => EncryptedOutputOrder.IV_Data_Tag;
@@ -672,7 +672,7 @@ namespace VaultCrypt
             }
         }
 
-        public class CameliaGcm : CameliaAlgorithm
+        private class CameliaGcm : CameliaAlgorithm
         {
             public short ExtraEncryptionDataSize => 28;
             public EncryptedOutputOrder EncryptedOutputOrder => EncryptedOutputOrder.IV_Data_Tag;
@@ -743,7 +743,7 @@ namespace VaultCrypt
             }
         }
 
-        public class CameliaOcb : CameliaAlgorithm
+        private class CameliaOcb : CameliaAlgorithm
         {
             public short ExtraEncryptionDataSize => 28;
             public EncryptedOutputOrder EncryptedOutputOrder => EncryptedOutputOrder.IV_Data_Tag;
@@ -814,7 +814,7 @@ namespace VaultCrypt
             }
         }
 
-        public class CameliaCtr : CameliaAlgorithm
+        private class CameliaCtr : CameliaAlgorithm
         {
             public short ExtraEncryptionDataSize => 76;
             public EncryptedOutputOrder EncryptedOutputOrder => EncryptedOutputOrder.IV_Data_Tag;
@@ -889,7 +889,7 @@ namespace VaultCrypt
             }
         }
 
-        public class XSalsa20 : XSalsa20Algorithm
+        private class XSalsa20 : XSalsa20Algorithm
         {
             public short ExtraEncryptionDataSize => 88;
             public EncryptedOutputOrder EncryptedOutputOrder => EncryptedOutputOrder.IV_Data_Tag;
