@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Reflection.PortableExecutable;
@@ -39,7 +39,7 @@ namespace VaultCrypt.Tests.Services
             {
                 Assert.Equal(_session.VAULT_READER.HeaderSize, fs.Length);
                 Assert.Equal(VaultSession.NewestVaultVersion, fs.ReadByte());
-                Assert.False(new byte[_session.VAULT_READER.SaltSize].SequenceEqual(_session.VAULT_READER.ReadSalt(fs))); //Asserting that salt is not empty (zeroed out value)
+                Assert.False(_session.VAULT_READER.ReadSalt(fs).AsSpan.SequenceEqual(new byte[_session.VAULT_READER.SaltSize])); //Asserting that salt is not empty (zeroed out value)
                 Assert.Equal(iterations, _session.VAULT_READER.ReadIterationsNumber(fs));
             }
 

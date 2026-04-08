@@ -56,7 +56,7 @@ namespace VaultCrypt.Services
             NormalizedPath vaultPath = NormalizedPath.From($"{folderPath}\\{vaultName}.vlt");
             IVaultReader reader = _registry.GetVaultReader(VaultSession.NewestVaultVersion);
             byte[] salt = null!;
-            byte[] vaultHeader = null!;
+            SecureBuffer.SecureLargeBuffer vaultHeader = null!;
             SecureBuffer.SecureLargeBuffer encryptedMetadata = null!;
             try
             {
@@ -66,14 +66,14 @@ namespace VaultCrypt.Services
                 encryptedMetadata = reader.VaultEncryption(new byte[sizeof(ushort) + reader.MetadataOffsetsSize]);
                 using (FileStream vaultFS = new FileStream(vaultPath!, FileMode.Create, FileAccess.Write))
                 {
-                    vaultFS.Write(vaultHeader);
+                    vaultFS.Write(vaultHeader.AsSpan);
                     vaultFS.Write(encryptedMetadata.AsSpan);
                 }
             }
             finally
             {
                 if (salt is not null) CryptographicOperations.ZeroMemory(salt);
-                if (vaultHeader is not null) CryptographicOperations.ZeroMemory(vaultHeader);
+                if (vaultHeader is not null) vaultHeader.Dispose();
                 if (encryptedMetadata is not null) encryptedMetadata.Dispose();
             }
         }
