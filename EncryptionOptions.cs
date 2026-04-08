@@ -117,6 +117,11 @@ namespace VaultCrypt
                 if (ChunkInformation is not null) ChunkInformation.Dispose();
                 ChunkInformation = null;
             }
+
+            ~FileEncryptionOptions()
+            {
+                Dispose();
+            }
         }
 
         public record ChunkInformation : IDisposable
