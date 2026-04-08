@@ -15,9 +15,9 @@ namespace VaultCrypt.Tests.Services
         public bool RefreshEncryptedFilesListWasCalled = false;
         public bool TrimVaultWasCalled = false;
 
-        public void CreateSessionFromFile(byte[] password, NormalizedPath path) => CreateSessionFromFileWasCalled = true;
+        public void CreateSessionFromFile(ReadOnlySpan<byte> password, NormalizedPath path) => CreateSessionFromFileWasCalled = true;
 
-        public void CreateVault(NormalizedPath folderPath, string vaultName, byte[] password, int iterations) => CreateVaultWasCalled = true;
+        public void CreateVault(NormalizedPath folderPath, string vaultName, ReadOnlySpan<byte> password, int iterations) => CreateVaultWasCalled = true;
 
         public void DeleteFileFromVault(long offset, ProgressionContext context) => DeleteFileFromVaultWasCalled = true;
 

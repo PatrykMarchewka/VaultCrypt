@@ -11,7 +11,7 @@ namespace VaultCrypt.Services
 {
     public interface IVaultService
     {
-        public void CreateVault(NormalizedPath folderPath, string vaultName, byte[] password, int iterations);
+        public void CreateVault(NormalizedPath folderPath, string vaultName, ReadOnlySpan<byte> password, int iterations);
         public void CreateSessionFromFile(ReadOnlySpan<byte> password, NormalizedPath path);
         public void TrimVault(ProgressionContext context);
         public void DeleteFileFromVault(long offset, ProgressionContext context);
@@ -43,13 +43,13 @@ namespace VaultCrypt.Services
         /// <param name="password">Password to encrypt the vault with</param>
         /// <param name="iterations">Number of PBKDF2 iterations</param>
         /// <exception cref="ArgumentNullException"><paramref name="folderPath"/>, <paramref name="vaultName"/> or <paramref name="password"/> is <see cref="null"/></exception>
+        /// <exception cref="ArgumentException"><paramref name="folderPath"/>, <paramref name="vaultName"/> or <paramref name="password"/> is empty or whitespace only characters</exception>
         /// <exception cref="ArgumentOutOfRangeException"><paramref name="iterations"/> is negative or set to zero</exception>
-        public void CreateVault(NormalizedPath folderPath, string vaultName, byte[] password, int iterations)
+        public void CreateVault(NormalizedPath folderPath, string vaultName, ReadOnlySpan<byte> password, int iterations)
         {
             ArgumentNullException.ThrowIfNullOrWhiteSpace(folderPath);
             ArgumentNullException.ThrowIfNullOrWhiteSpace(vaultName);
-            ArgumentNullException.ThrowIfNull(password);
-            if(password.Length == 0) { throw new ArgumentException("Provided empty password"); }
+            if(password.IsEmpty) { throw new ArgumentException("Provided empty password"); }
             ArgumentOutOfRangeException.ThrowIfNegativeOrZero(iterations);
 
             if (!Directory.Exists(folderPath)) Directory.CreateDirectory(folderPath!);
@@ -97,15 +97,15 @@ namespace VaultCrypt.Services
 
             IVaultReader reader = _registry.GetVaultReader(version);
             int iterations = reader.ReadIterationsNumber(fs);
-            byte[] salt = null!;
+            SecureBuffer.SecureLargeBuffer salt = null!;
             try
             {
                 salt = reader.ReadSalt(fs);
-                _session.CreateSession(path, reader, password, salt, iterations);
+                _session.CreateSession(path, reader, password, salt.AsSpan, iterations);
             }
             finally
             {
-                if (salt is not null) CryptographicOperations.ZeroMemory(salt);
+                if (salt is not null) salt.Dispose();
             }
             RefreshEncryptedFilesList(fs);
         }
