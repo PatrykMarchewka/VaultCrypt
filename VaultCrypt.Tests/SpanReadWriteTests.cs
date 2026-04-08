@@ -50,9 +50,11 @@ namespace VaultCrypt.Tests
             {
                 //+1 because second parameter is exclusive
                 int numberToRead = RandomNumberGenerator.GetInt32(1, (size - i) + 1);
-                byte[] expected = randomData.AsSpan().Slice(i, numberToRead).ToArray();
-                byte[] actual = reader.ReadBytes(numberToRead);
-                Assert.True(expected.SequenceEqual(actual));
+                ReadOnlySpan<byte> expected = randomData.AsSpan().Slice(i, numberToRead);
+                using (SecureBuffer.SecureLargeBuffer actual = reader.ReadBytes(numberToRead))
+                {
+                    Assert.True(actual.AsSpan.SequenceEqual(expected));
+                }
                 i += numberToRead;
             }
         }
@@ -194,13 +196,15 @@ namespace VaultCrypt.Tests
             expectedIndex += 8;
 
             byte[] expectedBytes = randomData[expectedIndex..];
-            byte[] actualBytes = reader.ReadBytes(size - expectedIndex);
-
+            using (SecureBuffer.SecureLargeBuffer actualBytes = reader.ReadBytes(size - expectedIndex))
+            {
+                Assert.True(actualBytes.AsSpan.SequenceEqual(expectedBytes));
+            }
             Assert.Equal(expectedByte, actualByte);
             Assert.Equal(expectedUshort, actualUshort);
             Assert.Equal(expectedUint, actualUint);
             Assert.Equal(expectedUlong, actualUlong);
-            Assert.True(expectedBytes.SequenceEqual(actualBytes));
+            
         }
         #endregion
 

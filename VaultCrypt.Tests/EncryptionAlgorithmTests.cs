@@ -25,7 +25,7 @@ namespace VaultCrypt.Tests
 
     public class EncryptionAlgorithmSharedTests()
     {
-        byte[] _key = RandomNumberGenerator.GetBytes(128);
+        byte[] _key = RandomNumberGenerator.GetBytes(PasswordHelper.KeySize);
         byte[] _data1 = RandomNumberGenerator.GetBytes(128);
         byte[] _data2 = RandomNumberGenerator.GetBytes(128);
 
@@ -197,9 +197,8 @@ namespace VaultCrypt.Tests
 
     public abstract class EncryptionAlgorithmTests<TSelf> where TSelf : EncryptionAlgorithmTests<TSelf>, new()
     {
-        byte[] _key = RandomNumberGenerator.GetBytes(128);
+        byte[] _key = RandomNumberGenerator.GetBytes(PasswordHelper.KeySize);
         byte[] _data1 = RandomNumberGenerator.GetBytes(128);
-        byte[] _data2 = RandomNumberGenerator.GetBytes(128);
 
         byte[] FlipSingleBit(ReadOnlySpan<byte> data, int positionToFlip)
         {

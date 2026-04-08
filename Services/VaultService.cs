@@ -11,8 +11,8 @@ namespace VaultCrypt.Services
 {
     public interface IVaultService
     {
-        public void CreateVault(NormalizedPath folderPath, string vaultName, byte[] password, int iterations);
-        public void CreateSessionFromFile(byte[] password, NormalizedPath path);
+        public void CreateVault(NormalizedPath folderPath, string vaultName, ReadOnlySpan<byte> password, int iterations);
+        public void CreateSessionFromFile(ReadOnlySpan<byte> password, NormalizedPath path);
         public void TrimVault(ProgressionContext context);
         public void DeleteFileFromVault(long offset, ProgressionContext context);
         public void RefreshEncryptedFilesList(Stream vaultFS);
@@ -43,20 +43,20 @@ namespace VaultCrypt.Services
         /// <param name="password">Password to encrypt the vault with</param>
         /// <param name="iterations">Number of PBKDF2 iterations</param>
         /// <exception cref="ArgumentNullException"><paramref name="folderPath"/>, <paramref name="vaultName"/> or <paramref name="password"/> is <see cref="null"/></exception>
+        /// <exception cref="ArgumentException"><paramref name="folderPath"/>, <paramref name="vaultName"/> or <paramref name="password"/> is empty or whitespace only characters</exception>
         /// <exception cref="ArgumentOutOfRangeException"><paramref name="iterations"/> is negative or set to zero</exception>
-        public void CreateVault(NormalizedPath folderPath, string vaultName, byte[] password, int iterations)
+        public void CreateVault(NormalizedPath folderPath, string vaultName, ReadOnlySpan<byte> password, int iterations)
         {
             ArgumentNullException.ThrowIfNullOrWhiteSpace(folderPath);
             ArgumentNullException.ThrowIfNullOrWhiteSpace(vaultName);
-            ArgumentNullException.ThrowIfNull(password);
-            if(password.Length == 0) { throw new ArgumentException("Provided empty password"); }
+            if(password.IsEmpty) { throw new ArgumentException("Provided empty password"); }
             ArgumentOutOfRangeException.ThrowIfNegativeOrZero(iterations);
 
             if (!Directory.Exists(folderPath)) Directory.CreateDirectory(folderPath!);
             NormalizedPath vaultPath = NormalizedPath.From($"{folderPath}\\{vaultName}.vlt");
             IVaultReader reader = _registry.GetVaultReader(VaultSession.NewestVaultVersion);
             byte[] salt = null!;
-            byte[] vaultHeader = null!;
+            SecureBuffer.SecureLargeBuffer vaultHeader = null!;
             SecureBuffer.SecureLargeBuffer encryptedMetadata = null!;
             try
             {
@@ -66,14 +66,14 @@ namespace VaultCrypt.Services
                 encryptedMetadata = reader.VaultEncryption(new byte[sizeof(ushort) + reader.MetadataOffsetsSize]);
                 using (FileStream vaultFS = new FileStream(vaultPath!, FileMode.Create, FileAccess.Write))
                 {
-                    vaultFS.Write(vaultHeader);
+                    vaultFS.Write(vaultHeader.AsSpan);
                     vaultFS.Write(encryptedMetadata.AsSpan);
                 }
             }
             finally
             {
                 if (salt is not null) CryptographicOperations.ZeroMemory(salt);
-                if (vaultHeader is not null) CryptographicOperations.ZeroMemory(vaultHeader);
+                if (vaultHeader is not null) vaultHeader.Dispose();
                 if (encryptedMetadata is not null) encryptedMetadata.Dispose();
             }
         }
@@ -83,9 +83,10 @@ namespace VaultCrypt.Services
         /// </summary>
         /// <param name="password">Password to unlock the vault with</param>
         /// <param name="path">Path to the vault with extension</param>
-        public void CreateSessionFromFile(byte[] password, NormalizedPath path)
+        /// <exception cref="ArgumentNullException">Thrown when <paramref name="path"/> is set to null</exception>
+        /// <exception cref="ArgumentException">Thrown when <paramref name="password"/> is empty or <paramref name="path"/> is empty or set to whitespace only characters</exception>
+        public void CreateSessionFromFile(ReadOnlySpan<byte> password, NormalizedPath path)
         {
-            ArgumentNullException.ThrowIfNull(password);
             if(password.Length == 0) { throw new ArgumentException("Provided empty password"); }
             ArgumentNullException.ThrowIfNullOrWhiteSpace(path);
 
@@ -96,15 +97,15 @@ namespace VaultCrypt.Services
 
             IVaultReader reader = _registry.GetVaultReader(version);
             int iterations = reader.ReadIterationsNumber(fs);
-            byte[] salt = null!;
+            SecureBuffer.SecureLargeBuffer salt = null!;
             try
             {
                 salt = reader.ReadSalt(fs);
-                _session.CreateSession(path, reader, password, salt, iterations);
+                _session.CreateSession(path, reader, password, salt.AsSpan, iterations);
             }
             finally
             {
-                if (salt is not null) CryptographicOperations.ZeroMemory(salt);
+                if (salt is not null) salt.Dispose();
             }
             RefreshEncryptedFilesList(fs);
         }
@@ -145,12 +146,12 @@ namespace VaultCrypt.Services
                         fileEncryptionOptions = _encryptionOptionsService.GetDecryptedFileEncryptionOptions(stream, offset);
                         try
                         {
-                            _session.ENCRYPTED_FILES.Add(offset, new EncryptedFileInfo(Encoding.UTF8.GetString(fileEncryptionOptions.FileName), fileEncryptionOptions.FileSize, EncryptionAlgorithm.GetEncryptionAlgorithmInfo[fileEncryptionOptions.EncryptionAlgorithm]));
+                            _session.ENCRYPTED_FILES.Add(offset, new EncryptedFileInfo(Encoding.UTF8.GetString(fileEncryptionOptions.FileName.AsSpan), fileEncryptionOptions.FileSize, EncryptionAlgorithm.GetEncryptionAlgorithmInfo[fileEncryptionOptions.EncryptionAlgorithm]));
                         }
                         catch (ArgumentException)
                         {
                             //Dictionary entry with the same key already exists, replace it
-                            _session.ENCRYPTED_FILES[offset] = new EncryptedFileInfo(Encoding.UTF8.GetString(fileEncryptionOptions.FileName), fileEncryptionOptions.FileSize, EncryptionAlgorithm.GetEncryptionAlgorithmInfo[fileEncryptionOptions.EncryptionAlgorithm]);
+                            _session.ENCRYPTED_FILES[offset] = new EncryptedFileInfo(Encoding.UTF8.GetString(fileEncryptionOptions.FileName.AsSpan), fileEncryptionOptions.FileSize, EncryptionAlgorithm.GetEncryptionAlgorithmInfo[fileEncryptionOptions.EncryptionAlgorithm]);
                         }
 
                     }

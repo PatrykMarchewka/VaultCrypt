@@ -36,10 +36,10 @@ namespace VaultCrypt.Tests
 
         public void PopulateEncryptedFilesList(Stream stream) => PopulateEncryptedFilesListWasCalled = true;
 
-        public byte[] PrepareVaultHeader(byte[] salt, int iterations)
+        public SecureBuffer.SecureLargeBuffer PrepareVaultHeader(ReadOnlySpan<byte> salt, int iterations)
         {
             PrepareVaultHeaderWasCalled = true;
-            return new byte[0];
+            return null!;
         }
 
         public SecureBuffer.SecureLargeBuffer ReadAndDecryptData(Stream stream, long offset, int length)
@@ -60,10 +60,10 @@ namespace VaultCrypt.Tests
             return new long[0];
         }
 
-        public byte[] ReadSalt(Stream stream)
+        public SecureBuffer.SecureLargeBuffer ReadSalt(Stream stream)
         {
             ReadSaltWasCalled = true;
-            return new byte[0];
+            return null!;
         }
 
         public void RemoveAndSaveMetadataOffsets(Stream stream, ushort itemIndex) => RemoveAndSaveMetadataOffsetsWasCalled = true;

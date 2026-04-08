@@ -24,13 +24,13 @@ namespace VaultCrypt
         {
             public byte Version { get; private set; } //Fixed 1 byte, version of the FileEncryptionOptions
             public ushort NameLength { get; private set; } //Fixed 2 bytes, length of fileName text
-            public byte[] FileName { get; private set; } //Varying length (read from nameLength), file name with extension!
+            public SecureBuffer.SecureLargeBuffer FileName { get; private set; } //Varying length (read from nameLength), file name with extension!
             public ulong FileSize { get; private set; } //Fixed 8 bytes, Size in bytes of encrypted file, with extra encryption metadata
             public byte EncryptionAlgorithm { get; private set; } //Fixed 1 byte, Encryption algorithm ID
             public bool IsChunked { get; private set; } //Fixed 1 byte, Whether file is chunked or not
             public ChunkInformation? ChunkInformation { get; private set; } //Fixed 14 bytes (2 bytes chunk size + 8 bytes total chunks count + 4 bytes final chunk size)
 
-            public FileEncryptionOptions(byte version, byte[] fileName, ulong fileSize, byte algorithm, bool chunked, ChunkInformation? chunkInformation)
+            public FileEncryptionOptions(byte version, SecureBuffer.SecureLargeBuffer fileName, ulong fileSize, byte algorithm, bool chunked, ChunkInformation? chunkInformation)
             {
                 if (chunked && chunkInformation is null) throw new ArgumentException("Chunk information cannot be null if chunk flag is set to true");
 
@@ -46,7 +46,7 @@ namespace VaultCrypt
             public virtual bool Equals(FileEncryptionOptions? other)
             {
                 if (other is null) return false;
-                if (!FileName.AsSpan().SequenceEqual(other.FileName)) return false;
+                if (!FileName.AsSpan.SequenceEqual(other.FileName.AsSpan)) return false;
                 if (ChunkInformation is not null) if (!ChunkInformation.Equals(other.ChunkInformation)) return false;
                 return (Version == other.Version && NameLength == other.NameLength && FileSize == other.FileSize && EncryptionAlgorithm == other.EncryptionAlgorithm && IsChunked == other.IsChunked);
             }
@@ -56,7 +56,7 @@ namespace VaultCrypt
                 HashCode hash = new HashCode();
                 hash.Add(Version);
                 hash.Add(NameLength);
-                foreach (byte character in FileName) hash.Add(character);
+                foreach (byte character in FileName.AsSpan) hash.Add(character);
                 hash.Add(FileSize);
                 hash.Add(EncryptionAlgorithm);
                 hash.Add(IsChunked);
@@ -69,7 +69,7 @@ namespace VaultCrypt
                 SpanWriter bufferSpan = new SpanWriter(span);
                 bufferSpan.WriteByte(encryptionOptions.Version);
                 bufferSpan.WriteUInt16(encryptionOptions.NameLength);
-                bufferSpan.WriteSpan(encryptionOptions.FileName);
+                bufferSpan.WriteSpan(encryptionOptions.FileName.AsSpan);
                 bufferSpan.WriteUInt64(encryptionOptions.FileSize);
                 bufferSpan.WriteByte(encryptionOptions.EncryptionAlgorithm);
                 bufferSpan.WriteByte(encryptionOptions.IsChunked ? (byte)1 : (byte)0);
@@ -110,8 +110,7 @@ namespace VaultCrypt
             public void Dispose()
             {
                 Version = 0;
-                CryptographicOperations.ZeroMemory(FileName);
-                FileName = Array.Empty<byte>();
+                FileName.Dispose();
                 FileSize = 0;
                 EncryptionAlgorithm = 0;
                 IsChunked = false;
@@ -174,7 +173,7 @@ namespace VaultCrypt
                 var spanReader = new SpanReader(data);
                 byte version = spanReader.ReadByte();
                 ushort nameLength = spanReader.ReadUInt16();
-                byte[] fileName = spanReader.ReadBytes(nameLength);
+                SecureBuffer.SecureLargeBuffer fileName = spanReader.ReadBytes(nameLength);
                 ulong fileSize = spanReader.ReadUInt64();
                 byte encryptionAlgorithm = spanReader.ReadByte();
                 bool chunked = spanReader.ReadByte() == 1 ? true : false;
@@ -188,7 +187,7 @@ namespace VaultCrypt
                 var spanReader = new SpanReader(data);
                 byte version = spanReader.ReadByte();
                 ushort nameLength = spanReader.ReadUInt16();
-                byte[] fileName = spanReader.ReadBytes(nameLength);
+                SecureBuffer.SecureLargeBuffer fileName = spanReader.ReadBytes(nameLength);
                 ulong fileSize = spanReader.ReadUInt64();
                 byte encryptionAlgorithm = spanReader.ReadByte();
                 bool chunked = spanReader.ReadByte() == 1 ? true : false;
@@ -200,7 +199,6 @@ namespace VaultCrypt
 
             private static ChunkInformation DeserializeChunkInformationV0(SpanReader chunkData)
             {
-
                 ushort chunkSize = chunkData.ReadUInt16();
                 ushort totalChunks = chunkData.ReadUInt16();
                 uint finalChunkSize = chunkData.ReadUInt32();
