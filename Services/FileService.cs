@@ -74,27 +74,20 @@ namespace VaultCrypt.Services
             ArgumentNullException.ThrowIfNull(destination);
             ArgumentOutOfRangeException.ThrowIfNegative(destinationOffset);
 
-            //8MB buffer
-            byte[] buffer = new byte[8_388_608];
-
             source.Seek(offset, SeekOrigin.Begin);
             destination.Seek(destinationOffset, SeekOrigin.Begin);
-            try
+            using (SecureBuffer.SecureLargeBuffer buffer = new SecureBuffer.SecureLargeBuffer(8_388_608)) //8MB buffer
             {
                 while (length > 0)
                 {
                     //Length is provided as ulong to support fileSizes above 2GB
                     int chunkSize = (int)Math.Min(length, (ulong)buffer.Length);
-                    source.ReadExactly(buffer, 0, chunkSize);
-                    destination.Write(buffer, 0, chunkSize);
+                    var sliced = buffer.AsSpan.Slice(0, chunkSize);
+                    source.ReadExactly(sliced);
+                    destination.Write(sliced);
                     length -= (ulong)chunkSize;
                 }
             }
-            finally
-            {
-                CryptographicOperations.ZeroMemory(buffer);
-            }
-
         }
     }
 }
