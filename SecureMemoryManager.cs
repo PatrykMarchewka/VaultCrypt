@@ -52,16 +52,16 @@ namespace VaultCrypt
         }
 
         /// <summary>
-        /// Unmanaged memory is always unpinned, this method does nothing in this context
+        /// Unmanaged memory is outisde GC heap, this method does nothing in this context
         /// </summary>
         public override void Unpin()
         {
-            //Unmanaged memory is always unpinned, method intentionally left empty
+            //Unmanaged memory is outside GC heap, method intentionally left empty
         }
 
         protected override void Dispose(bool disposing)
         {
-            //Unamanaged memory should be freed where they are managed
+            //Unamanaged memory should be freed from where it is managed instead
             Interlocked.Exchange(ref _disposed, 1);
             _pointer = null;
             _length = 0;

@@ -14,7 +14,15 @@ namespace VaultCrypt
 {
     public interface ISecureBuffer
     {
+        /// <summary>
+        /// Gets full length of the buffer which may be padded depending on implementation
+        /// </summary>
         public int Length { get; }
+
+        /// <summary>
+        /// Creates a new span over memory region
+        /// </summary>
+        /// <exception cref="ObjectDisposedException">Thrown when the object is marked as already disposed</exception>
         public Span<byte> AsSpan { get; }
     }
 
@@ -50,10 +58,6 @@ namespace VaultCrypt
                 }
             }
 
-            /// <summary>
-            /// Creates a new span over memory region
-            /// </summary>
-            /// <exception cref="ObjectDisposedException">Thrown when the object is marked as already disposed</exception>
             public Span<byte> AsSpan
             {
                 get
@@ -299,10 +303,6 @@ namespace VaultCrypt
                 }
             }
 
-            /// <summary>
-            /// Creates a new span over memory region
-            /// </summary>
-            /// <exception cref="ObjectDisposedException">Thrown when the object is marked as already disposed</exception>
             public Span<byte> AsSpan
             {
                 get
@@ -328,7 +328,7 @@ namespace VaultCrypt
             }
 
             /// <summary>
-            /// Creates new block of zeroed and unpinned memory
+            /// Creates new block of zeroed and unmanaged memory
             /// </summary>
             /// <param name="length">Size in bytes of memory to create</param>
             /// <exception cref="ArgumentOutOfRangeException">Thrown when <paramref name="length"/> is set to negative or zero value</exception>
