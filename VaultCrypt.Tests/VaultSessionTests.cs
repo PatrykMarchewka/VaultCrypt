@@ -156,9 +156,10 @@ namespace VaultCrypt.Tests
             byte[] expectedSalt = RandomNumberGenerator.GetBytes(Reader.SaltSize);
             stream.Write(expectedSalt);
 
-            var actualSalt = Reader.ReadSalt(stream);
-
-            Assert.True(expectedSalt.SequenceEqual(actualSalt));
+            using (SecureBuffer.SecureLargeBuffer actualSalt = Reader.ReadSalt(stream))
+            {
+                Assert.True(actualSalt.AsSpan.SequenceEqual(expectedSalt));
+            }
         }
 
         [Fact]
@@ -195,29 +196,25 @@ namespace VaultCrypt.Tests
             byte[] expectedSalt = RandomNumberGenerator.GetBytes(Reader.SaltSize);
             int expectedIterations = RandomNumberGenerator.GetInt32(int.MaxValue);
 
-            byte[] actualHeader = Reader.PrepareVaultHeader(expectedSalt, expectedIterations);
-
-            Assert.Equal(Reader.Version, actualHeader[0]);
-            Assert.True(expectedSalt.SequenceEqual(actualHeader[1..(Reader.SaltSize + 1)])); //+1 because end index is exclusive
-            Assert.Equal(expectedIterations, BinaryPrimitives.ReadInt32LittleEndian(actualHeader[^4..]));
-        }
-
-        [Fact]
-        public void PrepareVaultHeaderThrowsForNullValues()
-        {
-            Assert.Throws<ArgumentNullException>(() => Reader.PrepareVaultHeader(null!, 1));
+            using (SecureBuffer.SecureLargeBuffer actualHeader = Reader.PrepareVaultHeader(expectedSalt, expectedIterations))
+            {
+                Assert.Equal(1 + Reader.SaltSize + sizeof(int), actualHeader.Length);
+                Assert.Equal(Reader.Version, actualHeader.AsSpan[0]);
+                Assert.True(actualHeader.AsSpan.Slice(1, Reader.SaltSize).SequenceEqual(expectedSalt));
+                Assert.Equal(expectedIterations, BinaryPrimitives.ReadInt32LittleEndian(actualHeader.AsSpan[^4..]));
+            }
         }
 
         [Fact]
         public void PrepareVaultHeaderThrowsForNegativeValues()
         {
-            Assert.Throws<ArgumentOutOfRangeException>(() => Reader.PrepareVaultHeader(new byte[0], -1));
+            Assert.Throws<ArgumentOutOfRangeException>(() => Reader.PrepareVaultHeader(new byte[1], -1));
         }
 
         [Fact]
         public void PrepareVaultHeaderThrowsForZeroValues()
         {
-            Assert.Throws<ArgumentOutOfRangeException>(() => Reader.PrepareVaultHeader(new byte[0], 0));
+            Assert.Throws<ArgumentException>(() => Reader.PrepareVaultHeader(new byte[0], 0));
         }
 
         [Fact]
@@ -290,13 +287,18 @@ namespace VaultCrypt.Tests
             var stream = new MemoryStream();
             byte[] expectedSalt = RandomNumberGenerator.GetBytes(Reader.SaltSize);
             int expectedIterations = RandomNumberGenerator.GetInt32(int.MaxValue);
-            
-            stream.Write(Reader.PrepareVaultHeader(expectedSalt, expectedIterations));
 
-            byte[] actualSalt = Reader.ReadSalt(stream);
+            using (SecureBuffer.SecureLargeBuffer header = Reader.PrepareVaultHeader(expectedSalt, expectedIterations))
+            {
+                stream.Write(header.AsSpan);
+            }
+
+            using (SecureBuffer.SecureLargeBuffer actualSalt = Reader.ReadSalt(stream))
+            {
+                Assert.True(actualSalt.AsSpan.SequenceEqual(expectedSalt));
+            }
+
             int actualIterations = Reader.ReadIterationsNumber(stream);
-
-            Assert.True(expectedSalt.SequenceEqual(actualSalt));
             Assert.Equal(expectedIterations, actualIterations);
         }
 
