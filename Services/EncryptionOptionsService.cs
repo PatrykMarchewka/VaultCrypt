@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
@@ -11,10 +11,29 @@ namespace VaultCrypt.Services
 {
     public interface IEncryptionOptionsService
     {
+        /// <summary>
+        /// Converts provided information into <see cref="EncryptionOptions.FileEncryptionOptions"/>
+        /// </summary>
+        /// <param name="fileInfo">Information about file</param>
+        /// <param name="algorithm">Algorithm to use when encrypting or decrypting this file</param>
+        /// <param name="chunkSizeInMB">Maximum size of each chunk in megabytes, if file size is lower than chunk size then it gets encrypted in one singular chunk</param>
+        /// <returns></returns>
+        /// <exception cref="ArgumentNullException">Thrown when provided <paramref name="fileInfo"/> is set to null</exception>
+        /// <exception cref="ArgumentOutOfRangeException">Thrown when <paramref name="chunkSizeInMB"/> value is set to zero</exception>
         public EncryptionOptions.FileEncryptionOptions PrepareEncryptionOptions(FileInfo fileInfo, EncryptionAlgorithm.EncryptionAlgorithmInfo algorithm, ushort chunkSizeInMB);
+        /// <summary>
+        /// Pads <paramref name="options"/> and encrypts it ensuring final output length is exactly <see cref="IVaultReader.EncryptionOptionsSize"/> bytes
+        /// </summary>
+        /// <param name="options">Options to pad and then encrypt</param>
+        /// <returns></returns>
         public SecureBuffer.SecureLargeBuffer PadAndEncryptFileEncryptionOptions(EncryptionOptions.FileEncryptionOptions options);
+        /// <summary>
+        /// Gets encrypted options at <paramref name="metadataOffset"/> from vault and decrypts it
+        /// </summary>
+        /// <param name="vaultFS">Vault to read from</param>
+        /// <param name="metadataOffset">Offset at which to start reading</param>
+        /// <returns>Decrypted options</returns>
         public EncryptionOptions.FileEncryptionOptions GetDecryptedFileEncryptionOptions(Stream vaultFS, long metadataOffset);
-
     }
 
     public class EncryptionOptionsService : IEncryptionOptionsService
