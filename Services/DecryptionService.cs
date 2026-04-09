@@ -12,6 +12,16 @@ namespace VaultCrypt.Services
 {
     public interface IDecryptionService
     {
+        /// <summary>
+        /// Reads data from vault at <paramref name="metadataOffset"/>, decrypts it and saves at <paramref name="filePath"/>
+        /// </summary>
+        /// <param name="metadataOffset">Offset to <see cref="EncryptionOptions.FileEncryptionOptions"/></param>
+        /// <param name="filePath">Path to file after decrypting, if file already exists it will be overwritten </param>
+        /// <param name="context">Context to display progression</param>
+        /// <returns></returns>
+        /// <exception cref="ArgumentOutOfRangeException">Thrown when <paramref name="metadataOffset"/> points to vault metadata or is set to negative value</exception>
+        /// <exception cref="ArgumentNullException">Thrown when <paramref name="filePath"/> or <paramref name="context"/> are set to null</exception>
+        /// <exception cref="ArgumentException">Thrown when <paramref name="filePath"/> is set to empty or whitespace only characters</exception>
         public Task Decrypt(long metadataOffset, NormalizedPath filePath, ProgressionContext context);
     }
 
@@ -88,18 +98,6 @@ namespace VaultCrypt.Services
             }
         }
 
-        /// <summary>
-        /// 
-        /// </summary>
-        /// <param name="vaultFS"></param>
-        /// <param name="fileFS"></param>
-        /// <param name="chunkInformation"></param>
-        /// <param name="extraData"></param>
-        /// <param name="key"></param>
-        /// <param name="encryptionAlgorithm"></param>
-        /// <param name="context"></param>
-        /// <returns></returns>
-        /// <exception cref="VaultException"></exception>
         private async Task DecryptInMultipleChunks(Stream vaultFS, Stream fileFS, EncryptionOptions.ChunkInformation chunkInformation, short extraData, EncryptionAlgorithm.IEncryptionAlgorithmProvider provider, ProgressionContext context)
         {
             ArgumentNullException.ThrowIfNull(vaultFS);
