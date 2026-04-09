@@ -175,7 +175,7 @@ namespace VaultCrypt
         /// Reads salt from vault header
         /// </summary>
         /// <param name="stream">Stream to vault file to read from</param>
-        /// <returns>Salt in bytes</returns>
+        /// <returns>Salt read from <paramref name="stream"/></returns>
         /// <exception cref="ArgumentNullException">Thrown when <paramref name="stream"/> is null</exception>
         public SecureBuffer.SecureLargeBuffer ReadSalt(Stream stream);
 
@@ -188,43 +188,44 @@ namespace VaultCrypt
         public int ReadIterationsNumber(Stream stream);
 
         /// <summary>
-        /// Combines <see cref="Version"/>, <paramref name="salt"/> and <paramref name="iterations"/> into one byte array
+        /// Combines <see cref="Version"/>, <paramref name="salt"/> and <paramref name="iterations"/> into one array
         /// </summary>
         /// <param name="salt">Salt value to include</param>
         /// <param name="iterations">Iterations number to include</param>
         /// <returns>Array containing <see cref="Version"/>, <paramref name="salt"/> and <paramref name="iterations"/></returns>
-        /// <exception cref="ArgumentNullException">Thrown when <paramref name="salt"/> is null</exception>
+        /// <exception cref="ArgumentException">Thrown when <paramref name="salt"/> is empty</exception>
         /// <exception cref="ArgumentOutOfRangeException">Thrown when <paramref name="iterations"/> is set to negative value or zero</exception>
         public SecureBuffer.SecureLargeBuffer PrepareVaultHeader(ReadOnlySpan<byte> salt, int iterations);
 
         /// <summary>
-        /// Reads metadata offsets from vault header
+        /// Reads and decrypts metadata offsets
         /// </summary>
         /// <param name="stream">Stream to vault file to read from</param>
-        /// <returns>Array of offsets</returns>
+        /// <returns>Array of metadata offsets</returns>
+        /// <exception cref="ArgumentNullException">Thrown when provided <paramref name="stream"/> is set to null value</exception>
         public long[] ReadMetadataOffsets(Stream stream);
 
         /// <summary>
-        /// Adds <paramref name="newOffset"/> to offsets list and saves it back to the <paramref name="stream"/>
+        /// Adds <paramref name="newOffset"/> to offsets list and saves it back encrypted to <paramref name="stream"/>
         /// </summary>
         /// <param name="stream">Vault file to read and write to</param>
         /// <param name="newOffset">New offset to add</param>
         /// <exception cref="ArgumentNullException">Thrown when <paramref name="stream"/> is set to null</exception>
-        /// <exception cref="ArgumentOutOfRangeException">Thrown when <paramref name="newOffset"/> is set to negative or zero</exception>
+        /// <exception cref="ArgumentOutOfRangeException">Thrown when <paramref name="newOffset"/> is set to negative or zero value</exception>
         public void AddAndSaveMetadataOffsets(Stream stream, long newOffset);
 
         /// <summary>
-        /// Removes offset at <paramref name="itemIndex"/> from offsets list and saves it back to the <paramref name="stream"/>
+        /// Removes offset at <paramref name="itemIndex"/> from offsets list and saves it back encrypted to <paramref name="stream"/>
         /// </summary>
         /// <param name="stream">Vault file to read and write to</param>
-        /// <param name="itemIndex">Index to remove</param>
+        /// <param name="itemIndex">Zero based index to remove</param>
         /// <exception cref="ArgumentNullException">Thrown when <paramref name="stream"/> is set to null</exception>
         public void RemoveAndSaveMetadataOffsets(Stream stream, ushort itemIndex);
 
         /// <summary>
-        /// Saves provided <paramref name="offsets"/> to the <paramref name="stream"/>
+        /// Encrypts provided <paramref name="offsets"/> and replaces current metadata offsets in <paramref name="stream"/>
         /// </summary>
-        /// <param name="stream">Vault file to write to</param>
+        /// <param name="stream">Vault file to read and write to</param>
         /// <param name="offsets">Metadata offsets to save</param>
         /// <exception cref="ArgumentNullException">Thrown when <paramref name="stream"/> or <paramref name="offsets"/> is set to null</exception>
         public void SaveMetadataOffsets(Stream stream, long[] offsets);
@@ -237,7 +238,7 @@ namespace VaultCrypt
         /// <param name="length">Number of bytes to read</param>
         /// <returns>Decrypted information</returns>
         /// <exception cref="ArgumentNullException">Thrown when <paramref name="stream"/> is set to null</exception>
-        /// <exception cref="ArgumentOutOfRangeException">Thrown when <paramref name="offset"/> or <paramref name="length"/> is negative or zero</exception>
+        /// <exception cref="ArgumentOutOfRangeException">Thrown when <paramref name="offset"/> is set to negative value or <paramref name="length"/> is set to negative or zero value</exception>
         public SecureBuffer.SecureLargeBuffer ReadAndDecryptData(Stream stream, long offset, int length);
 
         /// <summary>
@@ -291,12 +292,6 @@ namespace VaultCrypt
         }
 
         #region Vault header
-        /// <summary>
-        /// Reads salt from vault header
-        /// </summary>
-        /// <param name="stream">Stream to read from</param>
-        /// <returns>Salt</returns>
-        /// <exception cref="ArgumentNullException">Thrown when provided <paramref name="stream"/> is set to null value</exception>
         public SecureBuffer.SecureLargeBuffer ReadSalt(Stream stream)
         {
             ArgumentNullException.ThrowIfNull(stream);
@@ -314,13 +309,6 @@ namespace VaultCrypt
                 throw;
             }
         }
-
-        /// <summary>
-        /// Reads iteration number from vault header
-        /// </summary>
-        /// <param name="stream">Stream to read from</param>
-        /// <returns>Iteration number</returns>
-        /// <exception cref="ArgumentNullException">Thrown when provided <paramref name="stream"/> is set to null value</exception>
         public int ReadIterationsNumber(Stream stream)
         {
             ArgumentNullException.ThrowIfNull(stream);
@@ -337,15 +325,6 @@ namespace VaultCrypt
                 CryptographicOperations.ZeroMemory(iterationBytes);
             }
         }
-
-        /// <summary>
-        /// Takes <see cref="Version"/>, <paramref name="salt"/> and <paramref name="iterations"/> and puts them into byte array resembling vault header
-        /// </summary>
-        /// <param name="salt">Salt used to derive vault key</param>
-        /// <param name="iterations">Iteration count used when deriving vault key</param>
-        /// <returns>Byte array </returns>
-        /// <exception cref="ArgumentNullException">Thrown when provided <paramref name="salt"/> is set to null value</exception>
-        /// <exception cref="ArgumentOutOfRangeException">Thrown when provided <paramref name="iterations"/> is set to negative or zero value</exception>"
         public SecureBuffer.SecureLargeBuffer PrepareVaultHeader(ReadOnlySpan<byte> salt, int iterations)
         {
             if (salt.IsEmpty) throw new ArgumentException("Provided empty salt", nameof(salt));
@@ -370,12 +349,6 @@ namespace VaultCrypt
         #endregion
 
         #region Metadata offsets
-        /// <summary>
-        /// Decrypts and returns metadata offsets
-        /// </summary>
-        /// <param name="stream">Stream to read from</param>
-        /// <returns>Array of metadata offsets</returns>
-        /// <exception cref="ArgumentNullException">Thrown when provided <paramref name="stream"/> is set to null value</exception>
         public long[] ReadMetadataOffsets(Stream stream)
         {
             ArgumentNullException.ThrowIfNull(stream);
@@ -420,13 +393,6 @@ namespace VaultCrypt
             }
         }
 
-        /// <summary>
-        /// Adds new offset and writes encrypted offsets to vault
-        /// </summary>
-        /// <param name="stream">Stream to read and write to</param>
-        /// <param name="newOffset">New offset to add</param>
-        /// <exception cref="ArgumentNullException">Thrown when provided <paramref name="stream"/> is set to null</exception>
-        /// <exception cref="ArgumentOutOfRangeException">Thrown when provided <paramref name="newOffset"/> is set to negative or zero value</exception>
         public void AddAndSaveMetadataOffsets(Stream stream, long newOffset)
         {
             ArgumentNullException.ThrowIfNull(stream);
@@ -454,12 +420,6 @@ namespace VaultCrypt
 
         }
 
-        /// <summary>
-        /// Removes offset at specified index and writes encrypted offsest to vault
-        /// </summary>
-        /// <param name="stream">Stream to read and write to</param>
-        /// <param name="itemIndex">Index of item to remove</param>
-        /// <exception cref="ArgumentNullException">Thrown when provided <paramref name="stream"/> is set to null</exception>
         public void RemoveAndSaveMetadataOffsets(Stream stream, ushort itemIndex)
         {
             ArgumentNullException.ThrowIfNull(stream);
@@ -520,12 +480,6 @@ namespace VaultCrypt
             stream.Write(encryptedMetadataOffsets);
         }
 
-        /// <summary>
-        /// Encrypts provided <paramref name="offsets"/> and replaces current metadata offsets in <paramref name="stream"/>
-        /// </summary>
-        /// <param name="stream">Stream to read and write to</param>
-        /// <param name="offsets">Metadata offsets to save</param>
-        /// <exception cref="ArgumentNullException">Thrown when provided <paramref name="stream"/> or <paramref name="offsets"/> are set to null</exception>
         public void SaveMetadataOffsets(Stream stream, long[] offsets)
         {
             ArgumentNullException.ThrowIfNull(stream);
@@ -547,15 +501,6 @@ namespace VaultCrypt
         }
         #endregion
 
-        /// <summary>
-        /// Reads <paramref name="length"/> from <paramref name="stream"/> starting at <paramref name="offset"/> and decrypts it
-        /// </summary>
-        /// <param name="stream">Stream to read from</param>
-        /// <param name="offset">Offset at where to start reading</param>
-        /// <param name="length">Length to read</param>
-        /// <returns>Decrypted data</returns>
-        /// <exception cref="ArgumentNullException">Thrown when provided <paramref name="stream"/> is null</exception>
-        /// <exception cref="ArgumentOutOfRangeException">Thrown when provided <paramref name="offset"/>, <paramref name="length"/> are set to negative, or <paramref name="length"/> is set to 0 </exception>
         public SecureBuffer.SecureLargeBuffer ReadAndDecryptData(Stream stream, long offset, int length)
         {
             ArgumentNullException.ThrowIfNull(stream);
@@ -570,12 +515,6 @@ namespace VaultCrypt
             }
         }
 
-        /// <summary>
-        /// Encrypts provided data using vault encryption algorithm
-        /// </summary>
-        /// <param name="data">Data to encrypt</param>
-        /// <returns>Encrypted data</returns>
-        /// <exception cref="ArgumentException">Thrown when provided empty data</exception>
         public SecureBuffer.SecureLargeBuffer VaultEncryption(ReadOnlyMemory<byte> data)
         {
             if (data.IsEmpty) throw new ArgumentException("Provided empty data", nameof(data));
