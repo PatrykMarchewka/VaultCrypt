@@ -11,15 +11,52 @@ namespace VaultCrypt.Services
 {
     public interface INavigationService
     {
+        /// <summary>
+        /// Event to invoke when switching views
+        /// </summary>
         public event Action<IViewModel> ChangeView;
+        /// <summary>
+        /// Used by viewmodels only to process <paramref name="request"/> and invoke navigation
+        /// </summary>
+        /// <param name="request">Request to invoke</param>
         public void HandleNavigation(NavigationRequest request);
+        /// <summary>
+        /// Disposes current session and navigates to <see cref="ViewModels.MainViewViewModel"/>
+        /// </summary>
         public void NavigateToMain();
+        /// <summary>
+        /// Navigates to <see cref="ViewModels.CreateVaultViewModel"/>
+        /// </summary>
         public void NavigateToCreateVault();
+        /// <summary>
+        /// Navigates to <see cref="ViewModels.OpenVaultViewModel"/>
+        /// </summary>
+        /// <param name="password">Password to try open vault with</param>
+        /// <param name="vaultPath">Path to the vault file</param>
         public void NavigateToOpenVault(SecureString password, NormalizedPath vaultPath);
+        /// <summary>
+        /// Naivates to <see cref="ViewModels.PasswordInputViewModel"/>
+        /// </summary>
+        /// <param name="vaultPath">Path to the vault file</param>
         public void NavigateToPasswordInput(NormalizedPath vaultPath);
+        /// <summary>
+        /// Navigates to <see cref="ViewModels.EncryptFileViewModel"/>
+        /// </summary>
+        /// <param name="filePath">Path of the file to encrypt</param>
         public void NavigateToEncryptFile(NormalizedPath filePath);
+        /// <summary>
+        /// Navigates to <see cref="ViewModels.ProgressViewModel"/>
+        /// </summary>
+        /// <param name="context">Context to pass in order to display progression</param>
         public void NavigateToProgress(ProgressionContext context);
+        /// <summary>
+        /// Navigates back from <see cref="ViewModels.ProgressViewModel"/>
+        /// </summary>
         public void NavigateFromProgress();
+        /// <summary>
+        /// Navigates to <see cref="ViewModels.ExceptionThrownViewModel"/>
+        /// </summary>
+        /// <param name="ex">Thrown exception to display</param>
         public void NavigateToExceptionThrown(Exception ex);
 
     }
