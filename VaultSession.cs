@@ -15,13 +15,45 @@ namespace VaultCrypt
 {
     public interface IVaultSession
     {
+        /// <summary>
+        /// Key used to encrypt/decrypt data
+        /// </summary>
         public SecureBuffer.SecureKeyBuffer KEY { get; }
+        /// <summary>
+        /// Path to vault file
+        /// </summary>
         public NormalizedPath VAULTPATH { get; }
+        /// <summary>
+        /// Dictionary holding information about encrypted files and offsets to their location
+        /// </summary>
         public Dictionary<long, EncryptedFileInfo> ENCRYPTED_FILES { get; }
+        /// <summary>
+        /// <see cref="IVaultReader"/> instance to properly read and write to vault
+        /// </summary>
         public IVaultReader VAULT_READER { get; }
+        /// <summary>
+        /// Event to invoke when refreshing <see cref="ENCRYPTED_FILES"/> list
+        /// </summary>
         public event Action? EncryptedFilesListUpdated;
+        /// <summary>
+        /// Sets <see cref="IVaultSession"/> fields
+        /// </summary>
+        /// <param name="vaultPath">Path to vault file</param>
+        /// <param name="vaultReader">Reader instance to use when reading or writing to vault</param>
+        /// <param name="password">Password to derive key from</param>
+        /// <param name="salt">Salt used to derive key</param>
+        /// <param name="iterations">Iterations number used when deriving key</param>
         public void CreateSession(NormalizedPath vaultPath, IVaultReader vaultReader, ReadOnlySpan<byte> password, ReadOnlySpan<byte> salt, int iterations);
-        public void RasiseEncryptedFileListUpdated();
+        /// <summary>
+        /// Raises <see cref="EncryptedFilesListUpdated"/>
+        /// </summary>
+        public void RaiseEncryptedFileListUpdated();
+        /// <summary>
+        /// Slices <see cref="KEY"/> into desired <paramref name="keySize"/>
+        /// </summary>
+        /// <param name="keySize">Requested size of key</param>
+        /// <returns>Sliced key with length equal to <paramref name="keySize"/></returns>
+        /// <exception cref="ArgumentOutOfRangeException">Thrown when requested a slice that is bigger than entire key</exception>
         public ReadOnlySpan<byte> GetSlicedKey(byte keySize);
         public void Dispose();
     }
@@ -39,7 +71,7 @@ namespace VaultCrypt
         public event Action? EncryptedFilesListUpdated;
 
         /// <summary>
-        /// Empty constructor initializing empty session to avoid NullReferenceException
+        /// Constructor initializing empty session values to avoid <see cref="NullReferenceException"/>
         /// </summary>
         private VaultSession()
         {
@@ -57,7 +89,7 @@ namespace VaultCrypt
             this.VAULT_READER = vaultReader;
         }
 
-        public void RasiseEncryptedFileListUpdated()
+        public void RaiseEncryptedFileListUpdated()
         {
             this.EncryptedFilesListUpdated?.Invoke();
         }

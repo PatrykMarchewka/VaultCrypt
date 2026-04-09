@@ -121,7 +121,7 @@ namespace VaultCrypt.Services
             }
             finally
             {
-                _session.RasiseEncryptedFileListUpdated();
+                _session.RaiseEncryptedFileListUpdated();
             }
         }
 

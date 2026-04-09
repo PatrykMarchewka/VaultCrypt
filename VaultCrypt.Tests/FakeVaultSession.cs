@@ -66,7 +66,7 @@ namespace VaultCrypt.Tests
 
         public void CreateSession(NormalizedPath vaultPath, IVaultReader vaultReader, ReadOnlySpan<byte> password, ReadOnlySpan<byte> salt, int iterations) => CreateSessionWasCalled = true;
 
-        public void RasiseEncryptedFileListUpdated() => RaiseEncryptedFileListUpdatedWasCalled = true;
+        public void RaiseEncryptedFileListUpdated() => RaiseEncryptedFileListUpdatedWasCalled = true;
 
         public ReadOnlySpan<byte> GetSlicedKey(byte keySize)
         {
