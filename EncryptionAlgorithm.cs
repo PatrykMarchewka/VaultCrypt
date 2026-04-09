@@ -100,9 +100,29 @@ namespace VaultCrypt
 
         public interface IEncryptionAlgorithm
         {
+            /// <summary>
+            /// Size in bytes of extra data that is generated after encrypting
+            /// </summary>
             public short ExtraEncryptionDataSize { get; }
+            /// <summary>
+            /// Output order of IV, Tag and Cipher data
+            /// </summary>
             public EncryptedOutputOrder EncryptedOutputOrder { get; }
+            /// <summary>
+            /// Encrypts provided <paramref name="data"/> using <paramref name="key"/>
+            /// </summary>
+            /// <param name="data">Data to encrypt</param>
+            /// <param name="key">Key used to encrypt data</param>
+            /// <returns>Encrypted data</returns>
+            /// <exception cref="ArgumentException">Thrown when either <paramref name="data"/> or <paramref name="key"/> are empty</exception>
             public SecureBuffer.SecureLargeBuffer EncryptBytes(ReadOnlySpan<byte> data, ReadOnlySpan<byte> key);
+            /// <summary>
+            /// Decrypts provided <paramref name="data"/> using <paramref name="key"/>
+            /// </summary>
+            /// <param name="data">Data to decrypt</param>
+            /// <param name="key">Key used to decrypt data</param>
+            /// <returns>Decrypted data</returns>
+            /// <exception cref="ArgumentException">Thrown when either <paramref name="data"/> or <paramref name="key"/> are empty</exception>
             public SecureBuffer.SecureLargeBuffer DecryptBytes(ReadOnlySpan<byte> data, ReadOnlySpan<byte> key);
         }
 
@@ -967,7 +987,13 @@ namespace VaultCrypt
 
         public interface IEncryptionAlgorithmProvider
         {
+            /// <summary>
+            /// Key size used to encrypt or decrypt data
+            /// </summary>
             public byte KeySize { get; }
+            /// <summary>
+            /// Algorithm used to encrypt or decrypt data
+            /// </summary>
             public IEncryptionAlgorithm EncryptionAlgorithm { get; }
         }
 
