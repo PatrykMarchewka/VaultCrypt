@@ -63,7 +63,7 @@ namespace VaultCrypt.Tests
         {
             int eventRaisedCount = 0;
             _session.EncryptedFilesListUpdated += () => eventRaisedCount++;
-            _session.RasiseEncryptedFileListUpdated();
+            _session.RaiseEncryptedFileListUpdated();
             Assert.Equal(1, eventRaisedCount);
         }
 
