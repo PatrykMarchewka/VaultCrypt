@@ -90,7 +90,7 @@ namespace VaultCrypt.Tests.Services
             var encryptionAlgorithm = EncryptionAlgorithm.GetEncryptionAlgorithmInfo.First().Value;
             var options = _service.PrepareEncryptionOptions(fileInfo, encryptionAlgorithm, 1);
 
-            var encrypted = _service.EncryptAndPadFileEncryptionOptions(options);
+            var encrypted = _service.PadAndEncryptFileEncryptionOptions(options);
 
             Assert.Equal(_vaultSession.VAULT_READER.EncryptionOptionsSize, encrypted.Length);
             Assert.False(encrypted.AsSpan.SequenceEqual(new byte[_vaultSession.VAULT_READER.EncryptionOptionsSize]));
@@ -101,7 +101,7 @@ namespace VaultCrypt.Tests.Services
         [Fact]
         void EncryptAndPadFileEncryptionOptionsThrowsForNullValues()
         {
-            Assert.Throws<ArgumentNullException>(() => _service.EncryptAndPadFileEncryptionOptions(null!));
+            Assert.Throws<ArgumentNullException>(() => _service.PadAndEncryptFileEncryptionOptions(null!));
         }
 
         [Fact]
@@ -111,7 +111,7 @@ namespace VaultCrypt.Tests.Services
             {
                 var options = new EncryptionOptions.FileEncryptionOptions(0, tooBigFileName, 1, EncryptionAlgorithm.GetEncryptionAlgorithmInfo.First().Value.ID, false, null);
 
-                Assert.Throws<VaultException>(() => _service.EncryptAndPadFileEncryptionOptions(options));
+                Assert.Throws<VaultException>(() => _service.PadAndEncryptFileEncryptionOptions(options));
             }
         }
 
@@ -155,7 +155,7 @@ namespace VaultCrypt.Tests.Services
             var encryptionAlgorithm = EncryptionAlgorithm.GetEncryptionAlgorithmInfo.First().Value;
             var options = _service.PrepareEncryptionOptions(fileInfo, encryptionAlgorithm, 1);
 
-            SecureBuffer.SecureLargeBuffer encrypted = _service.EncryptAndPadFileEncryptionOptions(options);
+            SecureBuffer.SecureLargeBuffer encrypted = _service.PadAndEncryptFileEncryptionOptions(options);
             try
             {
                 //Create stream with other random data to simulate actual vault

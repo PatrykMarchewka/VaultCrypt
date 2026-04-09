@@ -55,7 +55,7 @@ namespace VaultCrypt.Services
                 SecureBuffer.SecureLargeBuffer paddedFileOptions = null!;
                 try
                 {
-                    paddedFileOptions = _encryptionOptionsService.EncryptAndPadFileEncryptionOptions(options);
+                    paddedFileOptions = _encryptionOptionsService.PadAndEncryptFileEncryptionOptions(options);
                     //Seek to the end of file to make sure its saved at the end and not after metadata data
                     vaultFS.Seek(0, SeekOrigin.End);
                     vaultFS.Write(paddedFileOptions.AsSpan);

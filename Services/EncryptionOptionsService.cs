@@ -12,7 +12,7 @@ namespace VaultCrypt.Services
     public interface IEncryptionOptionsService
     {
         public EncryptionOptions.FileEncryptionOptions PrepareEncryptionOptions(FileInfo fileInfo, EncryptionAlgorithm.EncryptionAlgorithmInfo algorithm, ushort chunkSizeInMB);
-        public SecureBuffer.SecureLargeBuffer EncryptAndPadFileEncryptionOptions(EncryptionOptions.FileEncryptionOptions options);
+        public SecureBuffer.SecureLargeBuffer PadAndEncryptFileEncryptionOptions(EncryptionOptions.FileEncryptionOptions options);
         public EncryptionOptions.FileEncryptionOptions GetDecryptedFileEncryptionOptions(Stream vaultFS, long metadataOffset);
 
     }
@@ -59,7 +59,7 @@ namespace VaultCrypt.Services
         }
 
 
-        public SecureBuffer.SecureLargeBuffer EncryptAndPadFileEncryptionOptions(EncryptionOptions.FileEncryptionOptions options)
+        public SecureBuffer.SecureLargeBuffer PadAndEncryptFileEncryptionOptions(EncryptionOptions.FileEncryptionOptions options)
         {
             ArgumentNullException.ThrowIfNull(options);
 

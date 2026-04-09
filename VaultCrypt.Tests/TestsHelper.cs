@@ -236,7 +236,7 @@ namespace VaultCrypt.Tests
                 //Write encryption options
                 offsets[i] = fs.Position;
                 fileEncryptionOptions[i] = new EncryptionOptions.FileEncryptionOptions(version: 0, fileNameBytes, fileSize, algorithm.ID, chunked: false, chunkInformation: null);
-                SecureBuffer.SecureLargeBuffer encryptedFileEncryptionOptions = service.EncryptAndPadFileEncryptionOptions(fileEncryptionOptions[i]);
+                SecureBuffer.SecureLargeBuffer encryptedFileEncryptionOptions = service.PadAndEncryptFileEncryptionOptions(fileEncryptionOptions[i]);
                 fs.Write(encryptedFileEncryptionOptions.AsSpan);
                 encryptedFileEncryptionOptions.Dispose();
 
