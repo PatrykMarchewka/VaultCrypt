@@ -114,22 +114,29 @@ namespace VaultCrypt
 
     public interface IVaultRegistry
     {
+        /// <summary>
+        /// Gets correct <see cref="IVaultReader"/>
+        /// </summary>
+        /// <param name="version">Version of the vault reader to get</param>
+        /// <returns><see cref="IVaultReader"/> with specified version</returns>
+        /// <exception cref="VaultException">Thrown when no reader for specified version can be found</exception>
         public IVaultReader GetVaultReader(byte version);
     }
 
     public class VaultRegistry : IVaultRegistry
     {
         public static VaultRegistry Current { get; private set; } = null!;
-        private static Dictionary<byte, Lazy<IVaultReader>> registry = null!;
+        private readonly Dictionary<byte, Lazy<IVaultReader>> _registry;
         
 
         public static VaultRegistry Initialize(IVaultSession session)
         {
             return Current = new VaultRegistry(session);
         }
+
         private VaultRegistry(IVaultSession session)
         {
-            registry = new()
+            _registry = new()
             {
                 {0, new Lazy<IVaultReader>(() => new VaultV0Reader(session)) }
             };
@@ -137,7 +144,7 @@ namespace VaultCrypt
 
         public IVaultReader GetVaultReader(byte version)
         {
-            return registry.TryGetValue(version, out var reader) ? reader.Value : throw new VaultException(VaultException.ErrorContext.VaultSession, VaultException.ErrorReason.NoReader);
+            return _registry.TryGetValue(version, out var reader) ? reader.Value : throw new VaultException(VaultException.ErrorContext.VaultSession, VaultException.ErrorReason.NoReader);
         }
     }
 
