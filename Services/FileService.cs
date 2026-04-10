@@ -48,18 +48,15 @@ namespace VaultCrypt.Services
         public void WriteReadyChunk(ConcurrentDictionary<ulong, SecureBuffer.SecureLargeBuffer> results, ref ulong nextToWrite, ulong currentIndex, Stream fileFS, object lockObject)
         {
             ArgumentNullException.ThrowIfNull(results);
-            ArgumentOutOfRangeException.ThrowIfNegative(nextToWrite);
-            ArgumentOutOfRangeException.ThrowIfNegative(currentIndex);
             ArgumentNullException.ThrowIfNull(fileFS);
             ArgumentNullException.ThrowIfNull(lockObject);
             lock (lockObject)
             {
-                SecureBuffer.SecureLargeBuffer ready = null!;
                 while (nextToWrite != currentIndex)
                 {
                     Monitor.Wait(lockObject);
                 }
-
+                SecureBuffer.SecureLargeBuffer ready = null!;
                 if (!results.TryRemove(nextToWrite, out ready!)) throw new VaultException(VaultException.ErrorContext.WriteToFile, VaultException.ErrorReason.MissingChunk);
                 try
                 {
