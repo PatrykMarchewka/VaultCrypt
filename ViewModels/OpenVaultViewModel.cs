@@ -21,8 +21,8 @@ namespace VaultCrypt.ViewModels
         private readonly IDecryptionService _decryptionService;
         private readonly IVaultSession _session;
 
-        private SecureString? password;
-        private NormalizedPath vaultPath = null!;
+        private SecureString _password = null!;
+        private NormalizedPath _vaultPath = null!;
         public ICollectionView EncryptedFilesCollectionView { get; private set; } = null!;
 
 
@@ -84,15 +84,15 @@ namespace VaultCrypt.ViewModels
             byte[] password = null!;
             try
             {
-                password = PasswordHelper.SecureStringToBytes(this.password!);
-                this.password!.Clear();
-                _vaultService.CreateSessionFromFile(password, vaultPath);
+                password = PasswordHelper.SecureStringToBytes(_password);
+                this._password.Clear();
+                _vaultService.CreateSessionFromFile(password, _vaultPath);
             }
             finally
             {
                 if (password is not null) CryptographicOperations.ZeroMemory(password);
             }
-            this.VaultName = Path.GetFileName(vaultPath);
+            this.VaultName = Path.GetFileName(_vaultPath);
         }
 
         public void RefreshCollection()
@@ -152,16 +152,16 @@ namespace VaultCrypt.ViewModels
         {
             if (parameters is { } p)
             {
-                password = (SecureString)p.GetType().GetProperty("Password")!.GetValue(p)!;
-                vaultPath = (NormalizedPath)p.GetType().GetProperty("VaultPath")!.GetValue(p)!;
+                this._password = (SecureString)p.GetType().GetProperty("Password")!.GetValue(p)!;
+                this._vaultPath = (NormalizedPath)p.GetType().GetProperty("VaultPath")!.GetValue(p)!;
             }
             CreateSession();
         }
 
         public void Dispose()
         {
-            this.password!.Clear();
-            this.vaultPath = null!;
+            this._password.Clear();
+            this._vaultPath = null!;
             this.SelectedFile = null;
         }
 
