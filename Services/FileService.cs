@@ -78,7 +78,7 @@ namespace VaultCrypt.Services
             ArgumentOutOfRangeException.ThrowIfNegative(offset);
             ArgumentOutOfRangeException.ThrowIfZero(length);
 
-            Span<byte> zeroes = stackalloc byte[1024];
+            ReadOnlySpan<byte> zeroes = stackalloc byte[1024];
             stream.Seek(offset, SeekOrigin.Begin);
             while (length > 0)
             {
