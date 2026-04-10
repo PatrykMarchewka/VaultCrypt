@@ -106,7 +106,7 @@ namespace VaultCrypt.ViewModels
 
             NormalizedPath folderPath = NormalizedPath.From(VaultFolder);
             NormalizedPath vaultPath = NormalizedPath.From($"{folderPath}\\{VaultName}.vlt");
-            byte[]? passwordBytes = null;
+            byte[] passwordBytes = null!;
             try
             {
                 passwordBytes = PasswordHelper.SecureStringToBytes(Password);
@@ -114,7 +114,7 @@ namespace VaultCrypt.ViewModels
             }
             finally
             {
-                CryptographicOperations.ZeroMemory(passwordBytes);
+                if (passwordBytes is not null) CryptographicOperations.ZeroMemory(passwordBytes);
             }
             NavigationRequested?.Invoke(new NavigateToPasswordInputRequest(vaultPath));
         }
