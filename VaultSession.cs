@@ -247,8 +247,7 @@ namespace VaultCrypt
         /// <param name="data">Data to encrypt</param>
         /// <returns>Encrypted information</returns>
         /// <exception cref="ArgumentException">Thrown when <paramref name="data"/> is empty</exception>
-        public SecureBuffer.SecureLargeBuffer VaultEncryption(ReadOnlyMemory<byte> data);
-
+        public SecureBuffer.SecureLargeBuffer VaultEncryption(ReadOnlySpan<byte> data);
     }
 
     //For new versions append the additional data at the end
@@ -389,7 +388,7 @@ namespace VaultCrypt
             using (SecureBuffer.SecureLargeBuffer buffer = new SecureBuffer.SecureLargeBuffer(bufferSize))
             {
                 stream.ReadExactly(buffer.AsSpan);
-                return VaultDecryption(buffer.AsMemory);
+                return VaultDecryption(buffer.AsSpan);
             }
         }
 
@@ -460,7 +459,7 @@ namespace VaultCrypt
             try
             {
                 metadataOffsets.AsSpan.CopyTo(paddedMetadataOffsets.AsSpan);
-                encryptedMetadataOffsets = VaultEncryption(paddedMetadataOffsets.AsMemory);
+                encryptedMetadataOffsets = VaultEncryption(paddedMetadataOffsets.AsSpan);
                 return encryptedMetadataOffsets;
             }
             catch (Exception)
@@ -511,26 +510,26 @@ namespace VaultCrypt
             {
                 stream.Seek(offset, SeekOrigin.Begin);
                 stream.ReadExactly(buffer.AsSpan);
-                return VaultDecryption(buffer.AsMemory);
+                return VaultDecryption(buffer.AsSpan);
             }
         }
 
-        public SecureBuffer.SecureLargeBuffer VaultEncryption(ReadOnlyMemory<byte> data)
+        public SecureBuffer.SecureLargeBuffer VaultEncryption(ReadOnlySpan<byte> data)
         {
             if (data.IsEmpty) throw new ArgumentException("Provided empty data", nameof(data));
 
             var provider = EncryptionAlgorithm.GetEncryptionAlgorithmInfo[VaultEncryptionAlgorithm].Provider();
-            return provider.EncryptionAlgorithm.EncryptBytes(data.Span, _session.GetSlicedKey(provider.KeySize));
+            return provider.EncryptionAlgorithm.EncryptBytes(data, _session.GetSlicedKey(provider.KeySize));
         }
 
-        private SecureBuffer.SecureLargeBuffer VaultDecryption(ReadOnlyMemory<byte> data)
+        private SecureBuffer.SecureLargeBuffer VaultDecryption(ReadOnlySpan<byte> data)
         {
             if (data.IsEmpty) throw new ArgumentException("Provided empty data", nameof(data));
 
             var provider = EncryptionAlgorithm.GetEncryptionAlgorithmInfo[VaultEncryptionAlgorithm].Provider();
             if (data.Length < provider.EncryptionAlgorithm.ExtraEncryptionDataSize) throw new ArgumentException("Provided data is too short", nameof(data));
 
-            return provider.EncryptionAlgorithm.DecryptBytes(data.Span, _session.GetSlicedKey(provider.KeySize));
+            return provider.EncryptionAlgorithm.DecryptBytes(data, _session.GetSlicedKey(provider.KeySize));
         }
     }
 

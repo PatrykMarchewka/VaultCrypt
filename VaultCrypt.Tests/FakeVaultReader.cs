@@ -70,7 +70,7 @@ namespace VaultCrypt.Tests
 
         public void SaveMetadataOffsets(Stream stream, long[] offsets) => SaveMetadataOffsetsWasCalled = true;
 
-        public SecureBuffer.SecureLargeBuffer VaultEncryption(ReadOnlyMemory<byte> data)
+        public SecureBuffer.SecureLargeBuffer VaultEncryption(ReadOnlySpan<byte> data)
         {
             VaultEncryptionWasCalled = true;
             return null!;
