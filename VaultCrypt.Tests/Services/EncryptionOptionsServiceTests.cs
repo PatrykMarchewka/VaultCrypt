@@ -79,23 +79,34 @@ namespace VaultCrypt.Tests.Services
         void PrepareEncryptionOptionsThrowsForZeroValues()
         {
             var fileInfo = new FileInfo(TestsHelper.CreateTemporaryFile(0)!);
-            Assert.Throws<ArgumentOutOfRangeException>(() => _service.PrepareEncryptionOptions(fileInfo, EncryptionAlgorithm.GetEncryptionAlgorithmInfo.First().Value, 0));
-            fileInfo.Delete();
+            try
+            {
+                Assert.Throws<ArgumentOutOfRangeException>(() => _service.PrepareEncryptionOptions(fileInfo, EncryptionAlgorithm.GetEncryptionAlgorithmInfo.First().Value, 0));
+            }
+            finally
+            {
+                fileInfo.Delete();
+            }
         }
 
         [Fact]
         void EncryptAndPadFileEncryptionOptionsReturnsCorrectInformation()
         {
             var fileInfo = new FileInfo(TestsHelper.CreateTemporaryFile(32)!);
-            var encryptionAlgorithm = EncryptionAlgorithm.GetEncryptionAlgorithmInfo.First().Value;
-            var options = _service.PrepareEncryptionOptions(fileInfo, encryptionAlgorithm, 1);
+            try
+            {
+                var encryptionAlgorithm = EncryptionAlgorithm.GetEncryptionAlgorithmInfo.First().Value;
+                var options = _service.PrepareEncryptionOptions(fileInfo, encryptionAlgorithm, 1);
 
-            var encrypted = _service.PadAndEncryptFileEncryptionOptions(options);
+                var encrypted = _service.PadAndEncryptFileEncryptionOptions(options);
 
-            Assert.Equal(_vaultSession.VAULT_READER.EncryptionOptionsSize, encrypted.Length);
-            Assert.False(encrypted.AsSpan.SequenceEqual(new byte[_vaultSession.VAULT_READER.EncryptionOptionsSize]));
-
-            fileInfo.Delete();
+                Assert.Equal(_vaultSession.VAULT_READER.EncryptionOptionsSize, encrypted.Length);
+                Assert.False(encrypted.AsSpan.SequenceEqual(new byte[_vaultSession.VAULT_READER.EncryptionOptionsSize]));
+            }
+            finally
+            {
+                fileInfo.Delete();
+            }
         }
 
         [Fact]
@@ -152,28 +163,28 @@ namespace VaultCrypt.Tests.Services
         {
             //Create temporary file with random data with size of 1-1024bytes
             var fileInfo = new FileInfo(TestsHelper.CreateTemporaryFile(RandomNumberGenerator.GetInt32(1, 1024))!);
-            var encryptionAlgorithm = EncryptionAlgorithm.GetEncryptionAlgorithmInfo.First().Value;
-            var options = _service.PrepareEncryptionOptions(fileInfo, encryptionAlgorithm, 1);
-
-            SecureBuffer.SecureLargeBuffer encrypted = _service.PadAndEncryptFileEncryptionOptions(options);
             try
             {
-                //Create stream with other random data to simulate actual vault
-                var stream = new MemoryStream();
-                int randomNumber = RandomNumberGenerator.GetInt32(1024);
-                stream.Write(RandomNumberGenerator.GetBytes(randomNumber));
-                stream.Write(encrypted.AsSpan);
-                //Append extra data at the end to mimick actual vault
-                stream.Write(RandomNumberGenerator.GetBytes(10));
+                var encryptionAlgorithm = EncryptionAlgorithm.GetEncryptionAlgorithmInfo.First().Value;
+                var options = _service.PrepareEncryptionOptions(fileInfo, encryptionAlgorithm, 1);
+                using (SecureBuffer.SecureLargeBuffer encrypted = _service.PadAndEncryptFileEncryptionOptions(options))
+                {
+                    //Create stream with other random data to simulate actual vault
+                    var stream = new MemoryStream();
+                    int randomNumber = RandomNumberGenerator.GetInt32(1024);
+                    stream.Write(RandomNumberGenerator.GetBytes(randomNumber));
+                    stream.Write(encrypted.AsSpan);
+                    //Append extra data at the end to mimick actual vault
+                    stream.Write(RandomNumberGenerator.GetBytes(10));
 
 
-                var result = _service.GetDecryptedFileEncryptionOptions(stream, randomNumber);
+                    var result = _service.GetDecryptedFileEncryptionOptions(stream, randomNumber);
 
-                Assert.Equal(options, result);
+                    Assert.Equal(options, result);
+                }
             }
             finally
             {
-                encrypted.Dispose();
                 fileInfo.Delete();
             }
         }

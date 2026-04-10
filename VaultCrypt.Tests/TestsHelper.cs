@@ -166,30 +166,35 @@ namespace VaultCrypt.Tests
             var path = NormalizedPath.From(Path.GetTempPath());
             var fileName = Path.GetRandomFileName();
             var provider = EncryptionAlgorithm.EncryptionAlgorithmInfo.AES256GCM.Provider();
-
             //v0 = [version (1byte)][salt (32 bytes)][iterations (4 bytes)] + [metadata offsets (28 bytes for AES decryption + 2 bytes ushort number +  MetadataOffsetsSize (4KB (4096 bytes))]...
             int saltSize = 32;
             int metadataOffsetsSize = sizeof(ushort) + 4096;
-            using FileStream fs = new FileStream($"{path}\\{fileName}.vlt", FileMode.CreateNew, FileAccess.Write);
-            //Write vault header information
-            fs.WriteByte(0);
-            fs.Write(salt ??= new byte[saltSize]);
-            byte[] iterationBytes = new byte[sizeof(int)];
-            BinaryPrimitives.WriteInt32LittleEndian(iterationBytes, iterations);
-            fs.Write(iterationBytes);
-            ReadOnlySpan<byte> key = CreateKey(password, salt, iterations)[..provider.KeySize];
-            //Write metadata
-            SecureBuffer.SecureLargeBuffer encryptedEmptyMetadata = null!;
+
+
+            string newVaultPath = $"{path}\\{fileName}.vlt";
+            using FileStream fs = new FileStream(newVaultPath, FileMode.CreateNew, FileAccess.Write);
             try
             {
-                encryptedEmptyMetadata = provider.EncryptionAlgorithm.EncryptBytes(new byte[metadataOffsetsSize], key);
-                fs.Write(encryptedEmptyMetadata.AsSpan);
+                //Write vault header information
+                fs.WriteByte(0);
+                fs.Write(salt ??= new byte[saltSize]);
+                byte[] iterationBytes = new byte[sizeof(int)];
+                BinaryPrimitives.WriteInt32LittleEndian(iterationBytes, iterations);
+                fs.Write(iterationBytes);
+                ReadOnlySpan<byte> key = CreateKey(password, salt, iterations)[..provider.KeySize];
+                //Write metadata
+                using (SecureBuffer.SecureLargeBuffer encryptedEmptyMetadata = provider.EncryptionAlgorithm.EncryptBytes(new byte[metadataOffsetsSize], key))
+                {
+                    fs.Write(encryptedEmptyMetadata.AsSpan);
+                }
+                return NormalizedPath.From(newVaultPath);
             }
-            finally
+            catch (Exception)
             {
-                if(encryptedEmptyMetadata is not null) encryptedEmptyMetadata.Dispose();
+                //Failed to create vault, delete entire file
+                File.Delete(newVaultPath);
+                throw;
             }
-            return NormalizedPath.From($"{path}\\{fileName}.vlt");
         }
 
         /// <summary>

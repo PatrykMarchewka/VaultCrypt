@@ -339,8 +339,8 @@ namespace VaultCrypt.Tests
             }
             finally
             {
-                if (actualEncrypted is not null) actualEncrypted.Dispose();
-                if (actualDecrypted is not null) actualDecrypted.Dispose();
+                actualEncrypted?.Dispose();
+                actualDecrypted?.Dispose();
             }
             
         }

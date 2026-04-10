@@ -243,16 +243,9 @@ namespace VaultCrypt.Tests
         {
             byte[] Key = _key.AsSpan().Slice(0, Provider.KeySize).ToArray();
             short extraData = Provider.EncryptionAlgorithm.ExtraEncryptionDataSize;
-            SecureBuffer.SecureLargeBuffer encrypted = null!;
-            try
+            using (SecureBuffer.SecureLargeBuffer encrypted = Provider.EncryptionAlgorithm.EncryptBytes(_data1, Key))
             {
-                encrypted = Provider.EncryptionAlgorithm.EncryptBytes(_data1, Key);
-
                 Assert.Equal(_data1.Length + extraData, encrypted.Length);
-            }
-            finally
-            {
-                if (encrypted is not null) encrypted.Dispose();
             }
         }
 
@@ -274,8 +267,8 @@ namespace VaultCrypt.Tests
             }
             finally
             {
-                if (iv is not null) iv.Dispose();
-                if (iv2 is not null) iv2.Dispose();
+                iv?.Dispose();
+                iv2?.Dispose();
             }
             
         }
@@ -295,8 +288,8 @@ namespace VaultCrypt.Tests
             }
             finally
             {
-                if (outputData is not null) outputData.Dispose();
-                if (outputData2 is not null) outputData2.Dispose();
+                outputData?.Dispose();
+                outputData2?.Dispose();
             }
         }
 
@@ -305,17 +298,11 @@ namespace VaultCrypt.Tests
         public void DecryptThrowsForWrongKey(EncryptionAlgorithm.IEncryptionAlgorithmProvider Provider)
         {
             byte[] Key = _key.AsSpan().Slice(0, Provider.KeySize).ToArray();
-            SecureBuffer.SecureLargeBuffer encrypted = null!;
-            try
+            using (SecureBuffer.SecureLargeBuffer encrypted = Provider.EncryptionAlgorithm.EncryptBytes(_data1, Key))
             {
-                encrypted = Provider.EncryptionAlgorithm.EncryptBytes(_data1, Key);
                 byte[] newKey = FlipSingleBit(Key, 1);
 
                 Assert.Throws(ExpectedMismatchedTagException, () => Provider.EncryptionAlgorithm.DecryptBytes(encrypted.AsSpan, newKey));
-            }
-            finally
-            {
-                if (encrypted is not null)  encrypted.Dispose();
             }
         }
 
@@ -324,19 +311,12 @@ namespace VaultCrypt.Tests
         public void DecryptThrowsForTamperedIV(EncryptionAlgorithm.IEncryptionAlgorithmProvider Provider)
         {
             byte[] Key = _key.AsSpan().Slice(0, Provider.KeySize).ToArray();
-            SecureBuffer.SecureLargeBuffer encrypted = null!;
-            try
+            using (SecureBuffer.SecureLargeBuffer encrypted = Provider.EncryptionAlgorithm.EncryptBytes(_data1, Key))
             {
-                encrypted = Provider.EncryptionAlgorithm.EncryptBytes(_data1, Key);
                 byte[] encryptedTamperedIV = FlipSingleBit(encrypted.AsSpan, 0);
 
                 Assert.Throws(ExpectedMismatchedTagException, () => Provider.EncryptionAlgorithm.DecryptBytes(encryptedTamperedIV, Key));
             }
-            finally
-            {
-                if(encrypted is not null) encrypted.Dispose();
-            }
-            
 
         }
 
@@ -345,18 +325,12 @@ namespace VaultCrypt.Tests
         public void DecryptThrowsForTamperedData(EncryptionAlgorithm.IEncryptionAlgorithmProvider Provider)
         {
             byte[] Key = _key.AsSpan().Slice(0, Provider.KeySize).ToArray();
-            SecureBuffer.SecureLargeBuffer encrypted = null!;
-            try
+            using (SecureBuffer.SecureLargeBuffer encrypted = Provider.EncryptionAlgorithm.EncryptBytes(_data1, Key))
             {
-                encrypted = Provider.EncryptionAlgorithm.EncryptBytes(_data1, Key);
                 byte[] encryptedTamperedData = FlipSingleBit(encrypted.AsSpan, Provider.EncryptionAlgorithm.ExtraEncryptionDataSize);
 
                 Assert.Throws(ExpectedMismatchedTagException, () => Provider.EncryptionAlgorithm.DecryptBytes(encryptedTamperedData, Key));
             }
-            finally
-            {
-                if (encrypted is not null) encrypted.Dispose();
-            } 
         }
 
         [Theory]
@@ -364,10 +338,8 @@ namespace VaultCrypt.Tests
         public void DecryptThrowsForTamperedTag(EncryptionAlgorithm.IEncryptionAlgorithmProvider Provider)
         {
             byte[] Key = _key.AsSpan().Slice(0, Provider.KeySize).ToArray();
-            SecureBuffer.SecureLargeBuffer encrypted = null!;
-            try
+            using (SecureBuffer.SecureLargeBuffer encrypted = Provider.EncryptionAlgorithm.EncryptBytes(_data1, Key))
             {
-                encrypted = Provider.EncryptionAlgorithm.EncryptBytes(_data1, Key);
                 byte[] encryptedTamperedTag = null!;
                 if (Provider.EncryptionAlgorithm.EncryptedOutputOrder == EncryptionAlgorithm.EncryptedOutputOrder.IV_Data_Tag)
                 {
@@ -379,10 +351,6 @@ namespace VaultCrypt.Tests
                 }
 
                 Assert.Throws(ExpectedMismatchedTagException, () => Provider.EncryptionAlgorithm.DecryptBytes(encryptedTamperedTag, Key));
-            }
-            finally
-            {
-                if(encrypted is not null) encrypted.Dispose();
             }
         }
 
@@ -401,8 +369,8 @@ namespace VaultCrypt.Tests
             }
             finally
             {
-                if (encrypted is not null) encrypted.Dispose();
-                if (decrypted is not null) decrypted.Dispose();
+                encrypted?.Dispose();
+                decrypted?.Dispose();
             }
             
         }

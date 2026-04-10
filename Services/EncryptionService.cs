@@ -52,36 +52,23 @@ namespace VaultCrypt.Services
 
             _systemService.CheckFreeSpace(filePath);
 
-            EncryptionOptions.FileEncryptionOptions options = null!;
-            var provider = algorithm.Provider();
-            try
+            FileInfo fileInfo = new FileInfo(filePath!);
+            using (EncryptionOptions.FileEncryptionOptions options = _encryptionOptionsService.PrepareEncryptionOptions(fileInfo, algorithm, chunkSizeInMB))
             {
-                FileInfo fileInfo = new FileInfo(filePath!);
-                options = _encryptionOptionsService.PrepareEncryptionOptions(fileInfo, algorithm, chunkSizeInMB);
+                var provider = algorithm.Provider();
                 ulong totalChunks = options.ChunkInformation != null ? options.ChunkInformation!.TotalChunks : 1;
                 int concurrentChunkCount = _systemService.CalculateConcurrency(options.IsChunked, chunkSizeInMB);
                 await using FileStream vaultFS = new FileStream(_session.VAULTPATH!, FileMode.Open, FileAccess.ReadWrite);
                 await using FileStream fileFS = new FileStream(filePath!, FileMode.Open, FileAccess.Read);
                 _session.VAULT_READER.AddAndSaveMetadataOffsets(vaultFS, vaultFS.Seek(0, SeekOrigin.End));
 
-                SecureBuffer.SecureLargeBuffer paddedFileOptions = null!;
-                try
+                using (SecureBuffer.SecureLargeBuffer paddedFileOptions = _encryptionOptionsService.PadAndEncryptFileEncryptionOptions(options))
                 {
-                    paddedFileOptions = _encryptionOptionsService.PadAndEncryptFileEncryptionOptions(options);
                     //Seek to the end of file to make sure its saved at the end and not after metadata data
                     vaultFS.Seek(0, SeekOrigin.End);
                     vaultFS.Write(paddedFileOptions.AsSpan);
-
-                }
-                finally
-                {
-                    if (paddedFileOptions is not null) paddedFileOptions.Dispose();
                 }
                 await EncryptChunks(fileFS, vaultFS, totalChunks, concurrentChunkCount, chunkSizeInMB, provider, context);
-            }
-            finally
-            {
-                options.Dispose();
             }
         }
 
@@ -132,21 +119,17 @@ namespace VaultCrypt.Services
                         {
                             encryptedChunk = provider.EncryptionAlgorithm.EncryptBytes(chunkCopy.AsSpan, _session.KEY.AsSpan[..provider.KeySize]);
                             results.TryAdd(currentIndex, encryptedChunk);
-                        }
-                        finally
-                        {
-                            if (chunkCopy is not null) chunkCopy.Dispose();
-                        }
-
-                        try
-                        {
                             _fileService.WriteReadyChunk(results, ref nextToWrite, currentIndex, vaultFS, writeLock);
                         }
                         catch (Exception)
                         {
                             //Encrypted chunk usually gets cleaned in IFileService.WriteReadyChunk after writing, clean here if it throws
-                            encryptedChunk.Dispose();
+                            encryptedChunk?.Dispose();
                             throw;
+                        }
+                        finally
+                        {
+                            chunkCopy.Dispose();
                         }
                         
                         //Reporting current index + 1 because currentIndex is zero based while user gets to see 1 based indexing
@@ -157,7 +140,7 @@ namespace VaultCrypt.Services
             }
             finally
             {
-                if (buffer is not null) buffer.Dispose();
+                buffer.Dispose();
                 foreach (var result in results.Values)
                 {
                     result.Dispose();

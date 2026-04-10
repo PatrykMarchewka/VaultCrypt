@@ -33,10 +33,9 @@ namespace VaultCrypt.Tests.Services
             byte[] password = RandomNumberGenerator.GetBytes(32);
             int iterations = 10;
 
+            _service.CreateVault(path, fileName, password, iterations);
             try
             {
-                _service.CreateVault(path, fileName, password, iterations);
-
                 using (FileStream fs = new FileStream($"{path}\\{fileName}.vlt", FileMode.Open, FileAccess.Read))
                 {
                     Assert.Equal(_session.VAULT_READER.HeaderSize, fs.Length);
@@ -59,10 +58,9 @@ namespace VaultCrypt.Tests.Services
             byte[] password = RandomNumberGenerator.GetBytes(32);
             int iterations = 10;
 
+            _service.CreateVault(path, fileName, password, iterations);
             try
             {
-                _service.CreateVault(path, fileName, password, iterations);
-
                 Assert.True(File.Exists($"{path}\\{fileName}.vlt"));
             }
             finally

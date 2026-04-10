@@ -142,15 +142,9 @@ namespace VaultCrypt.Services
 
             IVaultReader reader = _registry.GetVaultReader(version);
             int iterations = reader.ReadIterationsNumber(fs);
-            SecureBuffer.SecureLargeBuffer salt = null!;
-            try
+            using (SecureBuffer.SecureLargeBuffer salt = reader.ReadSalt(fs))
             {
-                salt = reader.ReadSalt(fs);
                 _session.CreateSession(path, reader, password, salt.AsSpan, iterations);
-            }
-            finally
-            {
-                if (salt is not null) salt.Dispose();
             }
             RefreshEncryptedFilesList(fs);
         }
@@ -206,7 +200,7 @@ namespace VaultCrypt.Services
                     }
                     finally
                     {
-                        if (fileEncryptionOptions is not null) fileEncryptionOptions.Dispose();
+                        fileEncryptionOptions?.Dispose();
                     }
                 }
             }
@@ -258,7 +252,7 @@ namespace VaultCrypt.Services
                     }
                     finally
                     {
-                        if (encryptionOptions is not null) encryptionOptions.Dispose();
+                        encryptionOptions?.Dispose();
                     }
 
                     //Calculating toread to allow copying of partially encrypted files
@@ -313,7 +307,7 @@ namespace VaultCrypt.Services
                 }
                 finally
                 {
-                    if (encryptionOptions is not null) encryptionOptions.Dispose();
+                    encryptionOptions?.Dispose();
                 }
 
                 _fileService.ZeroOutPartOfFile(vaultFS, offset, length);

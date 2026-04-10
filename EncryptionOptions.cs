@@ -75,15 +75,9 @@ namespace VaultCrypt
                 bufferSpan.WriteByte(encryptionOptions.IsChunked ? (byte)1 : (byte)0);
                 if (encryptionOptions.IsChunked)
                 {
-                    SecureBuffer.SecureLargeBuffer chunkInfo = null!;
-                    try
+                    using (SecureBuffer.SecureLargeBuffer chunkInfo = ChunkInformation.SerializeChunkInformation(encryptionOptions.ChunkInformation!))
                     {
-                        chunkInfo = ChunkInformation.SerializeChunkInformation(encryptionOptions.ChunkInformation!);
                         bufferSpan.WriteSpan(chunkInfo.AsSpan);
-                    }
-                    finally
-                    {
-                        if (chunkInfo is not null) chunkInfo.Dispose();
                     }
                 }
             }
@@ -114,7 +108,7 @@ namespace VaultCrypt
                 FileSize = 0;
                 EncryptionAlgorithm = 0;
                 IsChunked = false;
-                if (ChunkInformation is not null) ChunkInformation.Dispose();
+                ChunkInformation?.Dispose();
                 ChunkInformation = null;
             }
 

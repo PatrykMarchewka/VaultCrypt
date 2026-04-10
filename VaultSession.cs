@@ -375,7 +375,7 @@ namespace VaultCrypt
             }
             finally
             {
-                if (decrypted is not null) decrypted.Dispose();
+                decrypted?.Dispose();
             }
 
         }
@@ -465,7 +465,7 @@ namespace VaultCrypt
             }
             catch (Exception)
             {
-                if (encryptedMetadataOffsets is not null) encryptedMetadataOffsets.Dispose();
+                encryptedMetadataOffsets?.Dispose();
                 throw;
             }
             finally
@@ -495,8 +495,8 @@ namespace VaultCrypt
             }
             finally
             {
-                if (offsetsBuffer is not null) offsetsBuffer.Dispose();
-                if (encryptedMetadataOffsets is not null) encryptedMetadataOffsets.Dispose();
+                offsetsBuffer?.Dispose();
+                encryptedMetadataOffsets?.Dispose();
             }
         }
         #endregion

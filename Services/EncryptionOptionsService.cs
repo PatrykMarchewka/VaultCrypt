@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
@@ -84,35 +84,18 @@ namespace VaultCrypt.Services
 
             IVaultReader vaultReader = _session.VAULT_READER;
             short extraEncryptionDataSize = EncryptionAlgorithm.GetEncryptionAlgorithmInfo[vaultReader.VaultEncryptionAlgorithm].Provider().EncryptionAlgorithm.ExtraEncryptionDataSize;
-            SecureBuffer.SecureLargeBuffer encryptionOptionsBytes = null!;
-            SecureBuffer.SecureLargeBuffer paddedFileOptions = new SecureBuffer.SecureLargeBuffer(vaultReader.EncryptionOptionsSize - extraEncryptionDataSize);
-            try
+            using (SecureBuffer.SecureLargeBuffer paddedFileOptions = new SecureBuffer.SecureLargeBuffer(vaultReader.EncryptionOptionsSize - extraEncryptionDataSize))
             {
-                encryptionOptionsBytes = EncryptionOptions.FileEncryptionOptions.SerializeFileEncryptionOptions(options);
-                if ((encryptionOptionsBytes.Length + extraEncryptionDataSize) > vaultReader.EncryptionOptionsSize)
+                using (SecureBuffer.SecureLargeBuffer encryptionOptionsBytes = EncryptionOptions.FileEncryptionOptions.SerializeFileEncryptionOptions(options))
                 {
-                    throw new VaultException(VaultException.ErrorContext.EncryptionOptions, VaultException.ErrorReason.FileNameTooLong);
+                    if ((encryptionOptionsBytes.Length + extraEncryptionDataSize) > vaultReader.EncryptionOptionsSize)
+                    {
+                        throw new VaultException(VaultException.ErrorContext.EncryptionOptions, VaultException.ErrorReason.FileNameTooLong);
+                    }
+                    encryptionOptionsBytes.AsSpan.CopyTo(paddedFileOptions.AsSpan);
                 }
-                encryptionOptionsBytes.AsSpan.CopyTo(paddedFileOptions.AsSpan);
-            }
-            finally
-            {
-                if (encryptionOptionsBytes is not null) encryptionOptionsBytes.Dispose();
-            }
-            SecureBuffer.SecureLargeBuffer encryptedFileOptions = null!;
-            try
-            {
-                encryptedFileOptions = vaultReader.VaultEncryption(paddedFileOptions.AsMemory);
-                return encryptedFileOptions;
-            }
-            catch (Exception)
-            {
-                if (encryptedFileOptions is not null) encryptedFileOptions.Dispose();
-                throw;
-            }
-            finally
-            {
-                paddedFileOptions.Dispose();
+
+                return vaultReader.VaultEncryption(paddedFileOptions.AsSpan);
             }
         }
         public EncryptionOptions.FileEncryptionOptions GetDecryptedFileEncryptionOptions(Stream vaultFS, long metadataOffset)
@@ -121,23 +104,11 @@ namespace VaultCrypt.Services
             ArgumentOutOfRangeException.ThrowIfNegative(metadataOffset);
 
             IVaultReader vaultReader = _session.VAULT_READER;
-            SecureBuffer.SecureLargeBuffer decryptedMetadata = null!;
-            EncryptionOptions.FileEncryptionOptions fileEncryptionOptions = null!;
-            try
+
+            using (SecureBuffer.SecureLargeBuffer decryptedMetadata = vaultReader.ReadAndDecryptData(vaultFS, metadataOffset, vaultReader.EncryptionOptionsSize))
             {
-                decryptedMetadata = vaultReader.ReadAndDecryptData(vaultFS, metadataOffset, vaultReader.EncryptionOptionsSize);
-                fileEncryptionOptions = EncryptionOptions.FileEncryptionOptionsReader.Deserialize(decryptedMetadata.AsSpan);
+                return EncryptionOptions.FileEncryptionOptionsReader.Deserialize(decryptedMetadata.AsSpan);
             }
-            catch (Exception)
-            {
-                if (fileEncryptionOptions is not null) fileEncryptionOptions.Dispose();
-                throw;
-            }
-            finally
-            {
-                if (decryptedMetadata is not null) decryptedMetadata.Dispose();
-            }
-            return fileEncryptionOptions;
         }
     }
 }

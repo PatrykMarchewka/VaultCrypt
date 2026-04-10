@@ -48,34 +48,23 @@ namespace VaultCrypt.Services
             ArgumentNullException.ThrowIfNull(context);
 
             await using FileStream vaultFS = new FileStream(_session.VAULTPATH!, FileMode.Open, FileAccess.Read);
-            EncryptionOptions.FileEncryptionOptions encryptionOptions = _encryptionOptionsService.GetDecryptedFileEncryptionOptions(vaultFS, metadataOffset);
 
-            try
+            using (EncryptionOptions.FileEncryptionOptions encryptionOptions = _encryptionOptionsService.GetDecryptedFileEncryptionOptions(vaultFS, metadataOffset))
             {
                 var encryptionAlgorithmProvider = EncryptionAlgorithm.GetEncryptionAlgorithmInfo[encryptionOptions.EncryptionAlgorithm].Provider();
                 using FileStream fileFS = new FileStream(filePath!, FileMode.Create);
                 if (!encryptionOptions.IsChunked)
                 {
-                    SecureBuffer.SecureLargeBuffer decrypted = null!;
-                    try
+                    using (SecureBuffer.SecureLargeBuffer decrypted = DecryptInOneChunk(vaultFS, checked((int)encryptionOptions.FileSize), _session.GetSlicedKey(encryptionAlgorithmProvider.KeySize), encryptionAlgorithmProvider.EncryptionAlgorithm))
                     {
-                        decrypted = DecryptInOneChunk(vaultFS, checked((int)encryptionOptions.FileSize), _session.GetSlicedKey(encryptionAlgorithmProvider.KeySize), encryptionAlgorithmProvider.EncryptionAlgorithm);
                         fileFS.Write(decrypted.AsSpan);
-                        context.Progress.Report(new ProgressStatus(1, 1));
                     }
-                    finally
-                    {
-                        if (decrypted is not null) decrypted.Dispose();
-                    }
+                    context.Progress.Report(new ProgressStatus(1, 1));
                 }
                 else
                 {
                     await DecryptInMultipleChunks(vaultFS, fileFS, encryptionOptions.ChunkInformation!, encryptionAlgorithmProvider.EncryptionAlgorithm.ExtraEncryptionDataSize, encryptionAlgorithmProvider, context);
                 }
-            }
-            finally
-            {
-                encryptionOptions.Dispose();
             }
         }
 
@@ -86,15 +75,10 @@ namespace VaultCrypt.Services
             if (key.IsEmpty) throw new ArgumentException("Provided empty key", nameof(key));
             ArgumentNullException.ThrowIfNull(encryptionAlgorithm);
 
-            SecureBuffer.SecureLargeBuffer buffer = new SecureBuffer.SecureLargeBuffer(fileSize);
-            try
+            using (SecureBuffer.SecureLargeBuffer buffer = new SecureBuffer.SecureLargeBuffer(fileSize))
             {
                 vaultFS.ReadExactly(buffer.AsSpan);
                 return encryptionAlgorithm.DecryptBytes(buffer.AsSpan, key);
-            }
-            finally
-            {
-                buffer.Dispose();
             }
         }
 
@@ -121,13 +105,12 @@ namespace VaultCrypt.Services
                     context.CancellationToken.ThrowIfCancellationRequested();
                     int bytesRead = 0;
                     ulong currentIndex = chunkIndex++;
-                    SecureBuffer.SecureLargeBuffer currentChunk = null!;
                     bytesRead = await vaultFS.ReadAsync(buffer.AsMemory);
 
                     //End of file throw
                     if (bytesRead == 0) throw new VaultException(VaultException.ErrorContext.Decrypt, VaultException.ErrorReason.EndOfFile);
 
-                    currentChunk = new SecureBuffer.SecureLargeBuffer(bytesRead);
+                    SecureBuffer.SecureLargeBuffer currentChunk = new SecureBuffer.SecureLargeBuffer(bytesRead);
                     buffer.AsSpan[..bytesRead].CopyTo(currentChunk.AsSpan);
 
                     if (tasks.Any(task => task.IsFaulted)) throw new VaultException(VaultException.ErrorContext.Decrypt, VaultException.ErrorReason.TaskFaulted);
@@ -145,25 +128,17 @@ namespace VaultCrypt.Services
                         {
                             decryptedChunk = provider.EncryptionAlgorithm.DecryptBytes(currentChunk.AsSpan, _session.KEY.AsSpan[..provider.KeySize]);
                             results.TryAdd(currentIndex, decryptedChunk);
-                        }
-                        catch (Exception)
-                        {
-                            throw;
-                        }
-                        finally
-                        {
-                            if (currentChunk is not null) currentChunk.Dispose();
-                        }
-
-                        try
-                        {
                             _fileService.WriteReadyChunk(results, ref nextToWrite, currentIndex, fileFS, writeLock);
                         }
                         catch (Exception)
                         {
                             //Decrypted chunk usually gets cleaned in IFileService.WriteReadyChunk after writing, clean here if it throws
-                            decryptedChunk.Dispose();
+                            decryptedChunk?.Dispose();
                             throw;
+                        }
+                        finally
+                        {
+                            currentChunk.Dispose();
                         }
                         
                         //Reporting current index + 1 because currentIndex is zero based while user gets to see 1 based indexing
@@ -174,7 +149,7 @@ namespace VaultCrypt.Services
             }
             finally
             {
-                if (buffer is not null) buffer.Dispose();
+                buffer.Dispose();
                 foreach (var result in results.Values)
                 {
                     result.Dispose();
