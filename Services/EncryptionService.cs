@@ -12,6 +12,18 @@ namespace VaultCrypt.Services
 {
     public interface IEncryptionService
     {
+        /// <summary>
+        /// Reads data from <paramref name="filePath"/>, encrypts it and saves in vault
+        /// </summary>
+        /// <param name="algorithm">Algorithm to encrypt data with</param>
+        /// <param name="chunkSizeInMB">Maximum size of each chunk in megabytes, if file size is lower than chunk size then it gets encrypted in one singular chunk</param>
+        /// <param name="filePath">Path to file to encrypt</param>
+        /// <param name="context">Context to display progression</param>
+        /// <returns></returns>
+        /// <exception cref="ArgumentNullException">Thrown when <paramref name="algorithm"/>, <paramref name="filePath"/> or <paramref name="context"/> are set to null</exception>
+        /// <exception cref="ArgumentOutOfRangeException">Thrown when <paramref name="chunkSizeInMB"/> value is set to zero</exception>
+        /// <exception cref="ArgumentException">Thrown when <paramref name="filePath"/> is set to empty or whitespace only characters</exception>
+        /// <exception cref="VaultException">Thrown when trying to encrypt empty file</exception>
         public Task Encrypt(EncryptionAlgorithm.EncryptionAlgorithmInfo algorithm, ushort chunkSizeInMB, NormalizedPath filePath, ProgressionContext context);
     }
 
