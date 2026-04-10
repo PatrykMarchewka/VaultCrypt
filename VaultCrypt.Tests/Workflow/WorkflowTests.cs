@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Security;
@@ -21,8 +21,6 @@ namespace VaultCrypt.Tests.Workflow
         private readonly VaultRegistry _registry;
         private readonly VaultService _vaultService;
 
-        private readonly SecureBuffer.SecureLargeBuffer PasswordBuffer;
-
         public WorkflowTests()
         {
             this._fileService = new FileService();
@@ -33,8 +31,6 @@ namespace VaultCrypt.Tests.Workflow
             this._decryptionService = new DecryptionService(_fileService, _encryptionOptionsService, _vaultSession, _systemService);
             this._registry = VaultRegistry.Initialize(_vaultSession);
             this._vaultService = new VaultService(_fileService, _vaultSession, _encryptionOptionsService, _systemService, _registry);
-
-            this.PasswordBuffer = new SecureBuffer.SecureLargeBuffer(28);
         }
 
         #region Helper methods and fields
