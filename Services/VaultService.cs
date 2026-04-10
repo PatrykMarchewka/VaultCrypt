@@ -11,10 +11,44 @@ namespace VaultCrypt.Services
 {
     public interface IVaultService
     {
+        /// <summary>
+        /// Creates vault file (.vlt)
+        /// </summary>
+        /// <param name="folderPath">Path to the folder in which vault file should be placed</param>
+        /// <param name="vaultName">Name for the vault file</param>
+        /// <param name="password">Password to encrypt the vault with</param>
+        /// <param name="iterations">Number of iterations used when deriving the key</param>
+        /// <exception cref="ArgumentNullException">Thrown when <paramref name="folderPath"/>, <paramref name="vaultName"/> or <paramref name="password"/> is set to <see cref="null"/></exception>
+        /// <exception cref="ArgumentException">Thrown when <paramref name="folderPath"/>, <paramref name="vaultName"/> or <paramref name="password"/> value is empty or set to whitespace only characters</exception>
+        /// <exception cref="ArgumentOutOfRangeException">Thrown when <paramref name="iterations"/> is set to negative or zero value</exception>
         public void CreateVault(NormalizedPath folderPath, string vaultName, ReadOnlySpan<byte> password, int iterations);
+        /// <summary>
+        /// Creates new vault session from vault file
+        /// </summary>
+        /// <param name="password">Password to unlock the vault with</param>
+        /// <param name="path">Path to the vault file</param>
+        /// <exception cref="ArgumentNullException">Thrown when <paramref name="path"/> is set to <see cref="null"/></exception>
+        /// <exception cref="ArgumentException">Thrown when <paramref name="password"/> is empty or <paramref name="path"/> value is empty or set to whitespace only characters</exception>
         public void CreateSessionFromFile(ReadOnlySpan<byte> password, NormalizedPath path);
+        /// <summary>
+        /// Recreates existing vault without zeroed blocks or corrupted files
+        /// </summary>
+        /// <param name="context">Context to display progression</param>
+        /// <exception cref="ArgumentNullException">Thrown when <paramref name="context"/> is set to <see cref="null"/></exception>
         public void TrimVault(ProgressionContext context);
+        /// <summary>
+        /// Deletes file from vault by either shortening file length or zeroing out the blocks
+        /// </summary>
+        /// <param name="offset">Offset to the file inside vault</param>
+        /// <param name="context">Context to display progression</param>
+        /// <exception cref="ArgumentOutOfRangeException">Thrown when <paramref name="offset"/> is set to negative value</exception>
+        /// <exception cref="ArgumentNullException">Thrown when <paramref name="context"/> is set to <see cref="null"/></exception>
         public void DeleteFileFromVault(long offset, ProgressionContext context);
+        /// <summary>
+        /// Refreshes information in <see cref="IVaultSession.ENCRYPTED_FILES"/>
+        /// </summary>
+        /// <param name="vaultFS">Vault to read data from</param>
+        /// <exception cref="ArgumentNullException">Thrown when <paramref name="vaultFS"/> is set to <see cref="null"/></exception>
         public void RefreshEncryptedFilesList(Stream vaultFS);
     }
 
@@ -35,16 +69,6 @@ namespace VaultCrypt.Services
             this._registry = registry;
         }
 
-        /// <summary>
-        /// Creates vault file (.vlt)
-        /// </summary>
-        /// <param name="folderPath">Path to the folder in which vault file should be placed</param>
-        /// <param name="vaultName">Name for the vault file</param>
-        /// <param name="password">Password to encrypt the vault with</param>
-        /// <param name="iterations">Number of PBKDF2 iterations</param>
-        /// <exception cref="ArgumentNullException"><paramref name="folderPath"/>, <paramref name="vaultName"/> or <paramref name="password"/> is <see cref="null"/></exception>
-        /// <exception cref="ArgumentException"><paramref name="folderPath"/>, <paramref name="vaultName"/> or <paramref name="password"/> is empty or whitespace only characters</exception>
-        /// <exception cref="ArgumentOutOfRangeException"><paramref name="iterations"/> is negative or set to zero</exception>
         public void CreateVault(NormalizedPath folderPath, string vaultName, ReadOnlySpan<byte> password, int iterations)
         {
             ArgumentNullException.ThrowIfNullOrWhiteSpace(folderPath);
@@ -78,13 +102,6 @@ namespace VaultCrypt.Services
             }
         }
 
-        /// <summary>
-        /// Creates new vault session
-        /// </summary>
-        /// <param name="password">Password to unlock the vault with</param>
-        /// <param name="path">Path to the vault with extension</param>
-        /// <exception cref="ArgumentNullException">Thrown when <paramref name="path"/> is set to null</exception>
-        /// <exception cref="ArgumentException">Thrown when <paramref name="password"/> is empty or <paramref name="path"/> is empty or set to whitespace only characters</exception>
         public void CreateSessionFromFile(ReadOnlySpan<byte> password, NormalizedPath path)
         {
             if(password.Length == 0) { throw new ArgumentException("Provided empty password"); }
@@ -170,7 +187,6 @@ namespace VaultCrypt.Services
                 if (offsets is not null) CryptographicOperations.ZeroMemory(MemoryMarshal.AsBytes(offsets.AsSpan()));
             }
         }
-
 
         public void TrimVault(ProgressionContext context)
         {
