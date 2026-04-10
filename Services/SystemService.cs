@@ -14,7 +14,18 @@ namespace VaultCrypt.Services
 {
     public interface ISystemService
     {
+        /// <summary>
+        /// Checks whether there is enough free space on <see cref="IVaultSession.VAULTPATH"/> drive to perform operation
+        /// </summary>
+        /// <param name="filePath">Path of the file to check</param>
+        /// <exception cref="VaultException">Thrown when there is not enough free space on drive</exception>
         public void CheckFreeSpace(NormalizedPath filePath);
+        /// <summary>
+        /// Calculates number of chunks that can be encrypted and written to disk in parrarel at the same time based on processor threads and available RAM memory
+        /// </summary>
+        /// <param name="chunked">Dictates whether file is meant to be chunked</param>
+        /// <param name="chunkSizeInMB">Maximum size of each chunk</param>
+        /// <returns>Returns 1 if <paramref name="chunked"/> is set to false, otherwise 1 or higher number</returns>
         public int CalculateConcurrency(bool chunked, ushort chunkSizeInMB);
     }
 
@@ -28,13 +39,6 @@ namespace VaultCrypt.Services
             this._session = session;
         }
 
-
-
-        /// <summary>
-        /// Checks whether there is enough free space to perform operation
-        /// </summary>
-        /// <param name="filePath">Path of the file to check</param>
-        /// <exception cref="Exception">There is not enough free space on the disk with the vault or file can't be located</exception>
         public void CheckFreeSpace(NormalizedPath filePath)
         {
             ArgumentNullException.ThrowIfNull(filePath);
