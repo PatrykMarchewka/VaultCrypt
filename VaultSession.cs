@@ -74,10 +74,10 @@ namespace VaultCrypt
         /// </summary>
         private VaultSession()
         {
-            KEY = new SecureBuffer.SecureKeyBuffer(PasswordHelper.KeySize);
-            ENCRYPTED_FILES = new();
-            VAULTPATH = NormalizedPath.From(string.Empty);
-            VAULT_READER = null!;
+            this.KEY = new SecureBuffer.SecureKeyBuffer(PasswordHelper.KeySize);
+            this.ENCRYPTED_FILES = new();
+            this.VAULTPATH = NormalizedPath.From(string.Empty);
+            this.VAULT_READER = null!;
         }
 
         public void CreateSession(NormalizedPath vaultPath, IVaultReader vaultReader, ReadOnlySpan<byte> password, ReadOnlySpan<byte> salt, int iterations)
@@ -105,9 +105,9 @@ namespace VaultCrypt
         public void Dispose()
         {
             CryptographicOperations.ZeroMemory(this.KEY.AsSpan);
-            ENCRYPTED_FILES.Clear();
-            VAULTPATH = NormalizedPath.From(string.Empty);
-            VAULT_READER = null!;
+            this.ENCRYPTED_FILES.Clear();
+            this.VAULTPATH = NormalizedPath.From(string.Empty);
+            this.VAULT_READER = null!;
         }
 
     }
