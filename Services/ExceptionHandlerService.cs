@@ -27,6 +27,9 @@ namespace VaultCrypt.Services
                 case VaultException vEx:
                     navigationService.NavigateToExceptionThrown(vEx);
                     break;
+                case OperationCanceledException ocEx:
+                    navigationService.NavigateToExceptionThrown(new VaultException(VaultException.ErrorContext.VaultSession, VaultException.ErrorReason.OperationCancelled));
+                        break;
                 default:
                     navigationService.NavigateToExceptionThrown(new VaultException(VaultException.ErrorContext.VaultSession, VaultException.ErrorReason.Other, ex));
                     break;

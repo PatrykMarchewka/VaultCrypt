@@ -48,7 +48,8 @@ namespace VaultCrypt.Exceptions
             Other,
             TaskFaulted,
             WrongHMAC,
-            EmptyFile
+            EmptyFile,
+            OperationCancelled
         }
         public static string GetReason(ErrorReason reason) => reason switch
         {
@@ -62,6 +63,7 @@ namespace VaultCrypt.Exceptions
             ErrorReason.TaskFaulted => "One or more tasks failed",
             ErrorReason.WrongHMAC => "Wrong HMAC authentication tag",
             ErrorReason.EmptyFile => "Provided empty file",
+            ErrorReason.OperationCancelled => "Operation cancelled by the user",
             _ => "Unknown error reason"
         };
     }
