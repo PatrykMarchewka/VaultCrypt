@@ -13,7 +13,6 @@ namespace VaultCrypt.Tests
 
         public ProgressionContextTests()
         {
-            SynchronizationContext.SetSynchronizationContext(null);
             _progressionContext = new ProgressionContext();
         }
 
