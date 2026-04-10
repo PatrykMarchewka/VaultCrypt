@@ -118,7 +118,7 @@ namespace VaultCrypt.Tests
             IVaultReader reader =  CreateVaultRegistry(session).GetVaultReader(version);
             byte[] salt = new byte[session.VAULT_READER.SaltSize];
             vaultFS.Read(salt);
-            byte[] iterationBytes = new byte[4];
+            byte[] iterationBytes = new byte[sizeof(int)];
             vaultFS.Read(iterationBytes);
             int iterations = BinaryPrimitives.ReadInt32LittleEndian(iterationBytes);
             NormalizedPath vaultPath = null!;

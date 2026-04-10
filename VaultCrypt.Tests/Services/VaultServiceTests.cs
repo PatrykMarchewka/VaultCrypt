@@ -31,7 +31,7 @@ namespace VaultCrypt.Tests.Services
             var path = NormalizedPath.From(Path.GetTempPath());
             var fileName = Path.GetRandomFileName();
             byte[] password = RandomNumberGenerator.GetBytes(32);
-            int iterations = 10;
+            int iterations = RandomNumberGenerator.GetInt32(1,1000);
 
             _service.CreateVault(path, fileName, password, iterations);
             try
