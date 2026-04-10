@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.ComponentModel;
 using System.Linq;
@@ -13,8 +13,7 @@ namespace VaultCrypt.ViewModels
 {
     public class PasswordInputViewModel : INotifyPropertyChanged, INavigated, IViewModel, INavigatingViewModel
     {
-        private NormalizedPath? VaultPath;
-
+        private NormalizedPath _vaultPath = null!;
         private SecureString _password = null!;
         public SecureString Password
         {
@@ -39,13 +38,13 @@ namespace VaultCrypt.ViewModels
         {
             ValidationHelper.NotEmptySecureString(Password, "Password");
 
-            NavigationRequested?.Invoke(new NavigateToOpenVaultRequest(Password, VaultPath!));
+            NavigationRequested.Invoke(new NavigateToOpenVaultRequest(Password, _vaultPath));
             this.Password.Clear();
         }
 
         public void OnNavigatedTo(object? parameters)
         {
-            this.VaultPath = (NormalizedPath)parameters!;
+            this._vaultPath = (NormalizedPath)parameters!;
         }
 
         private void OnPropertyChanged(string name) { PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(name)); }

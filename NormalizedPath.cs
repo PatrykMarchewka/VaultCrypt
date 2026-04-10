@@ -34,8 +34,6 @@ namespace VaultCrypt
             return Value;
         }
 
-        public static implicit operator string?(NormalizedPath? path) => path?.Value;
-
-
+        public static implicit operator string(NormalizedPath path) => path.Value;
     }
 }

@@ -71,9 +71,9 @@ namespace VaultCrypt.Tests.Services
 
             try
             {
-                FileInfo vaultInfo = new FileInfo(vaultPath!);
+                FileInfo vaultInfo = new FileInfo(vaultPath);
                 long vaultFileSize = vaultInfo.Length;
-                using (FileStream vaultFS = new FileStream(vaultPath!, FileMode.Open, FileAccess.ReadWrite))
+                using (FileStream vaultFS = new FileStream(vaultPath, FileMode.Open, FileAccess.ReadWrite))
                 {
 
                     TestsHelper.SetVaultSessionFromStream(_session, vaultFS);
@@ -82,10 +82,10 @@ namespace VaultCrypt.Tests.Services
 
                 vaultInfo.Refresh();
                 long newVaultFileSize = vaultInfo.Length;
-                FileInfo expectedFileInfo = new FileInfo(fileToEncrypt!);
+                FileInfo expectedFileInfo = new FileInfo(fileToEncrypt);
                 EncryptedFileInfo expectedEncryptedFileInfo = new EncryptedFileInfo(expectedFileInfo.Name, (ulong)(expectedFileInfo.Length + algorithm.Provider().EncryptionAlgorithm.ExtraEncryptionDataSize), algorithm);
                 EncryptedFileInfo actualEncryptedFileInfo = null!;
-                using (FileStream vaultFS = new FileStream(vaultPath!, FileMode.Open, FileAccess.ReadWrite))
+                using (FileStream vaultFS = new FileStream(vaultPath, FileMode.Open, FileAccess.ReadWrite))
                 {
 
                     actualEncryptedFileInfo = TestsHelper.GetOffsetKVPFromVaultAtPosition(0, vaultFS, _session).Value;
@@ -100,8 +100,8 @@ namespace VaultCrypt.Tests.Services
             }
             finally
             {
-                File.Delete(vaultPath!);
-                File.Delete(fileToEncrypt!);
+                File.Delete(vaultPath);
+                File.Delete(fileToEncrypt);
                 //Session dispose here to prevent issues with allocating too much memory as XUnit cleans only after ALL theory tests finish
                 _session.Dispose();
             }
@@ -112,12 +112,12 @@ namespace VaultCrypt.Tests.Services
         async Task EncryptEncryptsAndSavesToVaultNotChunked(EncryptionAlgorithm.EncryptionAlgorithmInfo algorithm)
         {
             var vaultPath = TestsHelper.CreateVaultFile();
-            FileInfo vaultInfo = new FileInfo(vaultPath!);
+            FileInfo vaultInfo = new FileInfo(vaultPath);
             long vaultFileSize = vaultInfo.Length;
             var fileToEncrypt = TestsHelper.CreateTemporaryFile(RandomNumberGenerator.GetInt32(1, (1024 * 1024) - 1));
             try
             {
-                using (FileStream vaultFS = new FileStream(vaultPath!, FileMode.Open, FileAccess.ReadWrite))
+                using (FileStream vaultFS = new FileStream(vaultPath, FileMode.Open, FileAccess.ReadWrite))
                 {
 
                     TestsHelper.SetVaultSessionFromStream(_session, vaultFS);
@@ -128,10 +128,10 @@ namespace VaultCrypt.Tests.Services
 
                 vaultInfo.Refresh();
                 long newVaultFileSize = vaultInfo.Length;
-                FileInfo expectedFileInfo = new FileInfo(fileToEncrypt!);
+                FileInfo expectedFileInfo = new FileInfo(fileToEncrypt);
                 EncryptedFileInfo expectedEncryptedFileInfo = new EncryptedFileInfo(expectedFileInfo.Name, (ulong)(expectedFileInfo.Length + algorithm.Provider().EncryptionAlgorithm.ExtraEncryptionDataSize), algorithm);
                 EncryptedFileInfo actualEncryptedFileInfo = null!;
-                using (FileStream vaultFS = new FileStream(vaultPath!, FileMode.Open, FileAccess.ReadWrite))
+                using (FileStream vaultFS = new FileStream(vaultPath, FileMode.Open, FileAccess.ReadWrite))
                 {
 
                     actualEncryptedFileInfo = TestsHelper.GetOffsetKVPFromVaultAtPosition(0, vaultFS, _session).Value;
@@ -145,8 +145,8 @@ namespace VaultCrypt.Tests.Services
             }
             finally
             {
-                File.Delete(vaultPath!);
-                File.Delete(fileToEncrypt!);
+                File.Delete(vaultPath);
+                File.Delete(fileToEncrypt);
                 //Session dispose here to prevent issues with allocating too much memory as XUnit cleans only after ALL theory tests finish
                 _session.Dispose();
             }

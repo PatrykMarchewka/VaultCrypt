@@ -60,7 +60,7 @@ namespace VaultCrypt.Services
             ArgumentNullException.ThrowIfNull(filePath);
             if (!File.Exists(filePath)) throw new ArgumentException($"Cant find the file at {filePath}");
 
-            return new FileInfo(filePath!).Length;
+            return new FileInfo(filePath).Length;
         }
 
         public int CalculateConcurrency(bool chunked, ushort chunkSizeInMB)

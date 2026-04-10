@@ -22,7 +22,7 @@ namespace VaultCrypt.ViewModels
         private readonly IVaultSession _session;
 
         private SecureString? password;
-        private NormalizedPath? vaultPath;
+        private NormalizedPath vaultPath = null!;
         public ICollectionView EncryptedFilesCollectionView { get; private set; } = null!;
 
 
@@ -86,18 +86,18 @@ namespace VaultCrypt.ViewModels
             {
                 password = PasswordHelper.SecureStringToBytes(this.password!);
                 this.password!.Clear();
-                _vaultService.CreateSessionFromFile(password, vaultPath!);
+                _vaultService.CreateSessionFromFile(password, vaultPath);
             }
             finally
             {
                 if (password is not null) CryptographicOperations.ZeroMemory(password);
             }
-            this.VaultName = Path.GetFileName(vaultPath!);
+            this.VaultName = Path.GetFileName(vaultPath);
         }
 
         public void RefreshCollection()
         {
-            using var vaultFS = new FileStream(_session.VAULTPATH!, FileMode.Open, FileAccess.Read, FileShare.ReadWrite);
+            using var vaultFS = new FileStream(_session.VAULTPATH, FileMode.Open, FileAccess.Read, FileShare.ReadWrite);
             _vaultService.RefreshEncryptedFilesList(vaultFS);
         }
 
@@ -161,7 +161,7 @@ namespace VaultCrypt.ViewModels
         public void Dispose()
         {
             this.password!.Clear();
-            this.vaultPath = null;
+            this.vaultPath = null!;
             this.SelectedFile = null;
         }
 

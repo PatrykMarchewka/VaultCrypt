@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Security;
@@ -103,13 +103,13 @@ namespace VaultCrypt.Tests.Workflow
         {
             string directory = Path.GetTempPath();
             NormalizedPath fullNewPath = NormalizedPath.From($"{directory}\\{new FileInfo(fileName).Name}");
-            File.Copy(fileName, fullNewPath!);
+            File.Copy(fileName, fullNewPath);
             return fullNewPath;
         }
 
         private NormalizedPath CopyEmptyVaultV0(bool changeSession)
         {
-            var copyPath = Copy(EmptyVaultV0FilePath!);
+            var copyPath = Copy(EmptyVaultV0FilePath);
             if (changeSession)
             {
                 _vaultService.CreateSessionFromFile(PasswordBytes, copyPath);
@@ -120,7 +120,7 @@ namespace VaultCrypt.Tests.Workflow
 
         private NormalizedPath CopyFilledVaultV0(bool changeSession)
         {
-            var copyPath = Copy(FilledVaultV0FilePath!);
+            var copyPath = Copy(FilledVaultV0FilePath);
             if (changeSession)
             {
                 _vaultService.CreateSessionFromFile(PasswordBytes, copyPath);
@@ -132,7 +132,7 @@ namespace VaultCrypt.Tests.Workflow
         private async Task<long> EncryptFile(NormalizedPath filePath)
         {
             await _encryptionService.Encrypt(EncryptionAlgorithm.EncryptionAlgorithmInfo.AES256GCM, chunkSizeInMB: 1, filePath, new ProgressionContext());
-            using (var vaultFS = new FileStream(_vaultSession.VAULTPATH!, FileMode.Open, FileAccess.Read))
+            using (var vaultFS = new FileStream(_vaultSession.VAULTPATH, FileMode.Open, FileAccess.Read))
             {
                 _vaultService.RefreshEncryptedFilesList(vaultFS);
             }
@@ -167,16 +167,16 @@ namespace VaultCrypt.Tests.Workflow
                 NormalizedPath actualPattern = await DecryptFile(offset);
                 try
                 {
-                    Assert.True(File.ReadAllBytes(LoremIpsumFilePath!).SequenceEqual(File.ReadAllBytes(actualPattern!)));
+                    Assert.True(File.ReadAllBytes(LoremIpsumFilePath).SequenceEqual(File.ReadAllBytes(actualPattern)));
                 }
                 finally
                 {
-                    File.Delete(actualPattern!);
+                    File.Delete(actualPattern);
                 }
             }
             finally
             {
-                File.Delete(vaultPath!);
+                File.Delete(vaultPath);
             }
         }
 
@@ -198,16 +198,16 @@ namespace VaultCrypt.Tests.Workflow
                 NormalizedPath actualPattern = await DecryptFile(offset);
                 try
                 {
-                    Assert.True(File.ReadAllBytes(PatternFilePath!).SequenceEqual(File.ReadAllBytes(actualPattern!)));
+                    Assert.True(File.ReadAllBytes(PatternFilePath).SequenceEqual(File.ReadAllBytes(actualPattern)));
                 }
                 finally
                 {
-                    File.Delete(actualPattern!);
+                    File.Delete(actualPattern);
                 }
             }
             finally
             {
-                File.Delete(vaultPath!);
+                File.Delete(vaultPath);
             }
         }
 
@@ -229,18 +229,18 @@ namespace VaultCrypt.Tests.Workflow
                 NormalizedPath actualPattern = await DecryptFile(offsetPattern);
                 try
                 {
-                    Assert.True(File.ReadAllBytes(LoremIpsumFilePath!).SequenceEqual(File.ReadAllBytes(actualLorem!)));
-                    Assert.True(File.ReadAllBytes(PatternFilePath!).SequenceEqual(File.ReadAllBytes(actualPattern!)));
+                    Assert.True(File.ReadAllBytes(LoremIpsumFilePath).SequenceEqual(File.ReadAllBytes(actualLorem)));
+                    Assert.True(File.ReadAllBytes(PatternFilePath).SequenceEqual(File.ReadAllBytes(actualPattern)));
                 }
                 finally
                 {
-                    File.Delete(actualLorem!);
-                    File.Delete(actualPattern!);
+                    File.Delete(actualLorem);
+                    File.Delete(actualPattern);
                 }
             }
             finally
             {
-                File.Delete(vaultPath!);
+                File.Delete(vaultPath);
             }
         }
 
@@ -260,11 +260,11 @@ namespace VaultCrypt.Tests.Workflow
                 long offsetPattern = await EncryptFile(PatternFilePath);
                 _vaultService.DeleteFileFromVault(offsetPattern, new ProgressionContext());
 
-                Assert.Equal(offsetPattern, new FileInfo(vaultPath!).Length);
+                Assert.Equal(offsetPattern, new FileInfo(vaultPath).Length);
             }
             finally
             {
-                File.Delete(vaultPath!);
+                File.Delete(vaultPath);
             }
         }
 
@@ -283,18 +283,18 @@ namespace VaultCrypt.Tests.Workflow
                 long offsetLorem = await EncryptFile(LoremIpsumFilePath);
                 long offsetPattern = await EncryptFile(PatternFilePath);
                 _vaultService.DeleteFileFromVault(offsetLorem, new ProgressionContext());
-                byte[] actual = new byte[new FileInfo(LoremIpsumFilePath!).Length];
-                using (var vaultFs = new FileStream(vaultPath!, FileMode.Open, FileAccess.Read))
+                byte[] actual = new byte[new FileInfo(LoremIpsumFilePath).Length];
+                using (var vaultFs = new FileStream(vaultPath, FileMode.Open, FileAccess.Read))
                 {
                     vaultFs.Position = offsetLorem;
                     vaultFs.Read(actual);
                 }
 
-                Assert.True(new byte[new FileInfo(LoremIpsumFilePath!).Length].SequenceEqual(actual));
+                Assert.True(new byte[new FileInfo(LoremIpsumFilePath).Length].SequenceEqual(actual));
             }
             finally
             {
-                File.Delete(vaultPath!);
+                File.Delete(vaultPath);
             }
         }
 
@@ -318,26 +318,26 @@ namespace VaultCrypt.Tests.Workflow
                 var trimmedVault = TrimVault(changeSession: true);
                 try
                 {
-                    Assert.True(new FileInfo(trimmedVault!).Length < new FileInfo(vaultPath!).Length);
+                    Assert.True(new FileInfo(trimmedVault).Length < new FileInfo(vaultPath).Length);
                     //Additional check to see if trimming didnt break existing file
                     var actualPattern = await DecryptFile(_vaultSession.ENCRYPTED_FILES.Last().Key);
                     try
                     {
-                        Assert.True(File.ReadAllBytes(PatternFilePath!).SequenceEqual(File.ReadAllBytes(actualPattern!)));
+                        Assert.True(File.ReadAllBytes(PatternFilePath).SequenceEqual(File.ReadAllBytes(actualPattern)));
                     }
                     finally
                     {
-                        File.Delete(actualPattern!);
+                        File.Delete(actualPattern);
                     }
                 }
                 finally
                 {
-                    File.Delete(trimmedVault!);
+                    File.Delete(trimmedVault);
                 }
             }
             finally
             {
-                File.Delete(vaultPath!);
+                File.Delete(vaultPath);
             }
         }
 
@@ -362,29 +362,29 @@ namespace VaultCrypt.Tests.Workflow
                 try
                 {
                     //Since deleted file is at the end, trimming does "nothing", It copies the existing header and files but generates new metadata with new IV
-                    Assert.Equal(new FileInfo(trimmedVault!).Length, new FileInfo(vaultPath!).Length);
+                    Assert.Equal(new FileInfo(trimmedVault).Length, new FileInfo(vaultPath).Length);
                     await EncryptFile(PatternFilePath);
                     NormalizedPath actualLorem = await DecryptFile(offsetLorem);
                     NormalizedPath actualPattern = await DecryptFile(offsetPattern);
                     try
                     {
-                        Assert.True(File.ReadAllBytes(LoremIpsumFilePath!).SequenceEqual(File.ReadAllBytes(actualLorem!)));
-                        Assert.True(File.ReadAllBytes(PatternFilePath!).SequenceEqual(File.ReadAllBytes(actualPattern!)));
+                        Assert.True(File.ReadAllBytes(LoremIpsumFilePath).SequenceEqual(File.ReadAllBytes(actualLorem)));
+                        Assert.True(File.ReadAllBytes(PatternFilePath).SequenceEqual(File.ReadAllBytes(actualPattern)));
                     }
                     finally
                     {
-                        File.Delete(actualLorem!);
-                        File.Delete(actualPattern!);
+                        File.Delete(actualLorem);
+                        File.Delete(actualPattern);
                     }
                 }
                 finally
                 {
-                    File.Delete(trimmedVault!);
+                    File.Delete(trimmedVault);
                 }
             }
             finally
             {
-                File.Delete(vaultPath!);
+                File.Delete(vaultPath);
             }
         }
 

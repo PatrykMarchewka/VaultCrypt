@@ -47,19 +47,19 @@ namespace VaultCrypt.Services
             ArgumentNullException.ThrowIfNull(algorithm);
             ArgumentOutOfRangeException.ThrowIfZero(chunkSizeInMB);
             ArgumentNullException.ThrowIfNullOrWhiteSpace(filePath);
-            if (new FileInfo(filePath!).Length == 0) throw new VaultException(VaultException.ErrorContext.Encrypt, VaultException.ErrorReason.EmptyFile);
+            if (new FileInfo(filePath).Length == 0) throw new VaultException(VaultException.ErrorContext.Encrypt, VaultException.ErrorReason.EmptyFile);
             ArgumentNullException.ThrowIfNull(context);
 
             _systemService.CheckFreeSpace(filePath);
 
-            FileInfo fileInfo = new FileInfo(filePath!);
+            FileInfo fileInfo = new FileInfo(filePath);
             using (EncryptionOptions.FileEncryptionOptions options = _encryptionOptionsService.PrepareEncryptionOptions(fileInfo, algorithm, chunkSizeInMB))
             {
                 var provider = algorithm.Provider();
                 ulong totalChunks = options.ChunkInformation != null ? options.ChunkInformation!.TotalChunks : 1;
                 int concurrentChunkCount = _systemService.CalculateConcurrency(options.IsChunked, chunkSizeInMB);
-                await using FileStream vaultFS = new FileStream(_session.VAULTPATH!, FileMode.Open, FileAccess.ReadWrite);
-                await using FileStream fileFS = new FileStream(filePath!, FileMode.Open, FileAccess.Read);
+                await using FileStream vaultFS = new FileStream(_session.VAULTPATH, FileMode.Open, FileAccess.ReadWrite);
+                await using FileStream fileFS = new FileStream(filePath, FileMode.Open, FileAccess.Read);
                 _session.VAULT_READER.AddAndSaveMetadataOffsets(vaultFS, vaultFS.Seek(0, SeekOrigin.End));
 
                 using (SecureBuffer.SecureLargeBuffer paddedFileOptions = _encryptionOptionsService.PadAndEncryptFileEncryptionOptions(options))

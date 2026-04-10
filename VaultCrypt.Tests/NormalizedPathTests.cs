@@ -57,19 +57,17 @@ namespace VaultCrypt.Tests
         {
             var path = NormalizedPath.From(test);
 
-            string pathAsString = path!;
+            string pathAsString = path;
 
             Assert.Equal(test, pathAsString);
         }
 
         [Fact]
-        void NormalizedPathConvertsToStringNullCheck()
+        void NormalizedPathThrowsOnNullValue()
         {
-            NormalizedPath? path = null;
+            NormalizedPath path = null!;
 
-            string? pathAsString = path;
-
-            Assert.Null(pathAsString);
+            Assert.Throws<NullReferenceException>(() => { string pathAsString = path; });
         }
     }
 }

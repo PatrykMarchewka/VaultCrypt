@@ -82,7 +82,7 @@ namespace VaultCrypt.Services
             {
                 if (!Directory.Exists(folderPath))
                 {
-                    Directory.CreateDirectory(folderPath!);
+                    Directory.CreateDirectory(folderPath);
                     createdDirectory = true;
                 }
                 NormalizedPath vaultPath = NormalizedPath.From($"{folderPath}\\{vaultName}.vlt");
@@ -97,7 +97,7 @@ namespace VaultCrypt.Services
                     encryptedMetadata = reader.VaultEncryption(new byte[sizeof(ushort) + reader.MetadataOffsetsSize]);
                     try
                     {
-                        using (FileStream vaultFS = new FileStream(vaultPath!, FileMode.Create, FileAccess.Write))
+                        using (FileStream vaultFS = new FileStream(vaultPath, FileMode.Create, FileAccess.Write))
                         {
                             vaultFS.Write(vaultHeader.AsSpan);
                             vaultFS.Write(encryptedMetadata.AsSpan);
@@ -106,7 +106,7 @@ namespace VaultCrypt.Services
                     catch (Exception)
                     {
                         //Failed writing to vault, delete entire file
-                        File.Delete(vaultPath!);
+                        File.Delete(vaultPath);
                         throw;
                     }
                     
@@ -125,7 +125,7 @@ namespace VaultCrypt.Services
             }
             catch (Exception)
             {
-                if (createdDirectory) Directory.Delete(folderPath!);
+                if (createdDirectory) Directory.Delete(folderPath);
                 throw;
             }
         }
@@ -135,7 +135,7 @@ namespace VaultCrypt.Services
             if(password.Length == 0) { throw new ArgumentException("Provided empty password"); }
             ArgumentNullException.ThrowIfNullOrWhiteSpace(path);
 
-            using FileStream fs = new FileStream(path!, FileMode.Open, FileAccess.Read);
+            using FileStream fs = new FileStream(path, FileMode.Open, FileAccess.Read);
             Span<byte> buffer = stackalloc byte[1];
             fs.ReadExactly(buffer);
             byte version = buffer[0];
@@ -215,7 +215,7 @@ namespace VaultCrypt.Services
             ArgumentNullException.ThrowIfNull(context);
 
             _systemService.CheckFreeSpace(_session.VAULTPATH);
-            using FileStream vaultfs = new FileStream(_session.VAULTPATH!, FileMode.Open, FileAccess.Read);
+            using FileStream vaultfs = new FileStream(_session.VAULTPATH, FileMode.Open, FileAccess.Read);
             //Remove the last 4 characters from a string (.vlt) before adding new text
             using FileStream newVaultfs = new FileStream(_session.VAULTPATH.Value[..^4] + "_TRIMMED.vlt", FileMode.Create);
 
@@ -281,7 +281,7 @@ namespace VaultCrypt.Services
             ArgumentNullException.ThrowIfNull(context);
 
 
-            using FileStream vaultFS = new FileStream(_session.VAULTPATH!, FileMode.Open, FileAccess.ReadWrite);
+            using FileStream vaultFS = new FileStream(_session.VAULTPATH, FileMode.Open, FileAccess.ReadWrite);
             var fileList = _session.ENCRYPTED_FILES.ToList();
             //If the file is at the end, just trim the entire file, otherwise zero out the block
             if (_session.ENCRYPTED_FILES.Last().Key == offset)

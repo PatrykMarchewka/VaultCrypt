@@ -20,8 +20,8 @@ namespace VaultCrypt.Tests.Services
         void CheckFreeSpaceDoesNotThrowForValidValues()
         {
             var path = TestsHelper.CreateTemporaryFile(0);
-            _service.CheckFreeSpace(NormalizedPath.From(path!));
-            File.Delete(path!);
+            _service.CheckFreeSpace(NormalizedPath.From(path));
+            File.Delete(path);
         }
 
         [Fact]

@@ -65,7 +65,7 @@ namespace VaultCrypt.Tests.Services
             }
             finally
             {
-                Directory.Delete(path!, recursive: true);
+                Directory.Delete(path, recursive: true);
             }
         }
 
@@ -152,7 +152,7 @@ namespace VaultCrypt.Tests.Services
             {
                 vaultInformation = TestsHelper.CreateVaultFileWithEncryptedFileList(expectedFileListCount, _session);
 
-                using (FileStream fs = new FileStream(vaultInformation.Item1!, FileMode.Open, FileAccess.Read))
+                using (FileStream fs = new FileStream(vaultInformation.Item1, FileMode.Open, FileAccess.Read))
                 {
                     _service.RefreshEncryptedFilesList(fs);
                 }
@@ -166,7 +166,7 @@ namespace VaultCrypt.Tests.Services
             }
             finally
             {
-                if (vaultInformation.Item1 is not null) File.Delete(vaultInformation.Item1!);
+                if (vaultInformation.Item1 is not null) File.Delete(vaultInformation.Item1);
                 foreach (var item in vaultInformation.Item2)
                 {
                     item.Dispose();
@@ -191,7 +191,7 @@ namespace VaultCrypt.Tests.Services
             {
                 vaultInformation = TestsHelper.CreateVaultFileWithEncryptedFileList(numberOfFiles: 10, _session, password);
                 
-                long oldVaultSize = new FileInfo(vaultInformation.Item1!).Length;
+                long oldVaultSize = new FileInfo(vaultInformation.Item1).Length;
                 //Trim vault uses vault provided at VaultSession.VAULTPATH where VaultSession is the one provided when creating service
                 using (FileStream fs = new FileStream(vaultInformation.Item1.Value, FileMode.Open, FileAccess.Read))
                 {
@@ -203,18 +203,18 @@ namespace VaultCrypt.Tests.Services
                 {
 
                     _service.TrimVault(new ProgressionContext());
-                    newVaultPath = NormalizedPath.From(vaultInformation.Item1!.Value[..^4] + "_TRIMMED.vlt");
-                    long newVaultSize = new FileInfo(newVaultPath!).Length;
+                    newVaultPath = NormalizedPath.From(vaultInformation.Item1.Value[..^4] + "_TRIMMED.vlt");
+                    long newVaultSize = new FileInfo(newVaultPath).Length;
                     Assert.True(newVaultSize < oldVaultSize);
                 }
                 finally
                 {
-                    if (newVaultPath is not null) File.Delete(newVaultPath!);
+                    if (newVaultPath is not null) File.Delete(newVaultPath);
                 }
             }
             finally
             {
-                if (vaultInformation.Item1 is not null) File.Delete(vaultInformation.Item1!);
+                if (vaultInformation.Item1 is not null) File.Delete(vaultInformation.Item1);
                 
             }
             
@@ -239,17 +239,17 @@ namespace VaultCrypt.Tests.Services
                 try
                 {
                     _service.TrimVault(new ProgressionContext());
-                    newVaultPath = NormalizedPath.From(vaultInformation.Item1!.Value[..^4] + "_TRIMMED.vlt");
-                    Assert.Equal(new FileInfo(vaultInformation.Item1!).Length, new FileInfo(newVaultPath!).Length);
+                    newVaultPath = NormalizedPath.From(vaultInformation.Item1.Value[..^4] + "_TRIMMED.vlt");
+                    Assert.Equal(new FileInfo(vaultInformation.Item1).Length, new FileInfo(newVaultPath).Length);
                 }
                 finally
                 {
-                    File.Delete(newVaultPath!);
+                    File.Delete(newVaultPath);
                 }
             }
             finally
             {
-                if (vaultInformation.Item1 is not null) File.Delete(vaultInformation.Item1!);
+                if (vaultInformation.Item1 is not null) File.Delete(vaultInformation.Item1);
             }
         }
 
@@ -275,40 +275,40 @@ namespace VaultCrypt.Tests.Services
 
             Assert.True(new byte[_session.VAULT_READER.EncryptionOptionsSize].SequenceEqual(actual));
 
-            File.Delete(tuple.Item1!);
+            File.Delete(tuple.Item1);
         }
 
         [Fact]
         void DeleteFileFromVaultTrimsVault()
         {
             (NormalizedPath, EncryptionOptions.FileEncryptionOptions[]) tuple = TestsHelper.CreateVaultFileWithEncryptedFileList(10, _session);
-            long oldVaultSize = new FileInfo(tuple.Item1!).Length;
+            long oldVaultSize = new FileInfo(tuple.Item1).Length;
 
             _service.DeleteFileFromVault(_session.ENCRYPTED_FILES.Last().Key, new ProgressionContext());
 
-            long newVaultSize = new FileInfo(tuple.Item1!).Length;
+            long newVaultSize = new FileInfo(tuple.Item1).Length;
 
             Assert.True(newVaultSize < oldVaultSize);
 
-            File.Delete(tuple.Item1!);
+            File.Delete(tuple.Item1);
         }
 
         [Fact]
         void DeleteFileFromVaultChangesEncryptedFileListCount()
         {
             (NormalizedPath, EncryptionOptions.FileEncryptionOptions[]) tuple = TestsHelper.CreateVaultFileWithEncryptedFileList(10, _session);
-            long oldVaultSize = new FileInfo(tuple.Item1!).Length;
+            long oldVaultSize = new FileInfo(tuple.Item1).Length;
 
             var oldFileListCount = _session.ENCRYPTED_FILES.Count;
             _service.DeleteFileFromVault(_session.ENCRYPTED_FILES.Last().Key, new ProgressionContext());
-            using (FileStream vaultFS = new FileStream(_session.VAULTPATH!, FileMode.Open, FileAccess.Read))
+            using (FileStream vaultFS = new FileStream(_session.VAULTPATH, FileMode.Open, FileAccess.Read))
             {
                 _service.RefreshEncryptedFilesList(vaultFS);
             }
             var actualFileListCount = _session.ENCRYPTED_FILES.Count;
 
             Assert.Equal(oldFileListCount - 1, actualFileListCount);
-            File.Delete(tuple.Item1!);
+            File.Delete(tuple.Item1);
         }
 
         [Fact]

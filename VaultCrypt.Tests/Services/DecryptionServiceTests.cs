@@ -40,7 +40,7 @@ namespace VaultCrypt.Tests.Services
 
             for (int i = 0; i < expectedFiles.Length; i++)
             {
-                using (FileStream vaultFS = new FileStream(vault.Item1!, FileMode.Open, FileAccess.Read))
+                using (FileStream vaultFS = new FileStream(vault.Item1, FileMode.Open, FileAccess.Read))
                 {
                     long offset = TestsHelper.GetOffsetKVPFromVaultAtPosition(i, vaultFS, _session).Key;
                     filePaths[i] = TestsHelper.CreateTemporaryFile(0);
@@ -54,7 +54,7 @@ namespace VaultCrypt.Tests.Services
                 Assert.True(expectedFiles[i].SequenceEqual(actual));
                 File.Delete(filePaths[i]!);
             }
-            File.Delete(vault.Item1!);
+            File.Delete(vault.Item1);
         }
 
         [Fact]

@@ -47,12 +47,12 @@ namespace VaultCrypt.Services
             ArgumentNullException.ThrowIfNullOrWhiteSpace(filePath);
             ArgumentNullException.ThrowIfNull(context);
 
-            await using FileStream vaultFS = new FileStream(_session.VAULTPATH!, FileMode.Open, FileAccess.Read);
+            await using FileStream vaultFS = new FileStream(_session.VAULTPATH, FileMode.Open, FileAccess.Read);
 
             using (EncryptionOptions.FileEncryptionOptions encryptionOptions = _encryptionOptionsService.GetDecryptedFileEncryptionOptions(vaultFS, metadataOffset))
             {
                 var encryptionAlgorithmProvider = EncryptionAlgorithm.GetEncryptionAlgorithmInfo[encryptionOptions.EncryptionAlgorithm].Provider();
-                using FileStream fileFS = new FileStream(filePath!, FileMode.Create);
+                using FileStream fileFS = new FileStream(filePath, FileMode.Create);
                 if (!encryptionOptions.IsChunked)
                 {
                     using (SecureBuffer.SecureLargeBuffer decrypted = DecryptInOneChunk(vaultFS, checked((int)encryptionOptions.FileSize), _session.GetSlicedKey(encryptionAlgorithmProvider.KeySize), encryptionAlgorithmProvider.EncryptionAlgorithm))
