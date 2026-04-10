@@ -216,55 +216,72 @@ namespace VaultCrypt.Tests
             salt ??= new byte[vaultSessionWithReader.VAULT_READER.SaltSize];
             ReadOnlySpan<byte> key = CreateKey(password, salt, iterations);
             vaultSessionWithReader ??= CreateFilledSessionInstanceWithReader(key, 0);
-            var path = CreateVaultFile(0, password, salt);
             var fileEncryptionOptions = new EncryptionOptions.FileEncryptionOptions[filesToEncrypt.Length];
             var offsets = new long[filesToEncrypt.Length];
             var service = new EncryptionOptionsService(vaultSessionWithReader);
 
-
-            using FileStream fs = new FileStream(path!, FileMode.Open, FileAccess.ReadWrite);
-            SetVaultSessionFromStream(vaultSessionWithReader, fs, password);
-            //Replace the mocked list with real one
-            vaultSessionWithReader.ENCRYPTED_FILES.Clear();
-            for (int i = 0; i < filesToEncrypt.Length; i++)
+            var path = CreateVaultFile(0, password, salt);
+            try
             {
-                fs.Seek(0, SeekOrigin.End);
+                using FileStream fs = new FileStream(path, FileMode.Open, FileAccess.ReadWrite);
+                SetVaultSessionFromStream(vaultSessionWithReader, fs, password);
+                //Replace the mocked list with real one
+                vaultSessionWithReader.ENCRYPTED_FILES.Clear();
+                for (int i = 0; i < filesToEncrypt.Length; i++)
+                {
+                    fs.Seek(0, SeekOrigin.End);
 
-                //Add to encrypted files list
-                SecureBuffer.SecureLargeBuffer fileNameBytes = new SecureBuffer.SecureLargeBuffer(100);
-                RandomNumberGenerator.Fill(fileNameBytes.AsSpan);
-                var algorithm = EncryptionAlgorithm.GetEncryptionAlgorithmInfo[(byte)RandomNumberGenerator.GetInt32(32)];
+                    //Add to encrypted files list
+                    SecureBuffer.SecureLargeBuffer fileNameBytes = new SecureBuffer.SecureLargeBuffer(100);
+                    try
+                    {
+                        RandomNumberGenerator.Fill(fileNameBytes.AsSpan);
+                        var algorithm = EncryptionAlgorithm.GetEncryptionAlgorithmInfo[(byte)RandomNumberGenerator.GetInt32(32)];
 
-                ulong fileSize = (ulong)(filesToEncrypt[i].Length + algorithm.Provider().EncryptionAlgorithm.ExtraEncryptionDataSize);
-                vaultSessionWithReader.ENCRYPTED_FILES.Add(fs.Position, new EncryptedFileInfo(Encoding.UTF8.GetString(fileNameBytes.AsSpan), fileSize, algorithm));
+                        ulong fileSize = (ulong)(filesToEncrypt[i].Length + algorithm.Provider().EncryptionAlgorithm.ExtraEncryptionDataSize);
+                        vaultSessionWithReader.ENCRYPTED_FILES.Add(fs.Position, new EncryptedFileInfo(Encoding.UTF8.GetString(fileNameBytes.AsSpan), fileSize, algorithm));
 
-                //Write encryption options
-                offsets[i] = fs.Position;
-                fileEncryptionOptions[i] = new EncryptionOptions.FileEncryptionOptions(version: 0, fileNameBytes, fileSize, algorithm.ID, chunked: false, chunkInformation: null);
-                SecureBuffer.SecureLargeBuffer encryptedFileEncryptionOptions = service.PadAndEncryptFileEncryptionOptions(fileEncryptionOptions[i]);
-                fs.Write(encryptedFileEncryptionOptions.AsSpan);
-                encryptedFileEncryptionOptions.Dispose();
+                        //Write encryption options
+                        offsets[i] = fs.Position;
+                        fileEncryptionOptions[i] = new EncryptionOptions.FileEncryptionOptions(version: 0, fileNameBytes, fileSize, algorithm.ID, chunked: false, chunkInformation: null);
+                        using (SecureBuffer.SecureLargeBuffer encryptedFileEncryptionOptions = service.PadAndEncryptFileEncryptionOptions(fileEncryptionOptions[i]))
+                        {
+                            fs.Write(encryptedFileEncryptionOptions.AsSpan);
+                        }
 
-                //Write the encrypted file
-                SecureBuffer.SecureLargeBuffer encryptedFile = algorithm.Provider().EncryptionAlgorithm.EncryptBytes(filesToEncrypt[i], key[..algorithm.Provider().KeySize]);
-                fs.Write(encryptedFile.AsSpan);
-                encryptedFile.Dispose();
+                        using (SecureBuffer.SecureLargeBuffer encryptedFile = algorithm.Provider().EncryptionAlgorithm.EncryptBytes(filesToEncrypt[i], key[..algorithm.Provider().KeySize]))
+                        {
+                            fs.Write(encryptedFile.AsSpan);
+                        }
+                    }
+                    catch (Exception)
+                    {
+                        fileNameBytes.Dispose();
+                        throw;
+                    }
+                }
+
+                byte[] metadataOffsets = new byte[sizeof(ushort) + 4096];
+                BinaryPrimitives.WriteUInt16LittleEndian(metadataOffsets.AsSpan(), (ushort)filesToEncrypt.Length);
+                for (int i = 0; i < filesToEncrypt.Length; i++)
+                {
+                    BinaryPrimitives.WriteInt64LittleEndian(metadataOffsets.AsSpan(2 + (i * 8), 8), offsets[i]);
+                }
+
+                using (SecureBuffer.SecureLargeBuffer encryptedMetadataOffsets = vaultSessionWithReader.VAULT_READER.VaultEncryption(metadataOffsets))
+                {
+                    //v0 = [version (1byte)][salt (32 bytes)][iterations (4 bytes)] + [metadata offsets (28 bytes for AES decryption + 2 bytes ushort number +  MetadataOffsetsSize (4KB (4096 bytes))]...
+                    fs.Seek(1 + 32 + 4, SeekOrigin.Begin); //Seeking to where offsets are placed
+                    fs.Write(encryptedMetadataOffsets.AsSpan);
+                }
+
+                return (path, fileEncryptionOptions);
             }
-
-            byte[] metadataOffsets = new byte[sizeof(ushort) + 4096];
-            BinaryPrimitives.WriteUInt16LittleEndian(metadataOffsets.AsSpan(), (ushort)filesToEncrypt.Length);
-            Span<byte> offsetBytes = stackalloc byte[8];
-            for (int i = 0; i < filesToEncrypt.Length; i++)
+            catch (Exception)
             {
-                BinaryPrimitives.WriteInt64LittleEndian(metadataOffsets.AsSpan(2 + (i * 8), 8), offsets[i]);
+                File.Delete(path);
+                throw;
             }
-            SecureBuffer.SecureLargeBuffer encryptedMetadataOffsets = vaultSessionWithReader.VAULT_READER.VaultEncryption(metadataOffsets);
-            //v0 = [version (1byte)][salt (32 bytes)][iterations (4 bytes)] + [metadata offsets (28 bytes for AES decryption + 2 bytes ushort number +  MetadataOffsetsSize (4KB (4096 bytes))]...
-            fs.Seek(1 + 32 + 4, SeekOrigin.Begin); //Seeking to where offsets are placed
-            fs.Write(encryptedMetadataOffsets.AsSpan);
-            encryptedMetadataOffsets.Dispose();
-
-            return (path, fileEncryptionOptions);
         }
 
         /// <summary>
