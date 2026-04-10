@@ -76,29 +76,57 @@ namespace VaultCrypt.Services
             if(password.IsEmpty) { throw new ArgumentException("Provided empty password"); }
             ArgumentOutOfRangeException.ThrowIfNegativeOrZero(iterations);
 
-            if (!Directory.Exists(folderPath)) Directory.CreateDirectory(folderPath!);
-            NormalizedPath vaultPath = NormalizedPath.From($"{folderPath}\\{vaultName}.vlt");
-            IVaultReader reader = _registry.GetVaultReader(VaultSession.NewestVaultVersion);
-            byte[] salt = null!;
-            SecureBuffer.SecureLargeBuffer vaultHeader = null!;
-            SecureBuffer.SecureLargeBuffer encryptedMetadata = null!;
+
+            bool createdDirectory = false;
             try
             {
-                salt = PasswordHelper.GenerateRandomSalt(reader.SaltSize);
-                vaultHeader = reader.PrepareVaultHeader(salt, iterations);
-                _session.CreateSession(vaultPath, reader, password, salt, iterations);
-                encryptedMetadata = reader.VaultEncryption(new byte[sizeof(ushort) + reader.MetadataOffsetsSize]);
-                using (FileStream vaultFS = new FileStream(vaultPath!, FileMode.Create, FileAccess.Write))
+                if (!Directory.Exists(folderPath))
                 {
-                    vaultFS.Write(vaultHeader.AsSpan);
-                    vaultFS.Write(encryptedMetadata.AsSpan);
+                    Directory.CreateDirectory(folderPath!);
+                    createdDirectory = true;
+                }
+                NormalizedPath vaultPath = NormalizedPath.From($"{folderPath}\\{vaultName}.vlt");
+                IVaultReader reader = _registry.GetVaultReader(VaultSession.NewestVaultVersion);
+                byte[] salt = PasswordHelper.GenerateRandomSalt(reader.SaltSize);
+                SecureBuffer.SecureLargeBuffer vaultHeader = null!;
+                SecureBuffer.SecureLargeBuffer encryptedMetadata = null!;
+                try
+                {
+                    vaultHeader = reader.PrepareVaultHeader(salt, iterations);
+                    _session.CreateSession(vaultPath, reader, password, salt, iterations);
+                    encryptedMetadata = reader.VaultEncryption(new byte[sizeof(ushort) + reader.MetadataOffsetsSize]);
+                    try
+                    {
+                        using (FileStream vaultFS = new FileStream(vaultPath!, FileMode.Create, FileAccess.Write))
+                        {
+                            vaultFS.Write(vaultHeader.AsSpan);
+                            vaultFS.Write(encryptedMetadata.AsSpan);
+                        }
+                    }
+                    catch (Exception)
+                    {
+                        //Failed writing to vault, delete entire file
+                        File.Delete(vaultPath!);
+                        throw;
+                    }
+                    
+                }
+                catch (Exception)
+                {
+                    //Creating vault failed, reset session to avoid holding stale data
+                    _session.Dispose();
+                }
+                finally
+                {
+                    CryptographicOperations.ZeroMemory(salt);
+                    vaultHeader?.Dispose();
+                    encryptedMetadata?.Dispose();
                 }
             }
-            finally
+            catch (Exception)
             {
-                if (salt is not null) CryptographicOperations.ZeroMemory(salt);
-                if (vaultHeader is not null) vaultHeader.Dispose();
-                if (encryptedMetadata is not null) encryptedMetadata.Dispose();
+                if (createdDirectory) Directory.Delete(folderPath!);
+                throw;
             }
         }
 
