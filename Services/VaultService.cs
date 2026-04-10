@@ -136,9 +136,7 @@ namespace VaultCrypt.Services
             ArgumentNullException.ThrowIfNullOrWhiteSpace(path);
 
             using FileStream fs = new FileStream(path, FileMode.Open, FileAccess.Read);
-            Span<byte> buffer = stackalloc byte[1];
-            fs.ReadExactly(buffer);
-            byte version = buffer[0];
+            byte version = (byte)fs.ReadByte();
 
             IVaultReader reader = _registry.GetVaultReader(version);
             int iterations = reader.ReadIterationsNumber(fs);
