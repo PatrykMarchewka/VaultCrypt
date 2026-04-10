@@ -13,7 +13,7 @@ using VaultCrypt.Services;
 
 namespace VaultCrypt
 {
-    public interface IVaultSession
+    public interface IVaultSession : IDisposable
     {
         /// <summary>
         /// Key used to encrypt/decrypt data
@@ -55,10 +55,9 @@ namespace VaultCrypt
         /// <returns>Sliced key with length equal to <paramref name="keySize"/></returns>
         /// <exception cref="ArgumentOutOfRangeException">Thrown when requested a slice that is bigger than entire key</exception>
         public ReadOnlySpan<byte> GetSlicedKey(byte keySize);
-        public void Dispose();
     }
 
-    public class VaultSession : IDisposable, IVaultSession
+    public class VaultSession : IVaultSession
     {
 
         public SecureBuffer.SecureKeyBuffer KEY { get; private set; }
