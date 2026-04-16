@@ -68,6 +68,7 @@ namespace VaultCrypt.Services
                     vaultFS.Seek(0, SeekOrigin.End);
                     vaultFS.Write(paddedFileOptions.AsSpan);
                 }
+                context.SetTotal(totalChunks);
                 await EncryptChunks(fileFS, vaultFS, totalChunks, concurrentChunkCount, chunkSizeInMB, provider, context);
             }
         }
@@ -131,9 +132,7 @@ namespace VaultCrypt.Services
                         {
                             chunkCopy.Dispose();
                         }
-                        
-                        //Reporting current index + 1 because currentIndex is zero based while user gets to see 1 based indexing
-                        context.Progress.Report(new ProgressStatus(currentIndex + 1, totalChunks));
+                        context.Increment();
                     }));
                 }
                 await Task.WhenAll(tasks);

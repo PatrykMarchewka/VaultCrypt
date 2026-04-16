@@ -221,6 +221,8 @@ namespace VaultCrypt.Services
             _fileService.CopyPartOfFile(vaultfs, 0, (ulong)reader.HeaderSize, newVaultfs, newVaultfs.Seek(0, SeekOrigin.End));
             var fileList = _session.ENCRYPTED_FILES.ToList();
             int fileListCount = fileList.Count;
+            //Total is filelList.Count + 1 because last action is saving new header
+            context.SetTotal(fileListCount + 1);
 
             long[] newVaultOffsets = new long[fileListCount];
             long[] trimmedOffsets = null!;
@@ -257,8 +259,7 @@ namespace VaultCrypt.Services
                     ulong toread = Math.Min((ulong)(nextOffset - currentOffset), (ulong)reader.EncryptionOptionsSize + fileSize);
                     newVaultOffsets[i] = newVaultfs.Seek(0, SeekOrigin.End);
                     _fileService.CopyPartOfFile(vaultfs, currentOffset, toread, newVaultfs, newVaultOffsets[i]);
-                    //Reporting current index + 1 because i is zero based while user gets to see 1 based indexing, total is filelList.Count + 1 because last action is saving new header
-                    context.Progress.Report(new ProgressStatus(i + 1, fileList.Count + 1));
+                    context.Increment();
                 }
                 //Delete offsets pointing to 0 (empty data from options that werent properly added) and duplicates
                 trimmedOffsets = newVaultOffsets.Where((offset, index) => offset != 0).Distinct().ToArray();
@@ -269,8 +270,7 @@ namespace VaultCrypt.Services
                 CryptographicOperations.ZeroMemory(MemoryMarshal.AsBytes(newVaultOffsets.AsSpan()));
                 if (trimmedOffsets is not null) CryptographicOperations.ZeroMemory(MemoryMarshal.AsBytes(trimmedOffsets.AsSpan()));
             }
-
-            context.Progress.Report(new ProgressStatus(fileListCount + 1, fileListCount + 1));
+            context.Increment();
         }
 
         public void DeleteFileFromVault(long offset, ProgressionContext context)
@@ -311,7 +311,7 @@ namespace VaultCrypt.Services
                 _fileService.ZeroOutPartOfFile(vaultFS, offset, length);
             }
             _session.VAULT_READER.RemoveAndSaveMetadataOffsets(vaultFS, checked((ushort)fileList.FindIndex(file => file.Key == offset)));
-            context.Progress.Report(new ProgressStatus(1, 1));
+            context.Increment();
         }
     }
 }

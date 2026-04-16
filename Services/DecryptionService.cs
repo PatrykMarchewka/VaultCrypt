@@ -59,10 +59,11 @@ namespace VaultCrypt.Services
                     {
                         fileFS.Write(decrypted.AsSpan);
                     }
-                    context.Progress.Report(new ProgressStatus(1, 1));
+                    context.Increment();
                 }
                 else
                 {
+                    context.SetTotal(encryptionOptions.ChunkInformation!.TotalChunks);
                     await DecryptInMultipleChunks(vaultFS, fileFS, encryptionOptions.ChunkInformation!, encryptionAlgorithmProvider.EncryptionAlgorithm.ExtraEncryptionDataSize, encryptionAlgorithmProvider, context);
                 }
             }
@@ -140,9 +141,8 @@ namespace VaultCrypt.Services
                         {
                             currentChunk.Dispose();
                         }
-                        
-                        //Reporting current index + 1 because currentIndex is zero based while user gets to see 1 based indexing
-                        context.Progress.Report(new ProgressStatus(currentIndex + 1, chunkInformation.TotalChunks));
+
+                        context.Increment();
                     }));
                 }
                 await Task.WhenAll(tasks);

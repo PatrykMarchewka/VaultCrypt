@@ -9,7 +9,7 @@
     <Grid>
         <StackPanel Grid.Column="1" Orientation="Vertical">
             <TextBlock Text="Working..."/>
-            <ProgressBar Grid.Row="1" Grid.Column="1" Minimum="0" Maximum="{Binding Context.Total}" Value="{Binding Context.Completed}"/>
+            <ProgressBar Grid.Row="1" Grid.Column="1" Minimum="0" Maximum="{Binding Context.Total}" Value="{Binding Context.Completed, Mode=OneWay}"/>
             <TextBlock d:Text="0/0" HorizontalAlignment="Right">
                 <TextBlock.Text>
                     <MultiBinding StringFormat="{}{0}/{1}">

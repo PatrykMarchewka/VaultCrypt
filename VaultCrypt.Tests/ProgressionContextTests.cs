@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
@@ -17,100 +18,99 @@ namespace VaultCrypt.Tests
         }
 
         [Fact]
-        void CompletedRaisesPropertyChanged()
+        void ProgressionContextInitializesCorrectly()
         {
-            string? changedProperty = null;
-            _progressionContext.PropertyChanged += (sender, args) => { changedProperty = args.PropertyName; };
-
-            _progressionContext.Completed = 1;
-
-            Assert.Equal(nameof(_progressionContext.Completed), changedProperty);
+            Assert.Equal(0UL, _progressionContext.Completed);
+            Assert.Equal(1UL, _progressionContext.Total);
+            Assert.False(_progressionContext.CancellationToken.Equals(default));
         }
 
         [Fact]
-        void CompletedDoesNotRaisePropertyChanged()
+        void IncrementIncreasesCompletedValue()
         {
-            _progressionContext.Completed = 1;
-            int eventRaisedCount = 0;
-            _progressionContext.PropertyChanged += (sender, args) => { eventRaisedCount++; };
-            _progressionContext.Completed = 1;
+            _progressionContext.Increment(ulong.MaxValue);
+            Assert.Equal(ulong.MaxValue, _progressionContext.Completed);
+            _progressionContext.Increment();
+            Assert.Equal(0UL, _progressionContext.Completed);
+            _progressionContext.Increment(2);
+            Assert.Equal(2UL, _progressionContext.Completed);
+            
 
-            Assert.Equal(0, eventRaisedCount);
         }
 
         [Fact]
-        void CompletedChangesValue()
+        void IncrementCallsProgressReport()
         {
-            ulong expected = 5;
-            _progressionContext.Completed = expected;
+            //Event block to either return given item or wait desired time
+            var eventBlock = new BlockingCollection<object>();
 
-            Assert.Equal(expected, _progressionContext.Completed);
+            int progressReported = 0;
+            var progress = new Progress<ProgressionContext>(_ => { progressReported++; eventBlock.Add(new object()); }); 
+            _progressionContext.Progress = progress;
+
+            _progressionContext.Increment();
+            eventBlock.TryTake(out _, 1000);
+            Assert.Equal(1, progressReported);
         }
 
         [Fact]
-        void TotalRaisesPropertyChanged()
+        void IncrementThrowsOnZeroValue()
         {
-            string? changedProperty = null;
-            _progressionContext.PropertyChanged += (sender, args) => { changedProperty = args.PropertyName; };
-
-            _progressionContext.Total = 10;
-
-            Assert.Equal(nameof(_progressionContext.Total), changedProperty);
+            Assert.Throws<ArgumentOutOfRangeException>(() => _progressionContext.Increment(0));
         }
 
         [Fact]
-        void TotalDoesNotRaisePropertyChanged()
+        void SetTotalChangesValue()
         {
-            _progressionContext.Total = 10;
-            int eventRaisedCount = 0;
-            _progressionContext.PropertyChanged += (sender, args) => { eventRaisedCount++; };
-            _progressionContext.Total = 10;
-
-            Assert.Equal(0, eventRaisedCount);
+            _progressionContext.SetTotal(1);
+            Assert.Equal(1UL, _progressionContext.Total);
+            _progressionContext.SetTotal(2);
+            Assert.Equal(2UL, _progressionContext.Total);
+            _progressionContext.SetTotal(ulong.MaxValue);
+            Assert.Equal(ulong.MaxValue, _progressionContext.Total);
         }
 
         [Fact]
-        void TotalChangesValue()
+        void SetTotalCallsProgressReport()
         {
-            ulong expected = 5;
-            _progressionContext.Total = expected;
+            //Event block to either return given item or wait desired time
+            var eventBlock = new BlockingCollection<object>();
 
-            Assert.Equal(expected, _progressionContext.Total);
-        }
+            int progressReported = 0;
+            var progress = new Progress<ProgressionContext>(_ => { progressReported++; eventBlock.Add(new object()); });
+            _progressionContext.Progress = progress;
 
-        [Theory]
-        [InlineData(1,2)]
-        [InlineData(2,2)]
-        [InlineData(0, ulong.MaxValue)]
-        [InlineData(ulong.MaxValue, ulong.MaxValue)]
-        async Task CompletedAndTotalAreSetCorrectly(ulong completed, ulong total)
-        {
-            _progressionContext.Progress.Report(new ProgressStatus(completed, total));
-
-            //Wait until values are set or until 100ms passes
-            System.Threading.SpinWait.SpinUntil(() => _progressionContext.Completed == completed, 100);
-            System.Threading.SpinWait.SpinUntil(() => _progressionContext.Total == total, 100);
-
-            Assert.Equal(completed, _progressionContext.Completed);
-            Assert.Equal(total, _progressionContext.Total);
-        }
-
-        [Theory]
-        [InlineData(int.MinValue, 0)]
-        [InlineData(-1, 0)]
-        [InlineData(0, int.MinValue)]
-        [InlineData(0, -1)]
-        [InlineData(int.MinValue, int.MinValue)]
-        [InlineData(-1, -1)]
-        void ProgressStatusThrowsOnNegativeValues(int completed, int total)
-        {
-            Assert.Throws<ArgumentOutOfRangeException>(() => _progressionContext.Progress.Report(new ProgressStatus(completed, total)));
+            _progressionContext.SetTotal(1);
+            eventBlock.TryTake(out _, 1000);
+            Assert.Equal(1, progressReported);
         }
 
         [Fact]
-        void ProgressStatusThrowsOnZeroTotal()
+        void SetTotalThrowsOnZeroValue()
         {
-            Assert.Throws<ArgumentOutOfRangeException>(() => _progressionContext.Progress.Report(new ProgressStatus(0, 0)));
+            Assert.Throws<ArgumentOutOfRangeException>(() => _progressionContext.SetTotal(0));
+        }
+
+        [Fact]
+        void SetTotalThrowsOnNegativeValues()
+        {
+            Assert.Throws<ArgumentOutOfRangeException>(() => _progressionContext.SetTotal(-1));
+            Assert.Throws<ArgumentOutOfRangeException>(() => _progressionContext.SetTotal(-2));
+            Assert.Throws<ArgumentOutOfRangeException>(() => _progressionContext.SetTotal(int.MinValue));
+        }
+
+        [Fact]
+        void CancelUpdatesToken()
+        {
+            _progressionContext.Cancel();
+            Assert.True(_progressionContext.CancellationToken.IsCancellationRequested);
+        }
+
+        [Fact]
+        void DisposeClearsValues()
+        {
+            _progressionContext.Dispose();
+            Assert.Throws<ObjectDisposedException>(() => _progressionContext.CancellationToken);
         }
     }
 }

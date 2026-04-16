@@ -7,65 +7,77 @@ using System.Threading.Tasks;
 
 namespace VaultCrypt
 {
-    public class ProgressionContext : INotifyPropertyChanged
+    public class ProgressionContext : IDisposable
     {
         private ulong _completed;
-        public ulong Completed
-        {
-            get => _completed;
-            set
-            {
-                if (_completed == value) return;
-                _completed = value;
-                OnPropertyChanged(nameof(Completed));
-            }
-        }
+        public ulong Completed => _completed;
+
         private ulong _total;
-        public ulong Total
-        {
-            get => _total;
-            set
-            {
-                if (_total == value) return;
-                _total = value;
-                OnPropertyChanged(nameof(Total));
-            }
-        }
-        public IProgress<ProgressStatus> Progress { get; init; }
-        public CancellationTokenSource CancellationTokenSource;
+        public ulong Total => _total;
 
+        /// <summary>
+        /// <see cref="IProgress{T}"/> instance to update the UI via <see cref="IProgress{T}.Report(T)"/>
+        /// </summary>
+        /// <remarks>
+        /// <see cref="Progress"/> needs to be set by viewmodel that uses <see cref="ProgressionContext"/> <br/>
+        /// Left as nullable to avoid counting progression without having viewmodel attached
+        /// </remarks>
+        public IProgress<ProgressionContext>? Progress { get; set; }
 
-
-        public CancellationToken CancellationToken => CancellationTokenSource.Token;
+        private readonly CancellationTokenSource _cancellationTokenSource = new();
+        public CancellationToken CancellationToken => _cancellationTokenSource.Token;
 
         public ProgressionContext()
         {
-            Completed = 0;
-            Total = 1; //Starting at 1 so user sees 0/1 instead 0/0
-            CancellationTokenSource = new CancellationTokenSource();
-            Progress = new Progress<ProgressStatus>(p => { Completed = p.Completed; Total = p.Total; });
+            _completed = 0;
+            _total = 1; //Starting at 1 so user sees 0/1 instead 0/0
         }
-        private void OnPropertyChanged(string name) { PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(name)); }
-        public event PropertyChangedEventHandler? PropertyChanged;
-    }
-    public record ProgressStatus
-    {
-        public ulong Completed { get; }
-        public ulong Total { get; }
 
-        public ProgressStatus(ulong completed, ulong total)
+        /// <summary>
+        /// Increments <see cref="Completed"/> value by <paramref name="amount"/> atomically and calls <see cref="IProgress{T}.Report(T)"/> to update the UI
+        /// </summary>
+        /// <param name="amount">Amount to increment</param>
+        /// <exception cref="ArgumentOutOfRangeException">Thrown when <paramref name="amount"/> is set to zero</exception>
+        public void Increment(ulong amount = 1)
         {
-            ArgumentOutOfRangeException.ThrowIfNegative(completed);
-            ArgumentOutOfRangeException.ThrowIfZero(total);
-            ArgumentOutOfRangeException.ThrowIfGreaterThan(completed, total);
-
-            Completed = completed;
-            Total = total;
+            ArgumentOutOfRangeException.ThrowIfZero(amount);
+            Interlocked.Add(ref _completed, amount);
+            Progress?.Report(this);
         }
 
-        public ProgressStatus(int completed, int total) : this((ulong) completed, (ulong)total)
+        /// <summary>
+        /// Sets the <see cref="Total"/> atomically to <paramref name="total"/> and calls <see cref="IProgress{T}.Report(T)"/> to update the UI
+        /// </summary>
+        /// <param name="total">New value to set</param>
+        /// <exception cref="ArgumentOutOfRangeException">Thrown when <paramref name="total"/> is set to zero</exception>
+        public void SetTotal(ulong total)
+        {
+            ArgumentOutOfRangeException.ThrowIfZero(total);
+            Interlocked.Exchange(ref _total, total);
+            Progress?.Report(this);
+        }
+
+        /// <inheritdoc cref="SetTotal(ulong)"/>
+        /// <exception cref="ArgumentOutOfRangeException">Thrown when <paramref name="total"/> is set to negative value</exception>
+        public void SetTotal(int total)
         {
             ArgumentOutOfRangeException.ThrowIfNegative(total);
+            SetTotal((ulong)total);
+        }
+
+        /// <summary>
+        /// Creates a request to cancel operation
+        /// </summary>
+        public void Cancel() => _cancellationTokenSource.Cancel();
+
+        public void Dispose()
+        {
+            _cancellationTokenSource.Dispose();
+        }
+
+        ~ProgressionContext()
+        {
+            Dispose();
         }
     }
 }

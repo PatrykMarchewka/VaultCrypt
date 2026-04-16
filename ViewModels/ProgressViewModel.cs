@@ -20,19 +20,25 @@ namespace VaultCrypt.ViewModels
             set
             {
                 if (_context == value) return;
-                if(_context != null) _context.PropertyChanged -= _context_PropertyChanged;
                 _context = value;
-                _context.PropertyChanged += _context_PropertyChanged;
+                _context.Progress = _progress;
+                CalculateCanExecute();
                 OnPropertyChanged(nameof(Context));
             }
         }
 
-        
+        private IProgress<ProgressionContext> _progress;
 
         public ICommand FinishCommand { get; }
         public ICommand CancelCommand { get; }
         public ProgressViewModel()
         {
+            _progress = new Progress<ProgressionContext>(status =>
+            {
+                //Runs everytime _progress.Report() is called
+                OnPropertyChanged(nameof(Context));
+                CalculateCanExecute();
+            });
             FinishCommand = new RelayCommand(_ => Finish(), _ => (Context.Completed == Context.Total));
             CancelCommand = new RelayCommand(_ => Cancel(), _ => (Context.Completed != Context.Total));
         }
@@ -44,18 +50,13 @@ namespace VaultCrypt.ViewModels
 
         public void Cancel()
         {
-            Context.CancellationTokenSource.Cancel();
+            Context.Cancel();
             NavigateBack();
         }
 
         public void NavigateBack()
         {
             NavigationRequested?.Invoke(new NavigateFromProgressRequest());
-        }
-
-        private void _context_PropertyChanged(object? sender, PropertyChangedEventArgs e)
-        {
-            CalculateCanExecute();
         }
 
         private void CalculateCanExecute()
@@ -68,8 +69,6 @@ namespace VaultCrypt.ViewModels
         {
             Context = (ProgressionContext)parameters!;
         }
-
-
 
         private void OnPropertyChanged(string name) { PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(name)); }
         public event PropertyChangedEventHandler? PropertyChanged;

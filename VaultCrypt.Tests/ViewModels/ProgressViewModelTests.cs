@@ -1,4 +1,5 @@
-﻿using System;
+using System;
+using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Linq;
 using System.Security;
@@ -15,6 +16,7 @@ namespace VaultCrypt.Tests.ViewModels
         public ProgressViewModelTests()
         {
             this._viewModel = new VaultCrypt.ViewModels.ProgressViewModel();
+            _viewModel.Context = new();
         }
 
         [Fact]
@@ -43,7 +45,7 @@ namespace VaultCrypt.Tests.ViewModels
         [Fact]
         void FilteredTextChangesValues()
         {
-            ProgressionContext expected = new() { Completed = 1, Total = 999 };
+            ProgressionContext expected = new();
             _viewModel.Context = expected;
 
             Assert.Equal(expected, _viewModel.Context);
@@ -52,33 +54,45 @@ namespace VaultCrypt.Tests.ViewModels
         [Fact]
         void FinishCommandCanExecuteChanges()
         {
+            //Event block to either return given item or wait desired time
+            var eventBlock = new BlockingCollection<object>();
+
             int eventRaisedCount = 0;
-            (_viewModel.FinishCommand as RelayCommand)!.CanExecuteChanged += (sender, args) => { eventRaisedCount++; };
-            _viewModel.Context = new() { Completed = 10};
-            _viewModel.Context.Total = 10;
+            (_viewModel.FinishCommand as RelayCommand)!.CanExecuteChanged += (sender, args) => { Interlocked.Increment(ref eventRaisedCount); eventBlock.Add(new object()); };
+            _viewModel.Context.SetTotal(1);
+            eventBlock.TryTake(out _, 1000);
             Assert.Equal(1, eventRaisedCount);
+            _viewModel.Context.Increment();
+            eventBlock.TryTake(out _, 1000);
+            Assert.Equal(2, eventRaisedCount);
             Assert.True(_viewModel.FinishCommand.CanExecute(null));
 
-            _viewModel.Context = new() { Completed = 10 };
-            _viewModel.Context.Total = 20;
-            Assert.Equal(2, eventRaisedCount);
+            _viewModel.Context.SetTotal(2);
+            eventBlock.TryTake(out _, 1000);
+            Assert.Equal(3, eventRaisedCount);
             Assert.False(_viewModel.FinishCommand.CanExecute(null));
         }
 
         [Fact]
         void CancelCommandCanExecuteChanges()
         {
-            int eventRaisedCount = 0;
-            (_viewModel.CancelCommand as RelayCommand)!.CanExecuteChanged += (sender, args) => { eventRaisedCount++; };
-            _viewModel.Context = new() { Completed = 1 };
-            _viewModel.Context.Total = 2;
-            Assert.Equal(1, eventRaisedCount);
-            Assert.True(_viewModel.CancelCommand.CanExecute(null));
+            //Event block to either return given item or wait desired time
+            var eventBlock = new BlockingCollection<object>();
 
-            _viewModel.Context = new() { Completed = 2 };
-            _viewModel.Context.Total = 2;
+            int eventRaisedCount = 0;
+            (_viewModel.CancelCommand as RelayCommand)!.CanExecuteChanged += (sender, args) => { Interlocked.Increment(ref eventRaisedCount); eventBlock.Add(new object());  };
+            _viewModel.Context.SetTotal(1);
+            eventBlock.TryTake(out _, 1000);
+            Assert.Equal(1, eventRaisedCount);
+            _viewModel.Context.Increment();
+            eventBlock.TryTake(out _, 1000);
             Assert.Equal(2, eventRaisedCount);
             Assert.False(_viewModel.CancelCommand.CanExecute(null));
+
+            _viewModel.Context.SetTotal(2);
+            eventBlock.TryTake(out _, 1000);
+            Assert.Equal(3, eventRaisedCount);
+            Assert.True(_viewModel.CancelCommand.CanExecute(null));
         }
 
         [Fact]
