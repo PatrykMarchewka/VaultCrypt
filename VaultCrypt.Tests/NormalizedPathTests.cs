@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
@@ -67,7 +67,7 @@ namespace VaultCrypt.Tests
         {
             NormalizedPath path = null!;
 
-            Assert.Throws<NullReferenceException>(() => { string pathAsString = path; });
+            Assert.Throws<ArgumentNullException>(() => { string pathAsString = path; });
         }
     }
 }

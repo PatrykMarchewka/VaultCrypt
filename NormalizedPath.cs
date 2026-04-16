@@ -23,17 +23,20 @@ namespace VaultCrypt
         /// </summary>
         /// <param name="input">String to normalize</param>
         /// <returns>NormalizedPath containing the path from the input</returns>
+        /// <exception cref="ArgumentNullException">Thrown when provided <paramref name="input"/> is set to null</exception>
         public static NormalizedPath From(string input)
         {
             ArgumentNullException.ThrowIfNull(input);
             return new NormalizedPath(input);
         }
 
-        public override string ToString()
-        {
-            return Value;
-        }
+        //Required to use string interpolation like $"{normalizedPath}"
+        public override string ToString() => Value;
 
-        public static implicit operator string(NormalizedPath path) => path.Value;
+        public static implicit operator string(NormalizedPath path)
+        {
+            ArgumentNullException.ThrowIfNull(path);
+            return path.Value;
+        }
     }
 }
