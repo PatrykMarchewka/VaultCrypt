@@ -166,8 +166,10 @@ namespace VaultCrypt.Tests.ViewModels
             //TODO: Use something less brittle than reflection
             SecureString newPassword = new SecureString();
             newPassword.AppendChar('c');
-            var reflection = typeof(OpenVaultViewModel).GetField("password", System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance);
-            reflection!.SetValue(_viewModel, newPassword);
+            var reflectionPassword = typeof(OpenVaultViewModel).GetField("_password", System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance);
+            reflectionPassword!.SetValue(_viewModel, newPassword);
+            var reflectionVaultPath = typeof(OpenVaultViewModel).GetField("_vaultPath", System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance);
+            reflectionVaultPath!.SetValue(_viewModel, NormalizedPath.From("CreateSessionCallsMethodTest"));
             _viewModel.CreateSession();
             Assert.True(fakeVaultService.CreateSessionFromFileWasCalled);
         }
@@ -256,7 +258,7 @@ namespace VaultCrypt.Tests.ViewModels
             //TODO: Use something less brittle than reflection
             SecureString newPassword = new SecureString();
             newPassword.AppendChar('c');
-            var reflection = typeof(OpenVaultViewModel).GetField("password", System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance);
+            var reflection = typeof(OpenVaultViewModel).GetField("_password", System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance);
             reflection!.SetValue(_viewModel, newPassword);
 
             int eventRaisedCount = 0;
