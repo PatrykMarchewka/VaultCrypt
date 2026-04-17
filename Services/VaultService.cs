@@ -281,17 +281,23 @@ namespace VaultCrypt.Services
 
             using FileStream vaultFS = new FileStream(_session.VAULTPATH, FileMode.Open, FileAccess.ReadWrite);
             var fileList = _session.ENCRYPTED_FILES.ToList();
-            //If the file is at the end, just trim the entire file, otherwise zero out the block
-            if (_session.ENCRYPTED_FILES.Last().Key == offset)
+            if(_session.ENCRYPTED_FILES.Count == 1)
             {
+                //Deleting only file in vault, set the size to empty vault file
+                vaultFS.SetLength(_session.VAULT_READER.HeaderSize);
+            }
+            else if (_session.ENCRYPTED_FILES.Last().Key == offset)
+            {
+                //Deleting last file in vault, set the size to remove last file
                 vaultFS.SetLength(offset);
             }
             else
             {
-                //Calculate length incase of partially written file
+                //Deleting file that isn't last or only, zero out the block
                 var encryptionMetadataSize = _session.VAULT_READER.EncryptionOptionsSize;
                 int currentKey = fileList.FindIndex(file => file.Key == offset);
                 EncryptionOptions.FileEncryptionOptions encryptionOptions = null!;
+                //Calculate length incase of partially written file
                 ulong length = 0;
                 try
                 {
