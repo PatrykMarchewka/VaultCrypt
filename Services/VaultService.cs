@@ -225,13 +225,20 @@ namespace VaultCrypt.Services
             context.SetTotal(fileListCount + 1);
 
             long[] newVaultOffsets = new long[fileListCount];
-            long[] trimmedOffsets = null!;
             try
             {
                 for (int i = 0; i < fileListCount; i++)
                 {
                     context.CancellationToken.ThrowIfCancellationRequested();
                     long currentOffset = fileList[i].Key;
+
+                    if (currentOffset > vaultfs.Length)
+                    {
+                        //Offset points outside vault, skip it
+                        context.Increment();
+                        continue;
+                    }
+
                     long nextOffset = long.MaxValue;
                     if (i + 1 < fileListCount)
                     {
@@ -255,20 +262,34 @@ namespace VaultCrypt.Services
                         encryptionOptions?.Dispose();
                     }
 
-                    //Calculating toread to allow copying of partially encrypted files
-                    ulong toread = Math.Min((ulong)(nextOffset - currentOffset), (ulong)reader.EncryptionOptionsSize + fileSize);
+                    /*
+                     * offsetMinimum represents the distance between current offset and next offset
+                     * optionsMinimum represents the size of encryption options metadata and encrypted file itself
+                     * fileMinimum represents the distance between current position and end of stream
+                     * 
+                     * We calculate the lowest amount of all three options to copy as an attempt to preserve the encrypted file as much as we can
+                     * offsetMinimum is lowest -> File is partially saved, we dont want to overstep onto another file
+                     * optionsMinimum is lowest -> File is fully saved, however there is unknown space between end of it and next file, we don't want to copy extra trash
+                     * fileMinimum is lowest -> End of stream reached, we can't copy more
+                     */
+                    ulong offsetMinimum = (ulong)(nextOffset - currentOffset);
+                    ulong optionsMinimum = reader.EncryptionOptionsSize + fileSize;
+                    ulong fileMinimum = (ulong)(vaultfs.Length - currentOffset);
+                    ulong toRead = new[] { offsetMinimum, optionsMinimum, fileMinimum }.Min();
+
                     newVaultOffsets[i] = newVaultfs.Seek(0, SeekOrigin.End);
-                    _fileService.CopyPartOfFile(vaultfs, currentOffset, toread, newVaultfs, newVaultOffsets[i]);
+                    _fileService.CopyPartOfFile(vaultfs, currentOffset, toRead, newVaultfs, newVaultOffsets[i]);
                     context.Increment();
                 }
-                //Delete offsets pointing to 0 (empty data from options that werent properly added) and duplicates
-                trimmedOffsets = newVaultOffsets.Where((offset, index) => offset != 0).Distinct().ToArray();
-                reader.SaveMetadataOffsets(newVaultfs, trimmedOffsets);
             }
             finally
             {
+                //Delete offsets pointing to 0 (empty data from options that werent properly added) and duplicates
+                long[] trimmedOffsets = newVaultOffsets.Where((offset, index) => offset != 0).Distinct().ToArray();
+                reader.SaveMetadataOffsets(newVaultfs, trimmedOffsets);
+
                 CryptographicOperations.ZeroMemory(MemoryMarshal.AsBytes(newVaultOffsets.AsSpan()));
-                if (trimmedOffsets is not null) CryptographicOperations.ZeroMemory(MemoryMarshal.AsBytes(trimmedOffsets.AsSpan()));
+                CryptographicOperations.ZeroMemory(MemoryMarshal.AsBytes(trimmedOffsets.AsSpan()));
             }
             context.Increment();
         }
