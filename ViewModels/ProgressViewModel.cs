@@ -1,6 +1,6 @@
 using System;
-using System.CodeDom.Compiler;
 using System.Collections.Generic;
+using System.Collections.ObjectModel;
 using System.ComponentModel;
 using System.Linq;
 using System.Security;
@@ -27,7 +27,11 @@ namespace VaultCrypt.ViewModels
             }
         }
 
-        private IProgress<ProgressionContext> _progress;
+        public ObservableCollection<string> PermMessages { get; } = new ObservableCollection<string>();
+
+        private string _tempMessage = string.Empty;
+        public string TempMessage => _tempMessage;
+
         private IProgress<ProgressReported> _progress;
 
         public ICommand FinishCommand { get; }
@@ -39,9 +43,22 @@ namespace VaultCrypt.ViewModels
                 //Runs everytime _progress.Report() is called
                 OnPropertyChanged(nameof(Context));
                 CalculateCanExecute();
+                AddPermMessage(status.Message);
+                SetTempMessage(status.TempMessage);
             });
             FinishCommand = new RelayCommand(_ => Finish(), _ => (Context.Completed == Context.Total));
             CancelCommand = new RelayCommand(_ => Cancel(), _ => (Context.Completed != Context.Total));
+        }
+
+        private void AddPermMessage(string? message)
+        {
+            if (!string.IsNullOrEmpty(message)) PermMessages.Insert(0, message);
+        }
+
+        private void SetTempMessage(string? tempMessage)
+        {
+            if (!string.IsNullOrEmpty(tempMessage)) _tempMessage = tempMessage;
+            else _tempMessage = string.Empty;
         }
 
         public void Finish()
@@ -57,6 +74,8 @@ namespace VaultCrypt.ViewModels
 
         public void NavigateBack()
         {
+            PermMessages.Clear();
+            _tempMessage = string.Empty;
             NavigationRequested?.Invoke(new NavigateFromProgressRequest());
         }
 
@@ -68,6 +87,7 @@ namespace VaultCrypt.ViewModels
 
         public void OnNavigatedTo(object? parameters)
         {
+            PermMessages.Clear();
             Context = (ProgressionContext)parameters!;
         }
 
