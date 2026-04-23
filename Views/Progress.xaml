@@ -19,6 +19,18 @@
                 </TextBlock.Text>
             </TextBlock>
 
+            <TextBlock d:Text="Error: This is example of an error" Text="{Binding TempMessage}" TextWrapping="NoWrap" Foreground="Red" HorizontalAlignment="Center"/>
+            
+            <ScrollViewer VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled" MaxHeight="250">
+                <ItemsControl ItemsSource="{Binding PermMessages}">
+                    <ItemsControl.ItemTemplate>
+                        <DataTemplate>
+                            <TextBlock Text="{Binding}" Margin="0,2"/>
+                        </DataTemplate>
+                    </ItemsControl.ItemTemplate>
+                </ItemsControl>
+            </ScrollViewer>
+            
             <StackPanel Orientation="Horizontal" HorizontalAlignment="Center">
                 <Button Content="OK" Command="{Binding FinishCommand}"/>
                 <Button Content="Cancel" Command="{Binding CancelCommand}"/>
