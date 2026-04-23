@@ -20,7 +20,7 @@ namespace VaultCrypt
         /// </summary>
         /// <remarks>
         /// <see cref="Progress"/> needs to be set by viewmodel that uses <see cref="ProgressReported"/> <br/>
-        /// Left as nullable to avoid counting progression without having viewmodel attached
+        /// Left as nullable to allow counting progression without having viewmodel attached
         /// </remarks>
         public IProgress<ProgressReported>? Progress { get; set; }
 
