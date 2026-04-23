@@ -358,28 +358,17 @@ namespace VaultCrypt
                 }
             }
 
-            /// <summary>
-            /// Disposes unmanaged objects and optionally managed ones
-            /// </summary>
-            /// <param name="disposing">Indicating whether to dispose managed objects</param>
-            void Dispose(bool disposing)
+            public void Dispose()
             {
                 //Atomic write to ensure that Main and GC threads dont overlap and read wrong value
                 if (Interlocked.Exchange(ref _disposed, 1) != 0) return;
                 ReleaseMemory();
-            }
-
-            /// <summary>
-            /// Safely releases memory by zeroing it and freeing
-            /// </summary>
-            public void Dispose()
-            {
-                Dispose(true);
                 GC.SuppressFinalize(this);
             }
             ~SecureLargeBuffer()
             {
-                Dispose(false);
+                if (Interlocked.Exchange(ref _disposed, 1) != 0) return;
+                ReleaseMemory();
             }
         }
     }
