@@ -74,6 +74,7 @@ namespace VaultCrypt.ViewModels
 
         public void NavigateBack()
         {
+            Context.Dispose();
             PermMessages.Clear();
             _tempMessage = string.Empty;
             NavigationRequested?.Invoke(new NavigateFromProgressRequest());
