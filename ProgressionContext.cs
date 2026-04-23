@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.ComponentModel;
 using System.Linq;
@@ -79,5 +79,39 @@ namespace VaultCrypt
         {
             Dispose();
         }
+
+    public sealed class ProgressFailure()
+    {
+        public enum ProgressPermFailure
+        {
+            None,
+            ChunkDecryptFailed,
+            FileMetadataDecryptFailed,
+            UnexpectedEndOfStream
+        }
+
+        public enum ProgressTempFailure
+        {
+            None,
+            ReadingFromStreamFailed,
+            WritingToFileFailed
+        }
+
+        public static string GetMessage(ProgressPermFailure failure) => failure switch
+        {
+            ProgressPermFailure.None => string.Empty,
+            ProgressPermFailure.ChunkDecryptFailed => "Failed to decrypt chunk",
+            ProgressPermFailure.FileMetadataDecryptFailed => "Failed to decrypt metadata for file",
+            ProgressPermFailure.UnexpectedEndOfStream => "Unexpected end of stream",
+            _ => "Unknown error!"
+        };
+
+        public static string GetMessage(ProgressTempFailure failure) => failure switch
+        {
+            ProgressTempFailure.None => string.Empty,
+            ProgressTempFailure.ReadingFromStreamFailed => "Failed to read required information from stream",
+            ProgressTempFailure.WritingToFileFailed => "Failed writing to file",
+            _ => "Unknown error!"
+        };
     }
 }
