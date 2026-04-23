@@ -1,7 +1,6 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
-using System.Reflection.PortableExecutable;
 using System.Security.Cryptography;
 using System.Text;
 using System.Threading.Tasks;
@@ -109,12 +108,10 @@ namespace VaultCrypt.Tests.Services
         void CreateSessionFromFileSetsValuesCorrectly()
         {
 
-            NormalizedPath vaultFile = null!;
+            NormalizedPath vaultFile = TestsHelper.CreateVaultFile();
             try
             {
-                vaultFile = TestsHelper.CreateVaultFile();
                 _service.CreateSessionFromFile(new byte[16], vaultFile);
-
 
                 Assert.True(TestsHelper.CreateKey(new byte[16], new byte[32], 1000).SequenceEqual(_session.KEY.AsSpan[..PasswordHelper.KeySize]));
                 Assert.Equal(vaultFile, _session.VAULTPATH);
@@ -123,7 +120,7 @@ namespace VaultCrypt.Tests.Services
             }
             finally
             {
-                if (vaultFile is not null) File.Delete(vaultFile!);
+                File.Delete(vaultFile);
             }
         }
 
@@ -263,52 +260,68 @@ namespace VaultCrypt.Tests.Services
         void DeleteFileFromVaultZeroesOutFile()
         {
             (NormalizedPath, EncryptionOptions.FileEncryptionOptions[]) tuple = TestsHelper.CreateVaultFileWithEncryptedFileList(10, _session);
-            var offset = _session.ENCRYPTED_FILES.First().Key;
-            _service.DeleteFileFromVault(_session.ENCRYPTED_FILES.First().Key, new ProgressionContext());
-
-            byte[] actual = new byte[_session.VAULT_READER.EncryptionOptionsSize];
-            using (FileStream fs = new FileStream(tuple.Item1.Value, FileMode.Open, FileAccess.Read))
+            try
             {
-                fs.Position = offset;
-                fs.Read(actual);
+                var offset = _session.ENCRYPTED_FILES.First().Key;
+                _service.DeleteFileFromVault(_session.ENCRYPTED_FILES.First().Key, new ProgressionContext());
+
+                byte[] actual = new byte[_session.VAULT_READER.EncryptionOptionsSize];
+                using (FileStream fs = new FileStream(tuple.Item1.Value, FileMode.Open, FileAccess.Read))
+                {
+                    fs.Position = offset;
+                    fs.Read(actual);
+                }
+
+                Assert.True(new byte[_session.VAULT_READER.EncryptionOptionsSize].SequenceEqual(actual));
             }
-
-            Assert.True(new byte[_session.VAULT_READER.EncryptionOptionsSize].SequenceEqual(actual));
-
-            File.Delete(tuple.Item1);
+            finally
+            {
+                File.Delete(tuple.Item1);
+            }
         }
 
         [Fact]
         void DeleteFileFromVaultTrimsVault()
         {
             (NormalizedPath, EncryptionOptions.FileEncryptionOptions[]) tuple = TestsHelper.CreateVaultFileWithEncryptedFileList(10, _session);
-            long oldVaultSize = new FileInfo(tuple.Item1).Length;
+            try
+            {
+                long oldVaultSize = new FileInfo(tuple.Item1).Length;
 
-            _service.DeleteFileFromVault(_session.ENCRYPTED_FILES.Last().Key, new ProgressionContext());
+                _service.DeleteFileFromVault(_session.ENCRYPTED_FILES.Last().Key, new ProgressionContext());
 
-            long newVaultSize = new FileInfo(tuple.Item1).Length;
+                long newVaultSize = new FileInfo(tuple.Item1).Length;
 
-            Assert.True(newVaultSize < oldVaultSize);
-
-            File.Delete(tuple.Item1);
+                Assert.True(newVaultSize < oldVaultSize);
+            }
+            finally
+            {
+                File.Delete(tuple.Item1);
+            }
         }
 
         [Fact]
         void DeleteFileFromVaultChangesEncryptedFileListCount()
         {
             (NormalizedPath, EncryptionOptions.FileEncryptionOptions[]) tuple = TestsHelper.CreateVaultFileWithEncryptedFileList(10, _session);
-            long oldVaultSize = new FileInfo(tuple.Item1).Length;
-
-            var oldFileListCount = _session.ENCRYPTED_FILES.Count;
-            _service.DeleteFileFromVault(_session.ENCRYPTED_FILES.Last().Key, new ProgressionContext());
-            using (FileStream vaultFS = new FileStream(_session.VAULTPATH, FileMode.Open, FileAccess.Read))
+            try
             {
-                _service.RefreshEncryptedFilesList(vaultFS);
-            }
-            var actualFileListCount = _session.ENCRYPTED_FILES.Count;
+                long oldVaultSize = new FileInfo(tuple.Item1).Length;
 
-            Assert.Equal(oldFileListCount - 1, actualFileListCount);
-            File.Delete(tuple.Item1);
+                var oldFileListCount = _session.ENCRYPTED_FILES.Count;
+                _service.DeleteFileFromVault(_session.ENCRYPTED_FILES.Last().Key, new ProgressionContext());
+                using (FileStream vaultFS = new FileStream(_session.VAULTPATH, FileMode.Open, FileAccess.Read))
+                {
+                    _service.RefreshEncryptedFilesList(vaultFS);
+                }
+                var actualFileListCount = _session.ENCRYPTED_FILES.Count;
+
+                Assert.Equal(oldFileListCount - 1, actualFileListCount);
+            }
+            finally
+            {
+                File.Delete(tuple.Item1);
+            }
         }
 
         [Fact]

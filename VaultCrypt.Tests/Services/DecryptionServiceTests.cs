@@ -50,9 +50,15 @@ namespace VaultCrypt.Tests.Services
 
             for (int i = 0; i < expectedFiles.Length; i++)
             {
-                byte[] actual = File.ReadAllBytes(filePaths[i]!);
-                Assert.True(expectedFiles[i].SequenceEqual(actual));
-                File.Delete(filePaths[i]!);
+                try
+                {
+                    byte[] actual = File.ReadAllBytes(filePaths[i]!);
+                    Assert.True(expectedFiles[i].SequenceEqual(actual));
+                }
+                finally
+                {
+                    File.Delete(filePaths[i]!);
+                }
             }
             File.Delete(vault.Item1);
         }
