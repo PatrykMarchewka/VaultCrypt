@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.CodeDom.Compiler;
 using System.Collections.Generic;
 using System.ComponentModel;
@@ -28,12 +28,13 @@ namespace VaultCrypt.ViewModels
         }
 
         private IProgress<ProgressionContext> _progress;
+        private IProgress<ProgressReported> _progress;
 
         public ICommand FinishCommand { get; }
         public ICommand CancelCommand { get; }
         public ProgressViewModel()
         {
-            _progress = new Progress<ProgressionContext>(status =>
+            _progress = new Progress<ProgressReported>(status =>
             {
                 //Runs everytime _progress.Report() is called
                 OnPropertyChanged(nameof(Context));

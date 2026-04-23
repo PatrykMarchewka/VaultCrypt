@@ -19,10 +19,10 @@ namespace VaultCrypt
         /// <see cref="IProgress{T}"/> instance to update the UI via <see cref="IProgress{T}.Report(T)"/>
         /// </summary>
         /// <remarks>
-        /// <see cref="Progress"/> needs to be set by viewmodel that uses <see cref="ProgressionContext"/> <br/>
+        /// <see cref="Progress"/> needs to be set by viewmodel that uses <see cref="ProgressReported"/> <br/>
         /// Left as nullable to avoid counting progression without having viewmodel attached
         /// </remarks>
-        public IProgress<ProgressionContext>? Progress { get; set; }
+        public IProgress<ProgressReported>? Progress { get; set; }
 
         private readonly CancellationTokenSource _cancellationTokenSource = new();
         public CancellationToken CancellationToken => _cancellationTokenSource.Token;
@@ -42,7 +42,7 @@ namespace VaultCrypt
         {
             ArgumentOutOfRangeException.ThrowIfZero(amount);
             Interlocked.Add(ref _completed, amount);
-            Progress?.Report(this);
+            Progress?.Report(new ProgressReported());
         }
 
         /// <summary>
@@ -54,7 +54,7 @@ namespace VaultCrypt
         {
             ArgumentOutOfRangeException.ThrowIfZero(total);
             Interlocked.Exchange(ref _total, total);
-            Progress?.Report(this);
+            Progress?.Report(new ProgressReported());
         }
 
         /// <inheritdoc cref="SetTotal(ulong)"/>
@@ -113,5 +113,26 @@ namespace VaultCrypt
             ProgressTempFailure.WritingToFileFailed => "Failed writing to file",
             _ => "Unknown error!"
         };
+    }
+
+    /// <summary>
+    /// Snapshot holding messages regarding progress to display
+    /// </summary>
+    public sealed record ProgressReported
+    {
+        /// <summary>
+        /// Message to display that should stay even if the issue passes
+        /// </summary>
+        public string? Message { get; }
+        /// <summary>
+        /// Message to display, indicates that message should be only visible during the current issue and get cleared once it passed
+        /// </summary>
+        public string? TempMessage { get; }
+
+        public ProgressReported(string? message = null, string? tempMessage = null)
+        {
+            Message = message;
+            TempMessage = tempMessage;
+        }
     }
 }
