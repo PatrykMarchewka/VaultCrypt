@@ -64,6 +64,49 @@ namespace VaultCrypt
             ArgumentOutOfRangeException.ThrowIfNegative(total);
             SetTotal((ulong)total);
         }
+        /// <summary>
+        /// Reports <paramref name="failure"/> with attached message and calls <see cref="IProgress{T}.Report(T)"/> to update the UI
+        /// </summary>
+        /// <param name="failure">Failure to report</param>
+        /// <param name="message">Additional message to add while reporting</param>
+        /// <exception cref="ArgumentNullException">Thrown when <paramref name="message"/> is set to null</exception>
+        /// <exception cref="ArgumentException">Thrown when <paramref name="message"/> is empty or <paramref name="failure"/> is set to <see cref="ProgressFailure.ProgressPermFailure.None"/></exception>
+        public void ReportPermStatus(ProgressFailure.ProgressPermFailure failure, string message)
+        {
+            ArgumentException.ThrowIfNullOrEmpty(message);
+            if (failure.Equals(ProgressFailure.ProgressPermFailure.None)) throw new ArgumentException("Cannot report message with failure state being set to none", nameof(failure));
+
+            string preparedMessage = $"{ProgressFailure.GetMessage(failure)} {message}";
+            Progress?.Report(new ProgressReported(message: preparedMessage));
+        }
+
+        /// <inheritdoc cref="ReportPermStatus(ProgressFailure.ProgressPermFailure, string)"/>
+        /// <param name="number">Number of a Task that failed</param>
+        public void ReportPermStatus(ProgressFailure.ProgressPermFailure failure, ulong number = 0)
+        {
+            ReportPermStatus(failure, $"#{number}");
+        }
+
+        /// <inheritdoc cref="ReportPermStatus(ProgressFailure.ProgressPermFailure, ulong)"/>
+        /// <exception cref="ArgumentOutOfRangeException">Thrown when <paramref name="number"/> is set to negative value</exception>
+        public void ReportPermStatus(ProgressFailure.ProgressPermFailure failure, int number = 0)
+        {
+            ArgumentOutOfRangeException.ThrowIfNegative(number);
+            ReportPermStatus(failure, (ulong)number);
+        }
+
+        /// <summary>
+        /// Reports <paramref name="failure"/> and calls <see cref="IProgress{T}.Report(T)"/> to update the UI
+        /// </summary>
+        /// <param name="failure">Failure to report</param>
+        /// <exception cref="ArgumentException">Thrown when <paramref name="failure"/> is set to <see cref="ProgressFailure.ProgressTempFailure.None"/></exception>
+        public void ReportTempStatus(ProgressFailure.ProgressTempFailure failure)
+        {
+            if(failure.Equals(ProgressFailure.ProgressTempFailure.None)) throw new ArgumentException("Cannot report message with failure state being set to none", nameof(failure));
+
+            string preparedTempMessage = $"{ProgressFailure.GetMessage(failure)} Retrying...";
+            Progress?.Report(new ProgressReported(tempMessage: preparedTempMessage));
+        }
 
         /// <summary>
         /// Creates a request to cancel operation
