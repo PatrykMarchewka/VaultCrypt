@@ -25,12 +25,13 @@ namespace VaultCrypt
         public IProgress<ProgressReported>? Progress { get; set; }
 
         private readonly CancellationTokenSource _cancellationTokenSource = new();
-        public CancellationToken CancellationToken => _cancellationTokenSource.Token;
+        public CancellationToken CancellationToken { get; }
 
         public ProgressionContext()
         {
             _completed = 0;
             _total = 1; //Starting at 1 so user sees 0/1 instead 0/0
+            CancellationToken = _cancellationTokenSource.Token;
         }
 
         /// <summary>
