@@ -111,11 +111,6 @@ namespace VaultCrypt
                 ChunkInformation?.Dispose();
                 ChunkInformation = null;
             }
-
-            ~FileEncryptionOptions()
-            {
-                Dispose();
-            }
         }
 
         public record ChunkInformation : IDisposable
