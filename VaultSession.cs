@@ -447,10 +447,19 @@ namespace VaultCrypt
 
         private SecureBuffer.SecureLargeBuffer PrepareMetadataOffsets(long[] offsets)
         {
-            SecureBuffer.SecureLargeBuffer offsetsBuffer = new SecureBuffer.SecureLargeBuffer(sizeof(ushort) + (offsets.Length * sizeof(long)));
-            BinaryPrimitives.WriteUInt16LittleEndian(offsetsBuffer.AsSpan, (ushort)offsets.Length);
-            MemoryMarshal.AsBytes(offsets.AsSpan()).CopyTo(offsetsBuffer.AsSpan.Slice(sizeof(ushort)));
-            return offsetsBuffer;
+            long[] distinctOffsets = [.. offsets.Distinct()];
+            try
+            {
+                SecureBuffer.SecureLargeBuffer offsetsBuffer = new SecureBuffer.SecureLargeBuffer(sizeof(ushort) + (distinctOffsets.Length * sizeof(long)));
+                BinaryPrimitives.WriteUInt16LittleEndian(offsetsBuffer.AsSpan, (ushort)distinctOffsets.Length);
+                MemoryMarshal.AsBytes(distinctOffsets.AsSpan()).CopyTo(offsetsBuffer.AsSpan.Slice(sizeof(ushort)));
+                return offsetsBuffer;
+            }
+            finally
+            {
+                CryptographicOperations.ZeroMemory(MemoryMarshal.AsBytes(distinctOffsets.AsSpan()));
+            }
+            
         }
 
         /// <summary>
