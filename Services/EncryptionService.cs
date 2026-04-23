@@ -60,15 +60,23 @@ namespace VaultCrypt.Services
                 int concurrentChunkCount = _systemService.CalculateConcurrency(options.IsChunked, chunkSizeInMB);
                 await using FileStream vaultFS = new FileStream(_session.VAULTPATH, FileMode.Open, FileAccess.ReadWrite);
                 await using FileStream fileFS = new FileStream(filePath, FileMode.Open, FileAccess.Read);
-                _session.VAULT_READER.AddAndSaveMetadataOffsets(vaultFS, vaultFS.Seek(0, SeekOrigin.End));
+
+                //First action is saving metadata
+                context.SetTotal(1 + totalChunks);
+
+                RetryHelper.TryUntilSuccess(
+                    tryAction: () => _session.VAULT_READER.AddAndSaveMetadataOffsets(vaultFS, vaultFS.Seek(0, SeekOrigin.End)),
+                    catchAction: () => context.ReportTempStatus(ProgressFailure.ProgressTempFailure.WritingToFileFailed));
+                context.Increment();
 
                 using (SecureBuffer.SecureLargeBuffer paddedFileOptions = _encryptionOptionsService.PadAndEncryptFileEncryptionOptions(options))
                 {
                     //Seek to the end of file to make sure its saved at the end and not after metadata data
-                    vaultFS.Seek(0, SeekOrigin.End);
-                    vaultFS.Write(paddedFileOptions.AsSpan);
+                    RetryHelper.TryUntilSuccess(
+                        tryAction: () => { vaultFS.Seek(0, SeekOrigin.End); vaultFS.Write(paddedFileOptions.AsSpan); },
+                        catchAction: () => context.ReportTempStatus(ProgressFailure.ProgressTempFailure.WritingToFileFailed));
                 }
-                context.SetTotal(totalChunks);
+                
                 await EncryptChunks(fileFS, vaultFS, totalChunks, concurrentChunkCount, chunkSizeInMB, provider, context);
             }
         }
@@ -87,7 +95,9 @@ namespace VaultCrypt.Services
             var results = new ConcurrentDictionary<ulong, SecureBuffer.SecureLargeBuffer>();
             ulong nextToWrite = 0;
             ulong chunkIndex = 0;
-            SecureBuffer.SecureLargeBuffer buffer = new SecureBuffer.SecureLargeBuffer((int)Math.Min((chunkSizeInMB * 1024 * 1024), fileFS.Length));
+
+            int bufferSize = (checked((int)Math.Min(chunkSizeInMB * 1024 * 1024, fileFS.Length)));
+            SecureBuffer.SecureLargeBuffer buffer = new SecureBuffer.SecureLargeBuffer(bufferSize);
             try
             {
                 //Object created to stop multiple threads for trying to write into vault file
@@ -95,15 +105,30 @@ namespace VaultCrypt.Services
                 while (chunkIndex < totalChunks)
                 {
                     context.CancellationToken.ThrowIfCancellationRequested();
-
-                    int bytesRead = await fileFS.ReadAsync(buffer.AsMemory);
-                    if (bytesRead == 0) throw new VaultException(VaultException.ErrorContext.Encrypt, VaultException.ErrorReason.EndOfFile);
-
-                    //Creating a copy of buffer to avoid race conditions
-                    SecureBuffer.SecureLargeBuffer chunkCopy = new SecureBuffer.SecureLargeBuffer(bytesRead);
-                    buffer.AsSpan[..bytesRead].CopyTo(chunkCopy.AsSpan);
-
+                    int bytesRead = 0;
                     ulong currentIndex = chunkIndex++;
+                    try
+                    {
+                        bytesRead = await RetryHelper.TryUntilSuccess<int>(
+                        tryAction: async () => await fileFS.ReadAsync(buffer.AsMemory),
+                        catchAction: () => context.ReportTempStatus(ProgressFailure.ProgressTempFailure.ReadingFromStreamFailed));
+                    }
+                    catch (Exception)
+                    {
+                        //Exception intentionally ignored
+                    }
+
+                    if(bytesRead == 0)
+                    {
+                        //Failed to read from stream or unexpected end of stream reached, waiting for all tasks to finish in order to encrypt as much as we can
+                        await Task.WhenAll(tasks);
+                        context.ReportPermStatus(ProgressFailure.ProgressPermFailure.UnexpectedEndOfStream, $"Cant read past chunk #{currentIndex}");
+                        context.ForceFinish();
+                        return;
+                    }
+
+                    SecureBuffer.SecureLargeBuffer currentChunk = new SecureBuffer.SecureLargeBuffer(bytesRead);
+                    buffer.AsSpan[..bytesRead].CopyTo(currentChunk.AsSpan);
 
                     if (tasks.Any(task => task.IsFaulted)) throw new VaultException(VaultException.ErrorContext.Encrypt, VaultException.ErrorReason.TaskFaulted);
                     if (tasks.Count >= concurrentChunkCount)
@@ -118,9 +143,12 @@ namespace VaultCrypt.Services
                         SecureBuffer.SecureLargeBuffer encryptedChunk = null!;
                         try
                         {
-                            encryptedChunk = provider.EncryptionAlgorithm.EncryptBytes(chunkCopy.AsSpan, _session.KEY.AsSpan[..provider.KeySize]);
+                            encryptedChunk = provider.EncryptionAlgorithm.EncryptBytes(currentChunk.AsSpan, _session.KEY.AsSpan[..provider.KeySize]);
                             results.TryAdd(currentIndex, encryptedChunk);
-                            _fileService.WriteReadyChunk(results, ref nextToWrite, currentIndex, vaultFS, writeLock);
+
+                            RetryHelper.TryUntilSuccess(
+                                tryAction: () => _fileService.WriteReadyChunk(results, ref nextToWrite, currentIndex, vaultFS, writeLock),
+                                catchAction: () => context.ReportTempStatus(ProgressFailure.ProgressTempFailure.WritingToFileFailed));
                         }
                         catch (Exception)
                         {
@@ -130,7 +158,7 @@ namespace VaultCrypt.Services
                         }
                         finally
                         {
-                            chunkCopy.Dispose();
+                            currentChunk.Dispose();
                         }
                         context.Increment();
                     }));
