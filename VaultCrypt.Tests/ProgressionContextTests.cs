@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Linq;
@@ -111,6 +111,57 @@ namespace VaultCrypt.Tests
         {
             _progressionContext.Dispose();
             Assert.Throws<ObjectDisposedException>(() => _progressionContext.CancellationToken);
+        }
+    }
+
+    public class ProgressFailureTests()
+    {
+        [Fact]
+        void GetMessageReturnsCorrectPermFailureString()
+        {
+            string expected = "Failed to decrypt chunk";
+            string actual = ProgressFailure.GetMessage(ProgressFailure.ProgressPermFailure.ChunkDecryptFailed);
+            Assert.Equal(expected, actual);
+        }
+
+        [Fact]
+        void GetMessageReturnsCorrectDefaultPermFailureString()
+        {
+            string expected = string.Empty;
+            string actual = ProgressFailure.GetMessage(default(ProgressFailure.ProgressPermFailure));
+            Assert.Equal(expected, actual);
+        }
+
+        [Fact]
+        void GetMessageReturnsCorrectFallbackPermFailureString()
+        {
+            string expected = "Unknown error!";
+            string actual = ProgressFailure.GetMessage((ProgressFailure.ProgressPermFailure)int.MaxValue);
+            Assert.Equal(expected, actual);
+        }
+
+        [Fact]
+        void GetMessageReturnsCorrectTempFailureString()
+        {
+            string expected = "Failed to read required information from stream";
+            string actual = ProgressFailure.GetMessage(ProgressFailure.ProgressTempFailure.ReadingFromStreamFailed);
+            Assert.Equal(expected, actual);
+        }
+
+        [Fact]
+        void GetMessageReturnsCorrectDefaultTempFailureString()
+        {
+            string expected = string.Empty;
+            string actual = ProgressFailure.GetMessage(default(ProgressFailure.ProgressTempFailure));
+            Assert.Equal(expected, actual);
+        }
+
+        [Fact]
+        void GetMessageReturnsCorrectFallbackTempFailureString()
+        {
+            string expected = "Unknown error!";
+            string actual = ProgressFailure.GetMessage((ProgressFailure.ProgressPermFailure)int.MaxValue);
+            Assert.Equal(expected, actual);
         }
     }
 }
