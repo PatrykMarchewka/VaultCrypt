@@ -49,7 +49,8 @@ namespace VaultCrypt.Exceptions
             TaskFaulted,
             WrongHMAC,
             EmptyFile,
-            OperationCancelled
+            OperationCancelled,
+            MaxRetriesReached
         }
         public static string GetReason(ErrorReason reason) => reason switch
         {
@@ -64,6 +65,7 @@ namespace VaultCrypt.Exceptions
             ErrorReason.WrongHMAC => "Wrong HMAC authentication tag",
             ErrorReason.EmptyFile => "Provided empty file",
             ErrorReason.OperationCancelled => "Operation cancelled by the user",
+            ErrorReason.MaxRetriesReached => "Reached maximum amount of retries",
             _ => "Unknown error reason"
         };
     }
