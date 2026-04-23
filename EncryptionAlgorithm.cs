@@ -167,13 +167,6 @@ namespace VaultCrypt
                 }
             }
 
-            /// <summary>
-            /// 
-            /// </summary>
-            /// <param name="data"></param>
-            /// <param name="key"></param>
-            /// <returns></returns>
-            /// <exception cref="VaultException">Thrown when decryption failed</exception>
             public SecureBuffer.SecureLargeBuffer DecryptBytes(ReadOnlySpan<byte> data, ReadOnlySpan<byte> key)
             {
                 if (data.IsEmpty) throw new ArgumentException("Provided empty data", nameof(data));
