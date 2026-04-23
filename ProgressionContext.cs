@@ -117,11 +117,7 @@ namespace VaultCrypt
         {
             _cancellationTokenSource.Dispose();
         }
-
-        ~ProgressionContext()
-        {
-            Dispose();
-        }
+    }
 
     public sealed class ProgressFailure()
     {
