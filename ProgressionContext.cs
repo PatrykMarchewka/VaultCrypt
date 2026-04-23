@@ -68,6 +68,17 @@ namespace VaultCrypt
             ArgumentOutOfRangeException.ThrowIfNegative(total);
             SetTotal((ulong)total);
         }
+
+        /// <summary>
+        /// Changes <see cref="Completed"/> value to match <see cref="Total"/> and calls <see cref="IProgress{T}.Report(T)"/> to update the UI <br/>
+        /// <see cref="IProgress{T}.Report(T)"/> is called even in case of <see cref="Completed"/> already matching <see cref="Total"/>
+        /// </summary>
+        public void ForceFinish()
+        {
+            Interlocked.Exchange(ref _completed, _total);
+            Progress?.Report(new ProgressReported());
+        }
+
         /// <summary>
         /// Reports <paramref name="failure"/> with attached message and calls <see cref="IProgress{T}.Report(T)"/> to update the UI
         /// </summary>
