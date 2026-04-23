@@ -38,10 +38,12 @@ namespace VaultCrypt
         /// Increments <see cref="Completed"/> value by <paramref name="amount"/> atomically and calls <see cref="IProgress{T}.Report(T)"/> to update the UI
         /// </summary>
         /// <param name="amount">Amount to increment</param>
-        /// <exception cref="ArgumentOutOfRangeException">Thrown when <paramref name="amount"/> is set to zero</exception>
+        /// <exception cref="ArgumentOutOfRangeException">Thrown when <paramref name="amount"/> is set to zero or incrementing would cause <see cref="Completed"/> to be greater than <see cref="Total"/></exception>
         public void Increment(ulong amount = 1)
         {
             ArgumentOutOfRangeException.ThrowIfZero(amount);
+            ArgumentOutOfRangeException.ThrowIfGreaterThan(amount, _total - _completed);
+
             Interlocked.Add(ref _completed, amount);
             Progress?.Report(new ProgressReported());
         }
@@ -50,10 +52,11 @@ namespace VaultCrypt
         /// Sets the <see cref="Total"/> atomically to <paramref name="total"/> and calls <see cref="IProgress{T}.Report(T)"/> to update the UI
         /// </summary>
         /// <param name="total">New value to set</param>
-        /// <exception cref="ArgumentOutOfRangeException">Thrown when <paramref name="total"/> is set to zero</exception>
+        /// <exception cref="ArgumentOutOfRangeException">Thrown when <paramref name="total"/> is set to zero or new value is less than current value of <see cref="Completed"/></exception>
         public void SetTotal(ulong total)
         {
             ArgumentOutOfRangeException.ThrowIfZero(total);
+            ArgumentOutOfRangeException.ThrowIfLessThan(total, Completed);
             Interlocked.Exchange(ref _total, total);
             Progress?.Report(new ProgressReported());
         }
