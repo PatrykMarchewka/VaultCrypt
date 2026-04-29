@@ -141,14 +141,17 @@ namespace VaultCrypt
             None,
             ChunkDecryptFailed,
             FileMetadataDecryptFailed,
-            UnexpectedEndOfStream
+            UnexpectedEndOfStream,
+            IOOperationFailed
         }
 
         public enum ProgressTempFailure
         {
             None,
             ReadingFromStreamFailed,
-            WritingToFileFailed
+            WritingToFileFailed,
+            CreatingStreamFailed,
+            DeletingFileFailed
         }
 
         public static string GetMessage(ProgressPermFailure failure) => failure switch
@@ -157,6 +160,7 @@ namespace VaultCrypt
             ProgressPermFailure.ChunkDecryptFailed => "Failed to decrypt chunk",
             ProgressPermFailure.FileMetadataDecryptFailed => "Failed to decrypt metadata for file",
             ProgressPermFailure.UnexpectedEndOfStream => "Unexpected end of stream",
+            ProgressPermFailure.IOOperationFailed => "I/O operation failed",
             _ => "Unknown error!"
         };
 
@@ -165,6 +169,8 @@ namespace VaultCrypt
             ProgressTempFailure.None => string.Empty,
             ProgressTempFailure.ReadingFromStreamFailed => "Failed to read required information from stream",
             ProgressTempFailure.WritingToFileFailed => "Failed writing to file",
+            ProgressTempFailure.CreatingStreamFailed => "Failed to create a new stream",
+            ProgressTempFailure.DeletingFileFailed => "Failed to delete a file",
             _ => "Unknown error!"
         };
     }
