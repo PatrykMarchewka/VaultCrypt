@@ -318,7 +318,7 @@ namespace VaultCrypt.Tests
             EncryptionOptionsService service = new EncryptionOptionsService(vaultSessionWithReader);
             using (EncryptionOptions.FileEncryptionOptions fileEncryptionOptions = service.GetDecryptedFileEncryptionOptions(vaultFS, offsetToGet))
             {
-                EncryptedFileInfo fileInfoToGet = new EncryptedFileInfo(Encoding.UTF8.GetString(fileEncryptionOptions.FileName.AsSpan), fileEncryptionOptions.FileSize, EncryptionAlgorithm.GetEncryptionAlgorithmInfo[fileEncryptionOptions.EncryptionAlgorithm]);
+                EncryptedFileInfo fileInfoToGet = new EncryptedFileInfo(fileEncryptionOptions.GetFileName(), fileEncryptionOptions.FileSize, EncryptionAlgorithm.GetEncryptionAlgorithmInfo[fileEncryptionOptions.EncryptionAlgorithm]);
                 return new KeyValuePair<long, EncryptedFileInfo>(offsetToGet, fileInfoToGet);
             }
         }

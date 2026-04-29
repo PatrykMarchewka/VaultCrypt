@@ -32,6 +32,13 @@ namespace VaultCrypt.Tests
         }
 
         [Fact]
+        void GetFileNameReturnsCorrectString()
+        {
+            string expected = "EncryptionOptionsTestNoChunk";
+            Assert.Equal(expected, _fileEncryptionOptions.GetFileName());
+        }
+
+        [Fact]
         void EncryptionOptionsThrowForIncorrectChunkedFlag()
         {
             string fileName = "DifferentValues";

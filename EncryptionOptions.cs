@@ -43,6 +43,15 @@ namespace VaultCrypt
                 ChunkInformation = chunkInformation;
             }
 
+            /// <summary>
+            /// Gets the filename as <see cref="string"/>
+            /// </summary>
+            /// <returns>String with the filename</returns>
+            public string GetFileName()
+            {
+                return Encoding.UTF8.GetString(this.FileName.AsSpan);
+            }
+
             public virtual bool Equals(FileEncryptionOptions? other)
             {
                 if (other is null) return false;
