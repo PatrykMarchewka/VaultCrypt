@@ -32,15 +32,23 @@ namespace VaultCrypt
 
             public FileEncryptionOptions(byte version, SecureBuffer.SecureLargeBuffer fileName, ulong fileSize, byte algorithm, bool chunked, ChunkInformation? chunkInformation)
             {
-                if (chunked && chunkInformation is null) throw new ArgumentException("Chunk information cannot be null if chunk flag is set to true");
+                try
+                {
+                    if (chunked && chunkInformation is null) throw new ArgumentException("Chunk information cannot be null if chunk flag is set to true");
 
-                Version = version;
-                NameLength = checked((ushort)fileName.Length);
-                FileName = fileName;
-                FileSize = fileSize;
-                EncryptionAlgorithm = algorithm;
-                IsChunked = chunked;
-                ChunkInformation = chunkInformation;
+                    Version = version;
+                    NameLength = checked((ushort)fileName.Length);
+                    FileName = fileName;
+                    FileSize = fileSize;
+                    EncryptionAlgorithm = algorithm;
+                    IsChunked = chunked;
+                    ChunkInformation = chunkInformation;
+                }
+                catch (Exception)
+                {
+                    fileName.Dispose();
+                    throw;
+                }
             }
 
             public FileEncryptionOptions(byte version, string fileName, ulong fileSize, byte algorithm, bool chunked, ChunkInformation? chunkInformation) : this(version, SetFileName(fileName), fileSize, algorithm, chunked, chunkInformation) { }
