@@ -49,8 +49,7 @@ namespace VaultCrypt.Services
             ArgumentNullException.ThrowIfNull(fileInfo);
             ArgumentOutOfRangeException.ThrowIfZero(chunkSizeInMB);
 
-            SecureBuffer.SecureLargeBuffer fileName = new SecureBuffer.SecureLargeBuffer(Encoding.UTF8.GetByteCount(fileInfo.Name));
-            Encoding.UTF8.GetBytes(fileInfo.Name, fileName.AsSpan);
+            ulong fileLength = (ulong)fileInfo.Length;
             bool chunked = false;
             EncryptionOptions.ChunkInformation? chunkInformation = null;
 
@@ -73,8 +72,8 @@ namespace VaultCrypt.Services
             }
             short extraBytes = algorithm.Provider().EncryptionAlgorithm.ExtraEncryptionDataSize;
 
-            ulong fileSize = chunkInformation is null ? (ulong)(fileInfo.Length + extraBytes) : ((ulong)fileInfo.Length + ((ulong)extraBytes * chunkInformation.TotalChunks));
-            return new EncryptionOptions.FileEncryptionOptions(1, fileName, fileSize, algorithm.ID, chunked, chunkInformation);
+            ulong encryptedFileSize = chunkInformation is null ? (fileLength + (ulong)extraBytes) : ((ulong)fileLength + ((ulong)extraBytes * chunkInformation.TotalChunks));
+            return new EncryptionOptions.FileEncryptionOptions(1, fileInfo.Name, encryptedFileSize, algorithm.ID, chunked, chunkInformation);
         }
 
 

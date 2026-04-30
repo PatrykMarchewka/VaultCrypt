@@ -13,9 +13,7 @@ namespace VaultCrypt.Tests
         public EncryptionOptionsTests()
         {
             string fileName = "EncryptionOptionsTestNoChunk";
-            SecureBuffer.SecureLargeBuffer fileNameBuffer = new SecureBuffer.SecureLargeBuffer(Encoding.UTF8.GetByteCount(fileName));
-            Encoding.UTF8.GetBytes(fileName).CopyTo(fileNameBuffer.AsSpan);
-            _fileEncryptionOptions = new EncryptionOptions.FileEncryptionOptions(0, fileNameBuffer, 1234, 1, false, null);
+            _fileEncryptionOptions = new EncryptionOptions.FileEncryptionOptions(0, fileName, 1234, 1, false, null);
         }
 
         public void Dispose()
@@ -26,9 +24,20 @@ namespace VaultCrypt.Tests
         private void CreateEncryptionOptionsWithChunkInformation()
         {
             string fileName = "EncryptionOptionsTestWithChunk";
+            _fileEncryptionOptions = new EncryptionOptions.FileEncryptionOptions(1, fileName, 1234, 1, true, new EncryptionOptions.ChunkInformation(16, 24, 131));
+        }
+
+        [Fact]
+        void DifferentConstructorsReturnSameData()
+        {
+            string fileName = "string";
             SecureBuffer.SecureLargeBuffer fileNameBuffer = new SecureBuffer.SecureLargeBuffer(Encoding.UTF8.GetByteCount(fileName));
             Encoding.UTF8.GetBytes(fileName).CopyTo(fileNameBuffer.AsSpan);
-            _fileEncryptionOptions = new EncryptionOptions.FileEncryptionOptions(1, fileNameBuffer, 1234, 1, true, new EncryptionOptions.ChunkInformation(16, 24, 131));
+
+            using var encryptionOptions = new EncryptionOptions.FileEncryptionOptions(0, fileNameBuffer, 1, 2, false, null);
+            using var encryptionOptions2 = new EncryptionOptions.FileEncryptionOptions(0, fileName, 1, 2, false, null);
+
+            Assert.Equal(encryptionOptions, encryptionOptions2);
         }
 
         [Fact]
@@ -41,12 +50,7 @@ namespace VaultCrypt.Tests
         [Fact]
         void EncryptionOptionsThrowForIncorrectChunkedFlag()
         {
-            string fileName = "DifferentValues";
-            using (SecureBuffer.SecureLargeBuffer fileNameBuffer = new SecureBuffer.SecureLargeBuffer(Encoding.UTF8.GetByteCount(fileName)))
-            {
-                Encoding.UTF8.GetBytes(fileName).CopyTo(fileNameBuffer.AsSpan);
-                Assert.Throws<ArgumentException>(() => new EncryptionOptions.FileEncryptionOptions(0, fileNameBuffer, 11, 1, true, null));
-            }
+            Assert.Throws<ArgumentException>(() => new EncryptionOptions.FileEncryptionOptions(0, "fileName", 11, 1, true, null));
         }
 
         [Fact]
@@ -67,7 +71,7 @@ namespace VaultCrypt.Tests
         {
             using (SecureBuffer.SecureLargeBuffer serialized = EncryptionOptions.FileEncryptionOptions.SerializeFileEncryptionOptions(_fileEncryptionOptions))
             {
-                var deserialized = EncryptionOptions.FileEncryptionOptionsReader.Deserialize(serialized.AsSpan);
+                using var deserialized = EncryptionOptions.FileEncryptionOptionsReader.Deserialize(serialized.AsSpan);
 
                 Assert.Equal(_fileEncryptionOptions, deserialized);
             }
@@ -80,7 +84,7 @@ namespace VaultCrypt.Tests
 
             using (SecureBuffer.SecureLargeBuffer serialized = EncryptionOptions.FileEncryptionOptions.SerializeFileEncryptionOptions(_fileEncryptionOptions))
             {
-                var deserialized = EncryptionOptions.FileEncryptionOptionsReader.Deserialize(serialized.AsSpan);
+                using var deserialized = EncryptionOptions.FileEncryptionOptionsReader.Deserialize(serialized.AsSpan);
 
                 Assert.Equal(_fileEncryptionOptions, deserialized);
             }
@@ -138,68 +142,29 @@ namespace VaultCrypt.Tests
         [Fact]
         void EncryptionOptionsEqualsReturnsFalseForDifferentName()
         {
-            SecureBuffer.SecureLargeBuffer firstBuffer = new SecureBuffer.SecureLargeBuffer(10);
-            SecureBuffer.SecureLargeBuffer secondBuffer = new SecureBuffer.SecureLargeBuffer(10);
-            try
-            {
-                Encoding.UTF8.GetBytes("SameValues").CopyTo(firstBuffer.AsSpan);
-                Encoding.UTF8.GetBytes("samevalues").CopyTo(secondBuffer.AsSpan);
+            using var first = new EncryptionOptions.FileEncryptionOptions(0, "Name", 11, 1, true, new EncryptionOptions.ChunkInformation(1, 2, 3));
+            using var second = new EncryptionOptions.FileEncryptionOptions(0, "name", 11, 1, true, new EncryptionOptions.ChunkInformation(1, 2, 3));
 
-                var first = new EncryptionOptions.FileEncryptionOptions(0, firstBuffer, 11, 1, true, new EncryptionOptions.ChunkInformation(1, 2, 3));
-                var second = new EncryptionOptions.FileEncryptionOptions(0, secondBuffer, 11, 1, true, new EncryptionOptions.ChunkInformation(1, 2, 3));
-
-                Assert.False(first.Equals(second));
-            }
-            finally
-            {
-                firstBuffer.Dispose();
-                secondBuffer.Dispose();
-            }
+            Assert.False(first.Equals(second));
         }
 
         [Fact]
         void EncryptionOptionsEqualsReturnsFalseForDifferentChunkInformation()
         {
-            SecureBuffer.SecureLargeBuffer firstBuffer = new SecureBuffer.SecureLargeBuffer(10);
-            SecureBuffer.SecureLargeBuffer secondBuffer = new SecureBuffer.SecureLargeBuffer(10);
-            try
-            {
-                Encoding.UTF8.GetBytes("SameValues").CopyTo(firstBuffer.AsSpan);
-                Encoding.UTF8.GetBytes("SameValues").CopyTo(secondBuffer.AsSpan);
+            using var first = new EncryptionOptions.FileEncryptionOptions(0, "SameValue", 11, 1, true, new EncryptionOptions.ChunkInformation(1, 2, 3));
+            using var second = new EncryptionOptions.FileEncryptionOptions(0, "SameValue", 11, 1, true, new EncryptionOptions.ChunkInformation(2, 2, 3));
 
-                var first = new EncryptionOptions.FileEncryptionOptions(0, firstBuffer, 11, 1, true, new EncryptionOptions.ChunkInformation(1, 2, 3));
-                var second = new EncryptionOptions.FileEncryptionOptions(0, secondBuffer, 11, 1, true, new EncryptionOptions.ChunkInformation(2, 2, 3));
-
-                Assert.False(first.Equals(second));
-            }
-            finally
-            {
-                firstBuffer.Dispose();
-                secondBuffer.Dispose();
-            }
+            Assert.False(first.Equals(second));
         }
 
         [Fact]
         void EncryptionOptionsEqualsReturnsTrueForSameValuesDifferentReference()
         {
-            SecureBuffer.SecureLargeBuffer firstBuffer = new SecureBuffer.SecureLargeBuffer(10);
-            SecureBuffer.SecureLargeBuffer secondBuffer = new SecureBuffer.SecureLargeBuffer(10);
-            try
-            {
-                Encoding.UTF8.GetBytes("SameValues").CopyTo(firstBuffer.AsSpan);
-                Encoding.UTF8.GetBytes("SameValues").CopyTo(secondBuffer.AsSpan);
+            using var first = new EncryptionOptions.FileEncryptionOptions(0, "SameValue", 11, 1, true, new EncryptionOptions.ChunkInformation(1, 2, 3));
+            using var second = new EncryptionOptions.FileEncryptionOptions(0, "SameValue", 11, 1, true, new EncryptionOptions.ChunkInformation(2, 2, 3));
 
-                var first = new EncryptionOptions.FileEncryptionOptions(0, firstBuffer, 11, 1, true, new EncryptionOptions.ChunkInformation(1, 2, 3));
-                var second = new EncryptionOptions.FileEncryptionOptions(0, secondBuffer, 11, 1, true, new EncryptionOptions.ChunkInformation(1, 2, 3));
-
-                Assert.Equal(first, second);
-                Assert.True(first.Equals(second));
-            }
-            finally
-            {
-                firstBuffer.Dispose();
-                secondBuffer.Dispose();
-            }
+            Assert.Equal(first, second);
+            Assert.True(first.Equals(second));
         }
 
         [Fact]
@@ -213,23 +178,10 @@ namespace VaultCrypt.Tests
         [Fact]
         void EncryptionOptionsGetHashCodeReturnsDifferentHashForDifferentValues()
         {
-            SecureBuffer.SecureLargeBuffer firstBuffer = new SecureBuffer.SecureLargeBuffer(10);
-            SecureBuffer.SecureLargeBuffer secondBuffer = new SecureBuffer.SecureLargeBuffer(10);
-            try
-            {
-                Encoding.UTF8.GetBytes("SameValues").CopyTo(firstBuffer.AsSpan);
-                Encoding.UTF8.GetBytes("SameValues").CopyTo(secondBuffer.AsSpan);
+            using var first = new EncryptionOptions.FileEncryptionOptions(0, "SameValue", 11, 1, true, new EncryptionOptions.ChunkInformation(1, 2, 3));
+            using var second = new EncryptionOptions.FileEncryptionOptions(0, "SameValue", 11, 1, true, new EncryptionOptions.ChunkInformation(2, 2, 3));
 
-                var first = new EncryptionOptions.FileEncryptionOptions(0, firstBuffer, 11, 1, true, new EncryptionOptions.ChunkInformation(1, 2, 3));
-                var second = new EncryptionOptions.FileEncryptionOptions(0, secondBuffer, 11, 1, true, new EncryptionOptions.ChunkInformation(2, 2, 3));
-
-                Assert.NotEqual(first.GetHashCode(), second.GetHashCode());
-            }
-            finally
-            {
-                firstBuffer.Dispose();
-                secondBuffer.Dispose();
-            }
+            Assert.NotEqual(first.GetHashCode(), second.GetHashCode());
         }
 
 
