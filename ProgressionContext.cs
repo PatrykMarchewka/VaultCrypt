@@ -85,10 +85,10 @@ namespace VaultCrypt
         /// <param name="failure">Failure to report</param>
         /// <param name="message">Additional message to add while reporting</param>
         /// <exception cref="ArgumentNullException">Thrown when <paramref name="message"/> is set to null</exception>
-        /// <exception cref="ArgumentException">Thrown when <paramref name="message"/> is empty or <paramref name="failure"/> is set to <see cref="ProgressFailure.ProgressPermFailure.None"/></exception>
+        /// <exception cref="ArgumentException">Thrown when <paramref name="message"/> is empty, whitespace only or <paramref name="failure"/> is set to <see cref="ProgressFailure.ProgressPermFailure.None"/></exception>
         public void ReportPermStatus(ProgressFailure.ProgressPermFailure failure, string message)
         {
-            ArgumentException.ThrowIfNullOrEmpty(message);
+            ArgumentException.ThrowIfNullOrWhiteSpace(message);
             if (failure.Equals(ProgressFailure.ProgressPermFailure.None)) throw new ArgumentException("Cannot report message with failure state being set to none", nameof(failure));
 
             string preparedMessage = $"{ProgressFailure.GetMessage(failure)} {message}";
