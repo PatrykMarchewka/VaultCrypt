@@ -132,14 +132,14 @@ namespace VaultCrypt.ViewModels
         {
             var context = new ProgressionContext();
             NavigationRequested?.Invoke(new NavigateToProgressRequest(context));
-            await Task.Run(() => _vaultService.DeleteFileFromVault(SelectedFile!.Value.Key, context));
+            await _vaultService.DeleteFileFromVault(SelectedFile!.Value.Key, context);
         }
 
         public async Task Trim()
         {
             var context = new ProgressionContext();
             NavigationRequested?.Invoke(new NavigateToProgressRequest(context));
-            await Task.Run(() => _vaultService.TrimVault(context));
+            await _vaultService.TrimVault(context);
         }
 
         public void Filter(string text)
