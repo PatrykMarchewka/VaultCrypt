@@ -47,7 +47,10 @@ namespace VaultCrypt.Services
             ArgumentNullException.ThrowIfNull(algorithm);
             ArgumentOutOfRangeException.ThrowIfZero(chunkSizeInMB);
             ArgumentNullException.ThrowIfNullOrWhiteSpace(filePath);
-            if (new FileInfo(filePath).Length == 0) throw new VaultException(VaultException.ErrorContext.Encrypt, VaultException.ErrorReason.EmptyFile);
+            long fileLength = await RetryHelper.TryUntilSuccessAsync(
+                tryAction: () => new FileInfo(filePath).Length,
+                catchAction: () => context.ReportTempStatus(ProgressFailure.ProgressTempFailure.ReadingFromStreamFailed));
+            if (fileLength == 0) throw new VaultException(VaultException.ErrorContext.Encrypt, VaultException.ErrorReason.EmptyFile);
             ArgumentNullException.ThrowIfNull(context);
 
             _systemService.CheckFreeSpace(filePath);
@@ -58,13 +61,19 @@ namespace VaultCrypt.Services
                 var provider = algorithm.Provider();
                 ulong totalChunks = options.ChunkInformation != null ? options.ChunkInformation!.TotalChunks : 1;
                 int concurrentChunkCount = _systemService.CalculateConcurrency(options.IsChunked, chunkSizeInMB);
-                await using FileStream vaultFS = new FileStream(_session.VAULTPATH, FileMode.Open, FileAccess.ReadWrite);
-                await using FileStream fileFS = new FileStream(filePath, FileMode.Open, FileAccess.Read);
+
+                await using FileStream vaultFS = await RetryHelper.TryUntilSuccessAsync(
+                    tryAction: () => new FileStream(_session.VAULTPATH, FileMode.Open, FileAccess.ReadWrite),
+                    catchAction: () => context.ReportTempStatus(ProgressFailure.ProgressTempFailure.CreatingStreamFailed));
+
+                await using FileStream fileFS = await RetryHelper.TryUntilSuccessAsync(
+                    tryAction: () => new FileStream(filePath, FileMode.Open, FileAccess.Read),
+                    catchAction: () => context.ReportTempStatus(ProgressFailure.ProgressTempFailure.CreatingStreamFailed));
 
                 //First action is saving metadata
                 context.SetTotal(1 + totalChunks);
 
-                RetryHelper.TryUntilSuccess(
+                await RetryHelper.TryUntilSuccessAsync(
                     tryAction: () => _session.VAULT_READER.AddAndSaveMetadataOffsets(vaultFS, vaultFS.Seek(0, SeekOrigin.End)),
                     catchAction: () => context.ReportTempStatus(ProgressFailure.ProgressTempFailure.WritingToFileFailed));
                 context.Increment();
@@ -72,7 +81,8 @@ namespace VaultCrypt.Services
                 using (SecureBuffer.SecureLargeBuffer paddedFileOptions = _encryptionOptionsService.PadAndEncryptFileEncryptionOptions(options))
                 {
                     //Seek to the end of file to make sure its saved at the end and not after metadata data
-                    RetryHelper.TryUntilSuccess(
+                    //START HERE, why is this disposed???
+                    await RetryHelper.TryUntilSuccessAsync(
                         tryAction: () => { vaultFS.Seek(0, SeekOrigin.End); vaultFS.Write(paddedFileOptions.AsSpan); },
                         catchAction: () => context.ReportTempStatus(ProgressFailure.ProgressTempFailure.WritingToFileFailed));
                 }
@@ -96,7 +106,10 @@ namespace VaultCrypt.Services
             ulong nextToWrite = 0;
             ulong chunkIndex = 0;
 
-            int bufferSize = (checked((int)Math.Min(chunkSizeInMB * 1024 * 1024, fileFS.Length)));
+            long originalFileSize = await RetryHelper.TryUntilSuccessAsync(
+                tryAction: () => fileFS.Length,
+                catchAction: () => context.ReportTempStatus(ProgressFailure.ProgressTempFailure.ReadingFromStreamFailed));
+            int bufferSize = (checked((int)Math.Min(chunkSizeInMB * 1024 * 1024, originalFileSize)));
             SecureBuffer.SecureLargeBuffer buffer = new SecureBuffer.SecureLargeBuffer(bufferSize);
             try
             {
@@ -109,7 +122,7 @@ namespace VaultCrypt.Services
                     ulong currentIndex = chunkIndex++;
                     try
                     {
-                        bytesRead = await RetryHelper.TryUntilSuccess<int>(
+                        bytesRead = await RetryHelper.TryUntilSuccessAsync(
                         tryAction: async () => await fileFS.ReadAsync(buffer.AsMemory),
                         catchAction: () => context.ReportTempStatus(ProgressFailure.ProgressTempFailure.ReadingFromStreamFailed));
                     }
@@ -126,7 +139,6 @@ namespace VaultCrypt.Services
                         context.ForceFinish();
                         return;
                     }
-
                     SecureBuffer.SecureLargeBuffer currentChunk = new SecureBuffer.SecureLargeBuffer(bytesRead);
                     buffer.AsSpan[..bytesRead].CopyTo(currentChunk.AsSpan);
 
@@ -137,7 +149,7 @@ namespace VaultCrypt.Services
                         tasks.RemoveAll(task => task.IsCompleted);
                     }
 
-                    tasks.Add(Task.Run(() =>
+                    tasks.Add(Task.Run(async () =>
                     {
                         context.CancellationToken.ThrowIfCancellationRequested();
                         SecureBuffer.SecureLargeBuffer encryptedChunk = null!;
@@ -145,8 +157,7 @@ namespace VaultCrypt.Services
                         {
                             encryptedChunk = provider.EncryptionAlgorithm.EncryptBytes(currentChunk.AsSpan, _session.KEY.AsSpan[..provider.KeySize]);
                             results.TryAdd(currentIndex, encryptedChunk);
-
-                            RetryHelper.TryUntilSuccess(
+                            await RetryHelper.TryUntilSuccessAsync(
                                 tryAction: () => _fileService.WriteReadyChunk(results, ref nextToWrite, currentIndex, vaultFS, writeLock),
                                 catchAction: () => context.ReportTempStatus(ProgressFailure.ProgressTempFailure.WritingToFileFailed));
                         }
