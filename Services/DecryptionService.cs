@@ -47,34 +47,41 @@ namespace VaultCrypt.Services
             ArgumentNullException.ThrowIfNullOrWhiteSpace(filePath);
             ArgumentNullException.ThrowIfNull(context);
 
-            await using FileStream vaultFS = new FileStream(_session.VAULTPATH, FileMode.Open, FileAccess.Read);
-
-            using (EncryptionOptions.FileEncryptionOptions encryptionOptions = _encryptionOptionsService.GetDecryptedFileEncryptionOptions(vaultFS, metadataOffset))
+            await using FileStream vaultFS = await RetryHelper.TryUntilSuccessAsync(
+                tryAction: () => new FileStream(_session.VAULTPATH, FileMode.Open, FileAccess.Read),
+                catchAction: () => context.ReportTempStatus(ProgressFailure.ProgressTempFailure.CreatingStreamFailed));
+            using EncryptionOptions.FileEncryptionOptions encryptionOptions = await RetryHelper.TryUntilSuccessAsync(
+                tryAction: () => _encryptionOptionsService.GetDecryptedFileEncryptionOptions(vaultFS, metadataOffset),
+                catchAction: () => context.ReportTempStatus(ProgressFailure.ProgressTempFailure.ReadingFromStreamFailed),
+                shouldRetry: ex => ex is IOException);
+            var encryptionAlgorithmProvider = EncryptionAlgorithm.GetEncryptionAlgorithmInfo[encryptionOptions.EncryptionAlgorithm].Provider();
+            await using FileStream fileFS = await RetryHelper.TryUntilSuccessAsync(
+                tryAction: () => new FileStream(filePath, FileMode.Create),
+                catchAction: () => context.ReportTempStatus(ProgressFailure.ProgressTempFailure.CreatingStreamFailed));
+            if (!encryptionOptions.IsChunked)
             {
-                var encryptionAlgorithmProvider = EncryptionAlgorithm.GetEncryptionAlgorithmInfo[encryptionOptions.EncryptionAlgorithm].Provider();
-                using FileStream fileFS = new FileStream(filePath, FileMode.Create);
-                if (!encryptionOptions.IsChunked)
+                try
                 {
-                    try
+                    using (SecureBuffer.SecureLargeBuffer decrypted = await RetryHelper.TryUntilSuccessAsync(
+                        tryAction: () => DecryptInOneChunk(vaultFS, checked((int)encryptionOptions.FileSize), _session.GetSlicedKey(encryptionAlgorithmProvider.KeySize), encryptionAlgorithmProvider.EncryptionAlgorithm),
+                        catchAction: () => context.ReportTempStatus(ProgressFailure.ProgressTempFailure.ReadingFromStreamFailed),
+                        shouldRetry: ex => ex is IOException))
                     {
-                        using (SecureBuffer.SecureLargeBuffer decrypted = DecryptInOneChunk(vaultFS, checked((int)encryptionOptions.FileSize), _session.GetSlicedKey(encryptionAlgorithmProvider.KeySize), encryptionAlgorithmProvider.EncryptionAlgorithm))
-                        {
-                            RetryHelper.TryUntilSuccess(
-                                tryAction: () => fileFS.Write(decrypted.AsSpan),
-                                catchAction: () => context.ReportTempStatus(ProgressFailure.ProgressTempFailure.WritingToFileFailed));
-                        }
+                        await RetryHelper.TryUntilSuccessAsync(
+                            tryAction: () => fileFS.Write(decrypted.AsSpan),
+                            catchAction: () => context.ReportTempStatus(ProgressFailure.ProgressTempFailure.WritingToFileFailed));
                     }
-                    catch (Exception)
-                    {
-                        context.ReportPermStatus(ProgressFailure.ProgressPermFailure.ChunkDecryptFailed, 1);
-                    }
-                    context.Increment();
                 }
-                else
+                catch (Exception)
                 {
-                    context.SetTotal(encryptionOptions.ChunkInformation!.TotalChunks);
-                    await DecryptInMultipleChunks(vaultFS, fileFS, encryptionOptions.ChunkInformation!, encryptionAlgorithmProvider.EncryptionAlgorithm.ExtraEncryptionDataSize, encryptionAlgorithmProvider, context);
+                    context.ReportPermStatus(ProgressFailure.ProgressPermFailure.ChunkDecryptFailed, 1);
                 }
+                context.Increment();
+            }
+            else
+            {
+                context.SetTotal(encryptionOptions.ChunkInformation!.TotalChunks);
+                await DecryptInMultipleChunks(vaultFS, fileFS, encryptionOptions.ChunkInformation!, encryptionAlgorithmProvider.EncryptionAlgorithm.ExtraEncryptionDataSize, encryptionAlgorithmProvider, context);
             }
         }
 
@@ -119,7 +126,7 @@ namespace VaultCrypt.Services
                     
                     try
                     {
-                        bytesRead = await RetryHelper.TryUntilSuccess<int>(
+                        bytesRead = await RetryHelper.TryUntilSuccessAsync(
                         tryAction: async () => { return await vaultFS.ReadAsync(buffer.AsMemory); },
                         catchAction: () => context.ReportTempStatus(ProgressFailure.ProgressTempFailure.ReadingFromStreamFailed));
                     }
@@ -147,7 +154,7 @@ namespace VaultCrypt.Services
                         tasks.RemoveAll(task => task.IsCompleted);
                     }
 
-                    tasks.Add(Task.Run(() =>
+                    tasks.Add(Task.Run(async () =>
                     {
                         context.CancellationToken.ThrowIfCancellationRequested();
                         SecureBuffer.SecureLargeBuffer decryptedChunk = null!;
@@ -156,17 +163,18 @@ namespace VaultCrypt.Services
                             decryptedChunk = provider.EncryptionAlgorithm.DecryptBytes(currentChunk.AsSpan, _session.KEY.AsSpan[..provider.KeySize]);
                             results.TryAdd(currentIndex, decryptedChunk);
 
-                            RetryHelper.TryUntilSuccess(
+                            await RetryHelper.TryUntilSuccessAsync(
                                 tryAction: () => _fileService.WriteReadyChunk(results, ref nextToWrite, currentIndex, fileFS, writeLock),
                                 catchAction: () => context.ReportTempStatus(ProgressFailure.ProgressTempFailure.WritingToFileFailed));
                         }
                         catch (Exception)
                         {
+                            //Decrypted chunk usually gets cleaned in IFileService.WriteReadyChunk after writing, clean here if it throws
+                            decryptedChunk?.Dispose();
                             context.ReportPermStatus(ProgressFailure.ProgressPermFailure.ChunkDecryptFailed, currentIndex);
                         }
                         finally
                         {
-                            decryptedChunk?.Dispose();
                             currentChunk.Dispose();
                         }
                         context.Increment();
