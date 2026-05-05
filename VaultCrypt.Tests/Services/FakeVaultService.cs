@@ -19,10 +19,18 @@ namespace VaultCrypt.Tests.Services
 
         public void CreateVault(NormalizedPath folderPath, string vaultName, ReadOnlySpan<byte> password, int iterations) => CreateVaultWasCalled = true;
 
-        public void DeleteFileFromVault(long offset, ProgressionContext context) => DeleteFileFromVaultWasCalled = true;
+        public Task DeleteFileFromVault(long offset, ProgressionContext context)
+        {
+            DeleteFileFromVaultWasCalled = true;
+            return Task.CompletedTask;
+        }
 
         public void RefreshEncryptedFilesList(Stream vaultFS) => RefreshEncryptedFilesListWasCalled = true;
 
-        public void TrimVault(ProgressionContext context) => TrimVaultWasCalled = true;
+        public Task TrimVault(ProgressionContext context)
+        {
+            TrimVaultWasCalled = true;
+            return Task.CompletedTask;
+        }
     }
 }
