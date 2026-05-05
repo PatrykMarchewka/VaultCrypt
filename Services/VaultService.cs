@@ -35,7 +35,7 @@ namespace VaultCrypt.Services
         /// </summary>
         /// <param name="context">Context to display progression</param>
         /// <exception cref="ArgumentNullException">Thrown when <paramref name="context"/> is set to <see cref="null"/></exception>
-        public void TrimVault(ProgressionContext context);
+        public Task TrimVault(ProgressionContext context);
         /// <summary>
         /// Deletes file from vault by either shortening file length or zeroing out the blocks
         /// </summary>
@@ -43,7 +43,7 @@ namespace VaultCrypt.Services
         /// <param name="context">Context to display progression</param>
         /// <exception cref="ArgumentOutOfRangeException">Thrown when <paramref name="offset"/> is set to negative value</exception>
         /// <exception cref="ArgumentNullException">Thrown when <paramref name="context"/> is set to <see cref="null"/></exception>
-        public void DeleteFileFromVault(long offset, ProgressionContext context);
+        public Task DeleteFileFromVault(long offset, ProgressionContext context);
         /// <summary>
         /// Refreshes information in <see cref="IVaultSession.ENCRYPTED_FILES"/>
         /// </summary>
@@ -82,31 +82,38 @@ namespace VaultCrypt.Services
             {
                 if (!Directory.Exists(folderPath))
                 {
-                    Directory.CreateDirectory(folderPath);
-                    createdDirectory = true;
+                    RetryHelper.TryUntilSuccess(tryAction: () => { Directory.CreateDirectory(folderPath); createdDirectory = true; }, maxRetries: 10);
                 }
                 NormalizedPath vaultPath = NormalizedPath.From($"{folderPath}\\{vaultName}.vlt");
                 IVaultReader reader = _registry.GetVaultReader(VaultSession.NewestVaultVersion);
                 byte[] salt = PasswordHelper.GenerateRandomSalt(reader.SaltSize);
-                SecureBuffer.SecureLargeBuffer vaultHeader = null!;
-                SecureBuffer.SecureLargeBuffer encryptedMetadata = null!;
                 try
                 {
-                    vaultHeader = reader.PrepareVaultHeader(salt, iterations);
+                    using SecureBuffer.SecureLargeBuffer vaultHeader = reader.PrepareVaultHeader(salt, iterations);
                     _session.CreateSession(vaultPath, reader, password, salt, iterations);
-                    encryptedMetadata = reader.VaultEncryption(new byte[sizeof(ushort) + reader.MetadataOffsetsSize]);
+                    using SecureBuffer.SecureLargeBuffer encryptedMetadata = reader.VaultEncryption(new byte[sizeof(ushort) + reader.MetadataOffsetsSize]);
                     try
                     {
-                        using (FileStream vaultFS = new FileStream(vaultPath, FileMode.Create, FileAccess.Write))
+                        RetryHelper.TryUntilSuccess(tryAction: () =>
                         {
-                            vaultFS.Write(vaultHeader.AsSpan);
-                            vaultFS.Write(encryptedMetadata.AsSpan);
-                        }
+                            using (FileStream vaultFS = new FileStream(vaultPath, FileMode.Create, FileAccess.Write))
+                            {
+                                vaultFS.Write(vaultHeader.AsSpan);
+                                vaultFS.Write(encryptedMetadata.AsSpan);
+                            }
+                        }, maxRetries: 10);
                     }
                     catch (Exception)
                     {
                         //Failed writing to vault, delete entire file
-                        File.Delete(vaultPath);
+                        try
+                        {
+                            RetryHelper.TryUntilSuccess(tryAction: () => File.Delete(vaultPath), maxRetries: 10);
+                        }
+                        catch (Exception)
+                        {
+                            throw new VaultCrypt.Exceptions.VaultUIException($"Could not delete leftover file at {vaultPath}");
+                        }
                         throw;
                     }
                     
@@ -119,13 +126,18 @@ namespace VaultCrypt.Services
                 finally
                 {
                     CryptographicOperations.ZeroMemory(salt);
-                    vaultHeader?.Dispose();
-                    encryptedMetadata?.Dispose();
                 }
             }
             catch (Exception)
             {
-                if (createdDirectory) Directory.Delete(folderPath);
+                try
+                {
+                    if (createdDirectory) RetryHelper.TryUntilSuccess(tryAction: () => Directory.Delete(folderPath), maxRetries: 10);
+                }
+                catch (Exception)
+                {
+                    throw new VaultCrypt.Exceptions.VaultUIException($"Could not delete leftover folder at {folderPath}");
+                }
                 throw;
             }
         }
@@ -135,14 +147,22 @@ namespace VaultCrypt.Services
             if(password.Length == 0) { throw new ArgumentException("Provided empty password"); }
             ArgumentNullException.ThrowIfNullOrWhiteSpace(path);
 
-            using FileStream fs = new FileStream(path, FileMode.Open, FileAccess.Read);
-            byte version = (byte)fs.ReadByte();
+
+            using FileStream fs = RetryHelper.TryUntilSuccess(tryAction: () => new FileStream(path, FileMode.Open, FileAccess.Read), maxRetries: 10);
+            byte version = RetryHelper.TryUntilSuccess(tryAction: () => (byte)fs.ReadByte(), maxRetries: 10);
 
             IVaultReader reader = _registry.GetVaultReader(version);
-            int iterations = reader.ReadIterationsNumber(fs);
-            using (SecureBuffer.SecureLargeBuffer salt = reader.ReadSalt(fs))
+            int iterations = RetryHelper.TryUntilSuccess(tryAction: () => reader.ReadIterationsNumber(fs), maxRetries: 10);
+
+            SecureBuffer.SecureLargeBuffer salt = null!;
+            try
             {
+                salt = RetryHelper.TryUntilSuccess(tryAction: () => reader.ReadSalt(fs), maxRetries: 10);
                 _session.CreateSession(path, reader, password, salt.AsSpan, iterations);
+            }
+            finally
+            {
+                salt?.Dispose();
             }
             RefreshEncryptedFilesList(fs);
         }
@@ -154,7 +174,7 @@ namespace VaultCrypt.Services
             try
             {
                 _session.ENCRYPTED_FILES.Clear();
-                PopulateEncryptedFilesList(vaultFS);
+                RetryHelper.TryUntilSuccess(tryAction: () => PopulateEncryptedFilesList(vaultFS), maxRetries: 10);
             }
             finally
             {
@@ -208,137 +228,248 @@ namespace VaultCrypt.Services
             }
         }
 
-        public void TrimVault(ProgressionContext context)
+        public async Task TrimVault(ProgressionContext context)
         {
             ArgumentNullException.ThrowIfNull(context);
 
-            _systemService.CheckFreeSpace(_session.VAULTPATH);
-            using FileStream vaultfs = new FileStream(_session.VAULTPATH, FileMode.Open, FileAccess.Read);
-            //Remove the last 4 characters from a string (.vlt) before adding new text
-            using FileStream newVaultfs = new FileStream(_session.VAULTPATH.Value[..^4] + "_TRIMMED.vlt", FileMode.Create);
+            await RetryHelper.TryUntilSuccessAsync(
+                tryAction: () => _systemService.CheckFreeSpace(_session.VAULTPATH),
+                catchAction: () => context.ReportTempStatus(ProgressFailure.ProgressTempFailure.SystemCheckFailed));
 
-            var reader = _session.VAULT_READER;
-            _fileService.CopyPartOfFile(vaultfs, 0, (ulong)reader.HeaderSize, newVaultfs, newVaultfs.Seek(0, SeekOrigin.End));
-            var fileList = _session.ENCRYPTED_FILES.ToList();
-            int fileListCount = fileList.Count;
-            //Total is filelList.Count + 1 because last action is saving new header
-            context.SetTotal(fileListCount + 1);
-
-            long[] newVaultOffsets = new long[fileListCount];
+            FileStream vaultfs = null!;
+            long oldVaultSize;
+            FileStream newVaultfs = null!;
             try
             {
-                for (int i = 0; i < fileListCount; i++)
+                try
                 {
-                    context.CancellationToken.ThrowIfCancellationRequested();
-                    long currentOffset = fileList[i].Key;
+                    vaultfs = await RetryHelper.TryUntilSuccessAsync(
+                        tryAction: () => vaultfs = new FileStream(_session.VAULTPATH, FileMode.Open, FileAccess.Read),
+                        catchAction: () => context.ReportTempStatus(ProgressFailure.ProgressTempFailure.CreatingStreamFailed));
+                    oldVaultSize = RetryHelper.TryUntilSuccess(tryAction: () => vaultfs.Length, catchAction: () => context.ReportTempStatus(ProgressFailure.ProgressTempFailure.ReadingFromStreamFailed));
+                }
+                catch (Exception)
+                {
+                    context.ReportPermStatus(ProgressFailure.ProgressPermFailure.IOOperationFailed, "Could not open vault file, aborting operation");
+                    context.ForceFinish();
+                    return;
+                }
 
-                    if (currentOffset > vaultfs.Length)
-                    {
-                        //Offset points outside vault, skip it
-                        context.Increment();
-                        continue;
-                    }
+                string newVaultPath = _session.VAULTPATH.Value[..^4] + "_TRIMMED.vlt"; //Remove the last 4 characters from original vault path (.vlt) before adding new text
+                try
+                {
+                    newVaultfs = await RetryHelper.TryUntilSuccessAsync(
+                        tryAction: () => newVaultfs = new FileStream(newVaultPath, FileMode.Create, FileAccess.ReadWrite, FileShare.Delete),
+                        catchAction: () => context.ReportTempStatus(ProgressFailure.ProgressTempFailure.CreatingStreamFailed));
+                }
+                catch (Exception)
+                {
+                    context.ReportPermStatus(ProgressFailure.ProgressPermFailure.IOOperationFailed, "Could not create new vault file, aborting operation");
+                    context.ForceFinish();
+                    return;
+                }
+                var reader = _session.VAULT_READER;
 
-                    long nextOffset = long.MaxValue;
-                    if (i + 1 < fileListCount)
-                    {
-                        nextOffset = fileList[i + 1].Key;
-                    }
-
-                    ulong fileSize = 0;
-                    EncryptionOptions.FileEncryptionOptions encryptionOptions = null!;
+                try
+                {
+                    await RetryHelper.TryUntilSuccessAsync(
+                        tryAction: () => _fileService.CopyPartOfFile(source: vaultfs!, offset: 0, length: (ulong)reader.HeaderSize, destination: newVaultfs!, destinationOffset: newVaultfs!.Seek(0, SeekOrigin.End)),
+                        catchAction: () => context.ReportTempStatus(ProgressFailure.ProgressTempFailure.WritingToFileFailed));
+                }
+                catch (Exception)
+                {
+                    //Couldnt copy vault header, delete new vault file
+                    context.ReportPermStatus(ProgressFailure.ProgressPermFailure.IOOperationFailed, "Could not copy vault header, aborting operation");
                     try
                     {
-                        encryptionOptions = _encryptionOptionsService.GetDecryptedFileEncryptionOptions(vaultfs, currentOffset);
-                        fileSize = encryptionOptions.FileSize;
+                        await RetryHelper.TryUntilSuccessAsync(
+                            tryAction: () => File.Delete(newVaultPath),
+                            catchAction: () => context.ReportTempStatus(ProgressFailure.ProgressTempFailure.DeletingFileFailed));
                     }
-                    catch
+                    catch (Exception)
                     {
-                        //Encryption options cant be read due to corruption, skip that offset
-                        continue;
+                        context.ReportPermStatus(ProgressFailure.ProgressPermFailure.IOOperationFailed, $"Could not delete leftover file at {newVaultPath}");
+                    }
+                    context.ForceFinish();
+                    return;
+                }
+                
+                var fileList = _session.ENCRYPTED_FILES.ToList();
+                int fileListCount = fileList.Count;
+                //Total is filelList.Count + 1 because last action is saving new header
+                context.SetTotal(fileListCount + 1);
+
+                long[] newVaultOffsets = new long[fileListCount];
+                try
+                {
+                    for (int i = 0; i < fileListCount; i++)
+                    {
+                        context.CancellationToken.ThrowIfCancellationRequested();
+                        long currentOffset = fileList[i].Key;
+
+                        if (currentOffset >= oldVaultSize)
+                        {
+                            //Offset points outside vault, skip it
+                            context.Increment();
+                            continue;
+                        }
+
+                        long nextOffset = long.MaxValue;
+                        if (i + 1 < fileListCount)
+                        {
+                            nextOffset = fileList[i + 1].Key;
+                        }
+
+                        ulong fileSize = 0;
+                        string fileName;
+                        EncryptionOptions.FileEncryptionOptions encryptionOptions = null!;
+                        try
+                        {
+                            encryptionOptions = await RetryHelper.TryUntilSuccessAsync(
+                                    tryAction: () => _encryptionOptionsService.GetDecryptedFileEncryptionOptions(vaultfs, currentOffset),
+                                    catchAction: () => context.ReportTempStatus(ProgressFailure.ProgressTempFailure.ReadingFromStreamFailed),
+                                    shouldRetry: ex => ex is IOException);
+                            fileSize = encryptionOptions.FileSize;
+                            fileName = encryptionOptions.GetFileName();
+                        }
+                        catch
+                        {
+                            //Encryption options cant be read due to corruption, skip that offset
+                            continue;
+                        }
+                        finally
+                        {
+                            encryptionOptions?.Dispose();
+                        }
+
+                        /*
+                         * offsetMinimum represents the distance between current offset and next offset
+                         * optionsMinimum represents the size of encryption options metadata and encrypted file itself
+                         * fileMinimum represents the distance between current position and end of stream
+                         * 
+                         * We calculate the lowest amount of all three options to copy as an attempt to preserve the encrypted file as much as we can
+                         * offsetMinimum is lowest -> File is partially saved, we dont want to overstep onto another file
+                         * optionsMinimum is lowest -> File is fully saved, however there is unknown space between end of it and next file, we don't want to copy extra trash
+                         * fileMinimum is lowest -> End of stream reached, we can't copy more
+                         */
+                        ulong offsetMinimum = (ulong)(nextOffset - currentOffset);
+                        ulong optionsMinimum = reader.EncryptionOptionsSize + fileSize;
+                        ulong fileMinimum = (ulong)(oldVaultSize - currentOffset);
+                        ulong toRead = new[] { offsetMinimum, optionsMinimum, fileMinimum }.Min();
+
+                        newVaultOffsets[i] = newVaultfs.Seek(0, SeekOrigin.End);
+                        try
+                        {
+                            await RetryHelper.TryUntilSuccessAsync(
+                                tryAction: () => _fileService.CopyPartOfFile(vaultfs, currentOffset, toRead, newVaultfs, newVaultOffsets[i]),
+                                catchAction: () => context.ReportTempStatus(ProgressFailure.ProgressTempFailure.WritingToFileFailed));
+                        }
+                        catch (Exception)
+                        {
+                            context.ReportPermStatus(ProgressFailure.ProgressPermFailure.IOOperationFailed, $"Could not copy file {fileName}");
+                        }
+                        context.Increment();
+                    }
+                }
+                finally
+                {
+                    //Delete offsets pointing to 0 (empty data from options that werent properly added) and duplicates
+                    long[] trimmedOffsets = newVaultOffsets.Where((offset, index) => offset != 0).Distinct().ToArray();
+                    reader.SaveMetadataOffsets(newVaultfs, trimmedOffsets);
+
+                    CryptographicOperations.ZeroMemory(MemoryMarshal.AsBytes(newVaultOffsets.AsSpan()));
+                    CryptographicOperations.ZeroMemory(MemoryMarshal.AsBytes(trimmedOffsets.AsSpan()));
+                }
+                context.Increment();
+            }
+            finally
+            {
+                vaultfs?.Dispose();
+                newVaultfs?.Dispose();
+            }
+        }
+
+        public async Task DeleteFileFromVault(long offset, ProgressionContext context)
+        {
+            ArgumentOutOfRangeException.ThrowIfLessThan(offset, _session.VAULT_READER.HeaderSize);
+            ArgumentNullException.ThrowIfNull(context);
+
+            FileStream vaultFS = null!;
+            try
+            {
+                try
+                {
+                    vaultFS = await RetryHelper.TryUntilSuccessAsync(
+                        tryAction: () => new FileStream(_session.VAULTPATH, FileMode.Open, FileAccess.ReadWrite),
+                        catchAction: () => context.ReportTempStatus(ProgressFailure.ProgressTempFailure.ReadingFromStreamFailed));
+                }
+                catch (Exception)
+                {
+                    context.ReportPermStatus(ProgressFailure.ProgressPermFailure.IOOperationFailed, "Could not open vault file, aborting operation");
+                    context.ForceFinish();
+                    return;
+                }
+                var fileList = _session.ENCRYPTED_FILES.ToList();
+                if (_session.ENCRYPTED_FILES.Count == 1)
+                {
+                    //Deleting only file in vault, set the size to empty vault file
+                    await RetryHelper.TryUntilSuccessAsync(
+                        tryAction: () => vaultFS.SetLength(_session.VAULT_READER.HeaderSize),
+                        catchAction: () => context.ReportTempStatus(ProgressFailure.ProgressTempFailure.WritingToFileFailed));
+                }
+                else if (_session.ENCRYPTED_FILES.Last().Key == offset)
+                {
+                    //Deleting last file in vault, set the size to remove last file
+                    await RetryHelper.TryUntilSuccessAsync(
+                        tryAction: () => vaultFS.SetLength(offset),
+                        catchAction: () => context.ReportTempStatus(ProgressFailure.ProgressTempFailure.WritingToFileFailed));
+                }
+                else
+                {
+                    //Deleting file that isn't last or only, zero out the block
+                    var encryptionMetadataSize = _session.VAULT_READER.EncryptionOptionsSize;
+                    int currentKey = fileList.FindIndex(file => file.Key == offset);
+                    ulong offsetDistance = (ulong)(fileList[currentKey + 1].Key - fileList[currentKey].Key);
+                    EncryptionOptions.FileEncryptionOptions encryptionOptions = null!;
+                    //Calculate length incase of partially written file
+                    ulong length = 0;
+                    try
+                    {
+                        encryptionOptions = await RetryHelper.TryUntilSuccessAsync(
+                                        tryAction: () => _encryptionOptionsService.GetDecryptedFileEncryptionOptions(vaultFS, offset),
+                                        catchAction: () => context.ReportTempStatus(ProgressFailure.ProgressTempFailure.ReadingFromStreamFailed),
+                                        shouldRetry: ex => ex is IOException);
+
+                        ulong expectedEncryptedSize = encryptionOptions.FileSize + encryptionMetadataSize;
+                        length = Math.Min(encryptionOptions.FileSize + (ulong)encryptionMetadataSize, (ulong)(fileList[currentKey + 1].Key - fileList[currentKey].Key));
+                    }
+                    catch (Exception)
+                    {
+                        //Encryption options are corrupted, zero out the part until next key
+                        length = offsetDistance;
                     }
                     finally
                     {
                         encryptionOptions?.Dispose();
                     }
 
-                    /*
-                     * offsetMinimum represents the distance between current offset and next offset
-                     * optionsMinimum represents the size of encryption options metadata and encrypted file itself
-                     * fileMinimum represents the distance between current position and end of stream
-                     * 
-                     * We calculate the lowest amount of all three options to copy as an attempt to preserve the encrypted file as much as we can
-                     * offsetMinimum is lowest -> File is partially saved, we dont want to overstep onto another file
-                     * optionsMinimum is lowest -> File is fully saved, however there is unknown space between end of it and next file, we don't want to copy extra trash
-                     * fileMinimum is lowest -> End of stream reached, we can't copy more
-                     */
-                    ulong offsetMinimum = (ulong)(nextOffset - currentOffset);
-                    ulong optionsMinimum = reader.EncryptionOptionsSize + fileSize;
-                    ulong fileMinimum = (ulong)(vaultfs.Length - currentOffset);
-                    ulong toRead = new[] { offsetMinimum, optionsMinimum, fileMinimum }.Min();
-
-                    newVaultOffsets[i] = newVaultfs.Seek(0, SeekOrigin.End);
-                    _fileService.CopyPartOfFile(vaultfs, currentOffset, toRead, newVaultfs, newVaultOffsets[i]);
-                    context.Increment();
+                    await RetryHelper.TryUntilSuccessAsync(
+                        tryAction: () => _fileService.ZeroOutPartOfFile(vaultFS, offset, length),
+                        catchAction: () => context.ReportTempStatus(ProgressFailure.ProgressTempFailure.WritingToFileFailed));
                 }
+
+                await RetryHelper.TryUntilSuccessAsync(
+                    tryAction: () => _session.VAULT_READER.RemoveAndSaveMetadataOffsets(vaultFS, checked((ushort)fileList.FindIndex(file => file.Key == offset))),
+                    catchAction: () => context.ReportTempStatus(ProgressFailure.ProgressTempFailure.WritingToFileFailed),
+                    shouldRetry: ex => ex is not OverflowException);
+
+                context.Increment();
+
             }
             finally
             {
-                //Delete offsets pointing to 0 (empty data from options that werent properly added) and duplicates
-                long[] trimmedOffsets = newVaultOffsets.Where((offset, index) => offset != 0).Distinct().ToArray();
-                reader.SaveMetadataOffsets(newVaultfs, trimmedOffsets);
-
-                CryptographicOperations.ZeroMemory(MemoryMarshal.AsBytes(newVaultOffsets.AsSpan()));
-                CryptographicOperations.ZeroMemory(MemoryMarshal.AsBytes(trimmedOffsets.AsSpan()));
+                vaultFS?.Dispose();
             }
-            context.Increment();
-        }
-
-        public void DeleteFileFromVault(long offset, ProgressionContext context)
-        {
-            ArgumentOutOfRangeException.ThrowIfNegative(offset);
-            ArgumentNullException.ThrowIfNull(context);
-
-
-            using FileStream vaultFS = new FileStream(_session.VAULTPATH, FileMode.Open, FileAccess.ReadWrite);
-            var fileList = _session.ENCRYPTED_FILES.ToList();
-            if(_session.ENCRYPTED_FILES.Count == 1)
-            {
-                //Deleting only file in vault, set the size to empty vault file
-                vaultFS.SetLength(_session.VAULT_READER.HeaderSize);
-            }
-            else if (_session.ENCRYPTED_FILES.Last().Key == offset)
-            {
-                //Deleting last file in vault, set the size to remove last file
-                vaultFS.SetLength(offset);
-            }
-            else
-            {
-                //Deleting file that isn't last or only, zero out the block
-                var encryptionMetadataSize = _session.VAULT_READER.EncryptionOptionsSize;
-                int currentKey = fileList.FindIndex(file => file.Key == offset);
-                EncryptionOptions.FileEncryptionOptions encryptionOptions = null!;
-                //Calculate length incase of partially written file
-                ulong length = 0;
-                try
-                {
-                    encryptionOptions = _encryptionOptionsService.GetDecryptedFileEncryptionOptions(vaultFS, offset);
-                    length = Math.Min(encryptionOptions.FileSize + (ulong)encryptionMetadataSize, (ulong)(fileList[currentKey + 1].Key - fileList[currentKey].Key));
-                }
-                catch (Exception)
-                {
-                    //Encryption options are corrupted, zero out the part until next key
-                    length = (ulong)(fileList[currentKey + 1].Key - fileList[currentKey].Key);
-                }
-                finally
-                {
-                    encryptionOptions?.Dispose();
-                }
-
-                _fileService.ZeroOutPartOfFile(vaultFS, offset, length);
-            }
-            _session.VAULT_READER.RemoveAndSaveMetadataOffsets(vaultFS, checked((ushort)fileList.FindIndex(file => file.Key == offset)));
-            context.Increment();
         }
     }
 }
