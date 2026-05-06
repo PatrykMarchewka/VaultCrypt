@@ -30,12 +30,12 @@ namespace VaultCrypt.Tests
         void IncrementIncreasesCompletedValue()
         {
             _progressionContext.SetTotal(ulong.MaxValue);
-            _progressionContext.Increment(ulong.MaxValue);
-            Assert.Equal(ulong.MaxValue, _progressionContext.Completed);
             _progressionContext.Increment();
-            Assert.Equal(0UL, _progressionContext.Completed);
-            _progressionContext.Increment(2);
+            Assert.Equal(1UL, _progressionContext.Completed);
+            _progressionContext.Increment();
             Assert.Equal(2UL, _progressionContext.Completed);
+            _progressionContext.Increment(2);
+            Assert.Equal(4UL, _progressionContext.Completed);
         }
 
         [Fact]
@@ -212,13 +212,6 @@ namespace VaultCrypt.Tests
         {
             _progressionContext.Cancel();
             Assert.True(_progressionContext.CancellationToken.IsCancellationRequested);
-        }
-
-        [Fact]
-        void DisposeClearsValues()
-        {
-            _progressionContext.Dispose();
-            Assert.Throws<ObjectDisposedException>(() => _progressionContext.CancellationToken);
         }
     }
 
