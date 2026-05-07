@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Security;
@@ -142,10 +142,10 @@ namespace VaultCrypt.Tests.Workflow
             return randomFileName;
         }
 
-        private NormalizedPath TrimVault(bool changeSession)
+        private async Task<NormalizedPath> TrimVault(bool changeSession)
         {
             var trimmedVault = NormalizedPath.From(_vaultSession.VAULTPATH.Value[..^4] + "_TRIMMED.vlt");
-            _vaultService.TrimVault(new ProgressionContext());
+            await _vaultService.TrimVault(new ProgressionContext());
             if (changeSession)
             {
                 _vaultService.CreateSessionFromFile(PasswordBytes, trimmedVault);
@@ -254,7 +254,7 @@ namespace VaultCrypt.Tests.Workflow
             {
                 long offsetLorem = await EncryptFile(LoremIpsumFilePath);
                 long offsetPattern = await EncryptFile(PatternFilePath);
-                _vaultService.DeleteFileFromVault(offsetPattern, new ProgressionContext());
+                await _vaultService.DeleteFileFromVault(offsetPattern, new ProgressionContext());
 
                 Assert.Equal(offsetPattern, new FileInfo(vaultPath).Length);
             }
@@ -278,7 +278,7 @@ namespace VaultCrypt.Tests.Workflow
             {
                 long offsetLorem = await EncryptFile(LoremIpsumFilePath);
                 long offsetPattern = await EncryptFile(PatternFilePath);
-                _vaultService.DeleteFileFromVault(offsetLorem, new ProgressionContext());
+                await _vaultService.DeleteFileFromVault(offsetLorem, new ProgressionContext());
                 byte[] actual = new byte[new FileInfo(LoremIpsumFilePath).Length];
                 using (var vaultFs = new FileStream(vaultPath, FileMode.Open, FileAccess.Read))
                 {
@@ -309,9 +309,9 @@ namespace VaultCrypt.Tests.Workflow
                 long offsetLorem = await EncryptFile(LoremIpsumFilePath);
                 long offsetPattern = await EncryptFile(PatternFilePath);
 
-                _vaultService.DeleteFileFromVault(offsetLorem, new ProgressionContext());
+                await _vaultService.DeleteFileFromVault(offsetLorem, new ProgressionContext());
 
-                var trimmedVault = TrimVault(changeSession: true);
+                var trimmedVault = await TrimVault(changeSession: true);
                 try
                 {
                     Assert.True(new FileInfo(trimmedVault).Length < new FileInfo(vaultPath).Length);
@@ -352,9 +352,9 @@ namespace VaultCrypt.Tests.Workflow
                 long offsetLorem = await EncryptFile(LoremIpsumFilePath);
                 long offsetPattern = await EncryptFile(PatternFilePath);
 
-                _vaultService.DeleteFileFromVault(offsetPattern, new ProgressionContext());
+                await _vaultService.DeleteFileFromVault(offsetPattern, new ProgressionContext());
 
-                var trimmedVault = TrimVault(changeSession: true);
+                var trimmedVault = await TrimVault(changeSession: true);
                 try
                 {
                     //Since deleted file is at the end, trimming does "nothing", It copies the existing header and files but generates new metadata with new IV
