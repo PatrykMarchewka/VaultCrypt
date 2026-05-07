@@ -157,7 +157,7 @@ namespace VaultCrypt.Tests.Services
                 Assert.Equal(expectedFileListCount, _session.ENCRYPTED_FILES.Count);
                 for (int i = 0; i < expectedFileListCount; i++)
                 {
-                    Assert.Equal(Encoding.UTF8.GetString(vaultInformation.Item2[i].FileName.AsSpan), fileList[i].Value.FileName);
+                    Assert.Equal(vaultInformation.Item2[i].GetFileName(), fileList[i].Value.FileName);
                     Assert.Equal(EncryptionAlgorithm.GetEncryptionAlgorithmInfo[vaultInformation.Item2[i].EncryptionAlgorithm].Name, fileList[i].Value.EncryptionAlgorithm);
                 }
             }
@@ -178,7 +178,7 @@ namespace VaultCrypt.Tests.Services
         }
 
         [Fact]
-        void TrimVaultTrimsVaultAndSavesItToAFile()
+        async Task TrimVaultTrimsVaultAndSavesItToAFile()
         {
             byte[] password = Encoding.UTF8.GetBytes("TrimVaultTrims");
 
@@ -199,7 +199,7 @@ namespace VaultCrypt.Tests.Services
                 try
                 {
 
-                    _service.TrimVault(new ProgressionContext());
+                    await _service.TrimVault(new ProgressionContext());
                     newVaultPath = NormalizedPath.From(vaultInformation.Item1.Value[..^4] + "_TRIMMED.vlt");
                     long newVaultSize = new FileInfo(newVaultPath).Length;
                     Assert.True(newVaultSize < oldVaultSize);
@@ -218,7 +218,7 @@ namespace VaultCrypt.Tests.Services
         }
 
         [Fact]
-        void TrimVaultReturnsSameVaultIfThereIsNothingToTrim()
+        async Task TrimVaultReturnsSameVaultIfThereIsNothingToTrim()
         {
             byte[] password = Encoding.UTF8.GetBytes("TrimVaultReturnsSameVaultIfThereIsNothingToTrim");
 
@@ -235,7 +235,7 @@ namespace VaultCrypt.Tests.Services
                 }
                 try
                 {
-                    _service.TrimVault(new ProgressionContext());
+                    await _service.TrimVault(new ProgressionContext());
                     newVaultPath = NormalizedPath.From(vaultInformation.Item1.Value[..^4] + "_TRIMMED.vlt");
                     Assert.Equal(new FileInfo(vaultInformation.Item1).Length, new FileInfo(newVaultPath).Length);
                 }
@@ -253,17 +253,17 @@ namespace VaultCrypt.Tests.Services
         [Fact]
         void TrimVaultThrowsForNullValues()
         {
-            Assert.Throws<ArgumentNullException>(() => _service.TrimVault(null!));
+            Assert.ThrowsAsync<ArgumentNullException>(() => _service.TrimVault(null!));
         }
 
         [Fact]
-        void DeleteFileFromVaultZeroesOutFile()
+        async Task DeleteFileFromVaultZeroesOutFile()
         {
             (NormalizedPath, EncryptionOptions.FileEncryptionOptions[]) tuple = TestsHelper.CreateVaultFileWithEncryptedFileList(10, _session);
             try
             {
                 var offset = _session.ENCRYPTED_FILES.First().Key;
-                _service.DeleteFileFromVault(_session.ENCRYPTED_FILES.First().Key, new ProgressionContext());
+                await _service.DeleteFileFromVault(_session.ENCRYPTED_FILES.First().Key, new ProgressionContext());
 
                 byte[] actual = new byte[_session.VAULT_READER.EncryptionOptionsSize];
                 using (FileStream fs = new FileStream(tuple.Item1.Value, FileMode.Open, FileAccess.Read))
@@ -281,14 +281,14 @@ namespace VaultCrypt.Tests.Services
         }
 
         [Fact]
-        void DeleteFileFromVaultTrimsVault()
+        async Task DeleteFileFromVaultTrimsVault()
         {
             (NormalizedPath, EncryptionOptions.FileEncryptionOptions[]) tuple = TestsHelper.CreateVaultFileWithEncryptedFileList(10, _session);
             try
             {
                 long oldVaultSize = new FileInfo(tuple.Item1).Length;
 
-                _service.DeleteFileFromVault(_session.ENCRYPTED_FILES.Last().Key, new ProgressionContext());
+                await _service.DeleteFileFromVault(_session.ENCRYPTED_FILES.Last().Key, new ProgressionContext());
 
                 long newVaultSize = new FileInfo(tuple.Item1).Length;
 
@@ -301,7 +301,7 @@ namespace VaultCrypt.Tests.Services
         }
 
         [Fact]
-        void DeleteFileFromVaultChangesEncryptedFileListCount()
+        async Task DeleteFileFromVaultChangesEncryptedFileListCount()
         {
             (NormalizedPath, EncryptionOptions.FileEncryptionOptions[]) tuple = TestsHelper.CreateVaultFileWithEncryptedFileList(10, _session);
             try
@@ -309,7 +309,7 @@ namespace VaultCrypt.Tests.Services
                 long oldVaultSize = new FileInfo(tuple.Item1).Length;
 
                 var oldFileListCount = _session.ENCRYPTED_FILES.Count;
-                _service.DeleteFileFromVault(_session.ENCRYPTED_FILES.Last().Key, new ProgressionContext());
+                await _service.DeleteFileFromVault(_session.ENCRYPTED_FILES.Last().Key, new ProgressionContext());
                 using (FileStream vaultFS = new FileStream(_session.VAULTPATH, FileMode.Open, FileAccess.Read))
                 {
                     _service.RefreshEncryptedFilesList(vaultFS);
@@ -327,13 +327,13 @@ namespace VaultCrypt.Tests.Services
         [Fact]
         void DeleteFileThrowsForNullValues()
         {
-            Assert.Throws<ArgumentNullException>(() => _service.DeleteFileFromVault(1, null!));
+            Assert.ThrowsAsync<ArgumentNullException>(() => _service.DeleteFileFromVault(1, null!));
         }
 
         [Fact]
         void DeleteFileThrowsForNegativeValues()
         {
-            Assert.Throws<ArgumentOutOfRangeException>(() => _service.DeleteFileFromVault(-1, new ProgressionContext()));
+            Assert.ThrowsAsync<ArgumentOutOfRangeException>(() => _service.DeleteFileFromVault(-1, new ProgressionContext()));
         }
     }
 }
