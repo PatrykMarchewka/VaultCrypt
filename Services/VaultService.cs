@@ -373,12 +373,9 @@ namespace VaultCrypt.Services
                 }
                 finally
                 {
-                    //Delete offsets pointing to 0 (empty data from options that werent properly added) and duplicates
-                    long[] trimmedOffsets = newVaultOffsets.Where((offset, index) => offset != 0).Distinct().ToArray();
-                    reader.SaveMetadataOffsets(newVaultfs, trimmedOffsets);
+                    reader.SaveMetadataOffsets(newVaultfs, newVaultOffsets);
 
                     CryptographicOperations.ZeroMemory(MemoryMarshal.AsBytes(newVaultOffsets.AsSpan()));
-                    CryptographicOperations.ZeroMemory(MemoryMarshal.AsBytes(trimmedOffsets.AsSpan()));
                 }
                 context.Increment();
             }

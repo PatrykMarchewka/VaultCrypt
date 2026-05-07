@@ -446,7 +446,8 @@ namespace VaultCrypt
 
         private SecureBuffer.SecureLargeBuffer PrepareMetadataOffsets(long[] offsets)
         {
-            long[] distinctOffsets = [.. offsets.Distinct()];
+            //Remove all duplicates and offsets pointing to 0
+            long[] distinctOffsets = [.. offsets.Distinct().Where(offset => offset != 0)];
             try
             {
                 SecureBuffer.SecureLargeBuffer offsetsBuffer = new SecureBuffer.SecureLargeBuffer(sizeof(ushort) + (distinctOffsets.Length * sizeof(long)));
