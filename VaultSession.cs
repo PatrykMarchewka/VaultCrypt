@@ -1,7 +1,6 @@
 using System;
 using System.Buffers.Binary;
 using System.Collections.Generic;
-using System.ComponentModel;
 using System.IO;
 using System.Linq;
 using System.Runtime.InteropServices;
@@ -9,7 +8,7 @@ using System.Security.Cryptography;
 using System.Text;
 using System.Threading.Tasks;
 using VaultCrypt.Exceptions;
-using VaultCrypt.Services;
+
 
 namespace VaultCrypt
 {
@@ -54,7 +53,7 @@ namespace VaultCrypt
         /// <param name="keySize">Requested size of key</param>
         /// <returns>Sliced key with length equal to <paramref name="keySize"/></returns>
         /// <exception cref="ArgumentOutOfRangeException">Thrown when requested a slice that is bigger than entire key</exception>
-        public ReadOnlySpan<byte> GetSlicedKey(byte keySize);
+        public ReadOnlySpan<byte> GetSlicedKey(int keySize);
     }
 
     public class VaultSession : IVaultSession
@@ -93,7 +92,7 @@ namespace VaultCrypt
             this.EncryptedFilesListUpdated?.Invoke();
         }
 
-        public ReadOnlySpan<byte> GetSlicedKey(byte keySize)
+        public ReadOnlySpan<byte> GetSlicedKey(int keySize)
         {
             if (keySize > PasswordHelper.KeySize) throw new ArgumentOutOfRangeException("Requested bigger slice than the length of entire key");
             return this.KEY.AsSpan[..keySize];

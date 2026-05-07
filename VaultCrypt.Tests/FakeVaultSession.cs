@@ -68,7 +68,7 @@ namespace VaultCrypt.Tests
 
         public void RaiseEncryptedFileListUpdated() => RaiseEncryptedFileListUpdatedWasCalled = true;
 
-        public ReadOnlySpan<byte> GetSlicedKey(byte keySize)
+        public ReadOnlySpan<byte> GetSlicedKey(int keySize)
         {
             GetSlicedKeyWasCalled = true;
             return new byte[0];
