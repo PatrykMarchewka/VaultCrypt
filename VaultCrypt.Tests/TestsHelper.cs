@@ -21,6 +21,43 @@ namespace VaultCrypt.Tests
             public IVaultSession VaultSession = TestsHelper.CreateFilledSessionInstanceWithReader(Password, Salt, Iterations, Version, Path, EncryptedFiles);
         }
 
+        public static readonly byte[] TestDataVaultPassword = new byte[] { 82, 0, 111, 0, 117, 0, 110, 0, 100, 0, 84, 0, 114, 0, 105, 0, 112, 0, 84, 0, 101, 0, 115, 0, 116, 0, 115, 0 }; //Translates to "RoundTripTests", used as password for TestData vaults
+        public const int TestDataVaultPasswordIterations = 1_000_000;
+
+        private static string GetTestDataDirectory
+        {
+            get
+            {
+                var appDirectory = AppContext.BaseDirectory;
+
+                while (!Directory.Exists(Path.Combine(appDirectory, "TestData")))
+                {
+                    appDirectory = Directory.GetParent(appDirectory)!.FullName;
+                }
+
+                return appDirectory;
+            }
+        }
+        /// <summary>
+        /// Information about empty vault with no files with it. Vault created using release v1.3.0
+        /// </summary>
+        public static VaultInformation EmptyVaultV0Information = new VaultInformation(Path: NormalizedPath.From($"{GetTestDataDirectory}\\TestData\\EmptyVault_v0.vlt"), Version: 0, Password: TestDataVaultPassword, Salt: new byte[] { 195, 219, 86, 3, 88, 131, 238, 159, 16, 13, 104, 192, 166, 92, 241, 4, 4, 10, 62, 210, 252, 198, 41, 106, 144, 238, 190, 163, 117, 175, 29, 224 }, Iterations: TestDataVaultPasswordIterations, EncryptedFiles: new Dictionary<long, EncryptedFileInfo>());
+
+        /// <summary>
+        /// Information about vault with lorem ipsum and pattern files in it. Vault created using release v1.3.0
+        /// </summary>
+        public static VaultInformation FilledVaultV0Information = new VaultInformation(Path: NormalizedPath.From($"{GetTestDataDirectory}\\TestData\\FilledVault_v0.vlt"), Version: 0, Password: TestDataVaultPassword, Salt: new byte[] { 225, 243, 62, 251, 189, 149, 16, 122, 174, 149, 207, 59, 165, 47, 181, 136, 37, 180, 52, 129, 35, 9, 195, 231, 142, 42, 45, 47, 212, 165, 253, 45 }, Iterations: TestDataVaultPasswordIterations, EncryptedFiles: new Dictionary<long, EncryptedFileInfo>() { { 4163, new EncryptedFileInfo("LoremIpsum.txt", 99821, EncryptionAlgorithm.EncryptionAlgorithmInfo.AES256GCM) }, { 15008, new EncryptedFileInfo("PatternFile.txt", 18000504, EncryptionAlgorithm.EncryptionAlgorithmInfo.ChaCha20Poly1305) } });
+
+
+        /// <summary>
+        /// Lorem ipsum text file
+        /// </summary>
+        public static NormalizedPath LoremIpsumFilePath => NormalizedPath.From($"{GetTestDataDirectory}\\TestData\\LoremIpsum.txt");
+
+        /// <summary>
+        /// 17MB text file with repeating pattern data
+        /// </summary>
+        public static NormalizedPath PatternFilePath => NormalizedPath.From($"{GetTestDataDirectory}\\TestData\\PatternFile.txt");
 
         /// <summary>
         /// Creates temporary file filled with random bytes
