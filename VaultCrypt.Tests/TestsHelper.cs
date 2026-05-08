@@ -17,6 +17,10 @@ namespace VaultCrypt.Tests
     /// </summary>
     internal class TestsHelper
     {
+        public record VaultInformation(NormalizedPath Path, byte Version, byte[] Password, byte[] Salt, int Iterations, Dictionary<long, EncryptedFileInfo> EncryptedFiles) {
+            public IVaultSession VaultSession = TestsHelper.CreateFilledSessionInstanceWithReader(Password, Salt, Iterations, Version, Path, EncryptedFiles);
+        }
+
 
         /// <summary>
         /// Creates temporary file filled with random bytes
