@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Security.Cryptography;
@@ -7,7 +7,7 @@ using System.Threading.Tasks;
 
 namespace VaultCrypt.Tests.Services
 {
-    public class EncryptionServiceTests
+    public class EncryptionServiceTests : IDisposable
     {
         private readonly VaultCrypt.Services.EncryptionService _service;
         private readonly VaultCrypt.Services.FileService _fileService;
@@ -22,6 +22,11 @@ namespace VaultCrypt.Tests.Services
             _encryptionOptionsService = new VaultCrypt.Services.EncryptionOptionsService(_session);
             _systemService = new VaultCrypt.Services.SystemService(_session);
             _service = new VaultCrypt.Services.EncryptionService(_fileService, _encryptionOptionsService, _session, _systemService);
+        }
+
+        public void Dispose()
+        {
+            _session.KEY.Dispose();
         }
 
         public static IEnumerable<object[]> EncryptionAlgorithms => new List<object[]>

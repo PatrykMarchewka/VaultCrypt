@@ -6,7 +6,7 @@ using System.Threading.Tasks;
 
 namespace VaultCrypt.Tests.Services
 {
-    public class SystemServiceTests
+    public class SystemServiceTests : IDisposable
     {
         private readonly VaultCrypt.Services.SystemService _service;
         private readonly FakeVaultSession _session = FakeVaultSession.EmptyMockSession();
@@ -14,6 +14,11 @@ namespace VaultCrypt.Tests.Services
         public SystemServiceTests()
         {
             _service = new VaultCrypt.Services.SystemService(_session);
+        }
+
+        public void Dispose()
+        {
+            _session.KEY.Dispose();
         }
 
         [Fact]

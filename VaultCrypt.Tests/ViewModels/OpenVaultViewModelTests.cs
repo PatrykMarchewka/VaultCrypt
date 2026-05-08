@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Security;
@@ -10,7 +10,7 @@ using VaultCrypt.ViewModels;
 
 namespace VaultCrypt.Tests.ViewModels
 {
-    public class OpenVaultViewModelTests
+    public class OpenVaultViewModelTests : IDisposable
     {
         private VaultCrypt.ViewModels.OpenVaultViewModel _viewModel;
         private readonly FakeFileDialogService fakeFileDialogService = new();
@@ -21,6 +21,11 @@ namespace VaultCrypt.Tests.ViewModels
         public OpenVaultViewModelTests()
         {
             this._viewModel = new VaultCrypt.ViewModels.OpenVaultViewModel(fakeFileDialogService, fakeVaultService, fakeDecryptionService, fakeVaultSession);
+        }
+
+        public void Dispose()
+        {
+            fakeVaultSession.KEY.Dispose();
         }
 
         private void CreateVMWithFileDialogService(string? returnValue)

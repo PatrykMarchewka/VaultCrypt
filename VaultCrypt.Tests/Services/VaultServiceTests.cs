@@ -7,7 +7,7 @@ using System.Threading.Tasks;
 
 namespace VaultCrypt.Tests.Services
 {
-    public class VaultServiceTests
+    public class VaultServiceTests : IDisposable
     {
         private readonly VaultCrypt.Services.VaultService _service;
         private readonly VaultCrypt.Services.FileService _fileService;
@@ -22,6 +22,11 @@ namespace VaultCrypt.Tests.Services
             _encryptionOptionsService = new VaultCrypt.Services.EncryptionOptionsService(_session);
             _systemService = new VaultCrypt.Services.SystemService(_session);
             _service = new VaultCrypt.Services.VaultService(_fileService, _session, _encryptionOptionsService, _systemService, TestsHelper.CreateVaultRegistry(_session));
+        }
+
+        public void Dispose()
+        {
+            _session.KEY.Dispose();
         }
 
         [Fact]

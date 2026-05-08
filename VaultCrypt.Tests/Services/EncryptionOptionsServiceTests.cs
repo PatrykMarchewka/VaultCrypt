@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Security.Cryptography;
@@ -8,7 +8,7 @@ using VaultCrypt.Exceptions;
 
 namespace VaultCrypt.Tests.Services
 {
-    public class EncryptionOptionsServiceTests
+    public class EncryptionOptionsServiceTests : IDisposable
     {
         private readonly VaultCrypt.Services.EncryptionOptionsService _service;
         private readonly VaultSession _vaultSession;
@@ -17,6 +17,11 @@ namespace VaultCrypt.Tests.Services
         {
             _vaultSession = TestsHelper.CreateFilledSessionInstanceWithReader();
             _service = new VaultCrypt.Services.EncryptionOptionsService(_vaultSession);
+        }
+
+        public void Dispose()
+        {
+            _vaultSession.KEY.Dispose();
         }
 
         [Fact]
