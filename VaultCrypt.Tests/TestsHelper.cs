@@ -66,8 +66,8 @@ namespace VaultCrypt.Tests
         /// </summary>
         public static IEnumerable<object[]> VaultFileCombinations => new List<object[]>
         {
-            new object[]{(Func<NormalizedPath>)(() => CopyEmptyVaultV0()), EmptyVaultV0Information.VaultSession, EmptyVaultV0Information },
-            new object[]{(Func<NormalizedPath>)(() => CopyFilledVaultV0()), FilledVaultV0Information.VaultSession, FilledVaultV0Information },
+            new object[]{(Func<NormalizedPath>)(() => CopyEmptyVaultV0()), EmptyVaultV0Information },
+            new object[]{(Func<NormalizedPath>)(() => CopyFilledVaultV0()), FilledVaultV0Information },
         };
 
         /// <summary>
