@@ -48,7 +48,7 @@ namespace VaultCrypt.Tests
         /// <summary>
         /// Information about vault with lorem ipsum and pattern files in it. Vault created using release v1.3.0
         /// </summary>
-        public static VaultInformation FilledVaultV0Information = new VaultInformation(Path: NormalizedPath.From($"{GetTestDataDirectory}\\TestData\\FilledVault_v0.vlt"), Version: 0, Password: TestDataVaultPassword, Salt: new byte[] { 225, 243, 62, 251, 189, 149, 16, 122, 174, 149, 207, 59, 165, 47, 181, 136, 37, 180, 52, 129, 35, 9, 195, 231, 142, 42, 45, 47, 212, 165, 253, 45 }, Iterations: TestDataVaultPasswordIterations, EncryptedFiles: new Dictionary<long, EncryptedFileInfo>() { { 4163, new EncryptedFileInfo("LoremIpsum.txt", 99821, EncryptionAlgorithm.EncryptionAlgorithmInfo.AES256GCM) }, { 15008, new EncryptedFileInfo("PatternFile.txt", 18000504, EncryptionAlgorithm.EncryptionAlgorithmInfo.ChaCha20Poly1305) } });
+        public static VaultInformation FilledVaultV0Information = new VaultInformation(Path: NormalizedPath.From($"{GetTestDataDirectory}\\TestData\\FilledVault_v0.vlt"), Version: 0, Password: TestDataVaultPassword, Salt: new byte[] { 225, 243, 62, 251, 189, 149, 16, 122, 174, 149, 207, 59, 165, 47, 181, 136, 37, 180, 52, 129, 35, 9, 195, 231, 142, 42, 45, 47, 212, 165, 253, 45 }, Iterations: TestDataVaultPasswordIterations, EncryptedFiles: new Dictionary<long, EncryptedFileInfo>() { { 4163, new EncryptedFileInfo("LoremIpsum.txt", 99821, EncryptionAlgorithm.EncryptionAlgorithmInfo.AES256GCM) }, { 105008, new EncryptedFileInfo("PatternFile.txt", 18000504, EncryptionAlgorithm.EncryptionAlgorithmInfo.ChaCha20Poly1305) } });
 
 
         /// <summary>
