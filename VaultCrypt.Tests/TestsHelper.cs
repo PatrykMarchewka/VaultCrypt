@@ -21,6 +21,8 @@ namespace VaultCrypt.Tests
             public IVaultSession VaultSession = TestsHelper.CreateFilledSessionInstance(Password, Salt, Iterations, Version, Path, EncryptedFiles);
         }
 
+        public static VaultSession EmptySession = (VaultSession)Activator.CreateInstance(typeof(VaultSession), nonPublic: true)!;
+
         public static readonly byte[] TestDataVaultPassword = new byte[] { 82, 0, 111, 0, 117, 0, 110, 0, 100, 0, 84, 0, 114, 0, 105, 0, 112, 0, 84, 0, 101, 0, 115, 0, 116, 0, 115, 0 }; //Translates to "RoundTripTests", used as password for TestData vaults
         public const int TestDataVaultPasswordIterations = 1_000_000;
 
