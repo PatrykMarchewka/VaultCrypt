@@ -92,6 +92,22 @@ namespace VaultCrypt.Tests
         }
 
         /// <summary>
+        /// Returns string of randomly generated a-z characters with length equal to <paramref name="nameLength"/>
+        /// </summary>
+        /// <param name="nameLength">Length of the desired text</param>
+        /// <returns>Randomly generated string encoded in UTF8</returns>
+        internal static string CreateRandomFileName(int nameLength = 10)
+        {
+            byte[] nameBytes = new byte[nameLength];
+            for (int i = 0; i < nameLength; i++)
+            {
+                nameBytes[i] = (byte)RandomNumberGenerator.GetInt32(97, 123); //ASCII codes a-z
+            }
+
+            return Encoding.UTF8.GetString(nameBytes);
+        }
+
+        /// <summary>
         /// Creates empty instance of VaultSession using reflection to bypass private constructor
         /// </summary>
         /// <returns>New instance of VaultSession</returns>
