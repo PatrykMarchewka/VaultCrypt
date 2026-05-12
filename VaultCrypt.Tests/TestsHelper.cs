@@ -60,6 +60,26 @@ namespace VaultCrypt.Tests
         public static NormalizedPath PatternFilePath => NormalizedPath.From($"{GetTestDataDirectory}\\TestData\\PatternFile.txt");
 
         /// <summary>
+        /// Object holding Func<> to copy vault, session assosciated with it and VaultInformation about it
+        /// </summary>
+        public static IEnumerable<object[]> VaultFileCombinations => new List<object[]>
+        {
+            new object[]{(Func<NormalizedPath>)(() => CopyEmptyVaultV0()), EmptyVaultV0Information.VaultSession, EmptyVaultV0Information },
+            new object[]{(Func<NormalizedPath>)(() => CopyFilledVaultV0()), FilledVaultV0Information.VaultSession, FilledVaultV0Information },
+        };
+
+        /// <summary>
+        /// Object holding invalid <see cref="NormalizedPath"/> values and <see cref="Type"/> of expected exception method should throw when trying to work with it
+        /// </summary>
+        public static IEnumerable<object?[]> InvalidPath =>
+        [
+            new object?[]{null, typeof(ArgumentNullException)},
+            new object[]{NormalizedPath.From("  "), typeof(ArgumentException)},
+            new object[]{NormalizedPath.From(string.Empty), typeof(ArgumentException)}
+        ];
+
+
+        /// <summary>
         /// Creates temporary file filled with random bytes
         /// </summary>
         /// <param name="size">Size of the file to create</param>
