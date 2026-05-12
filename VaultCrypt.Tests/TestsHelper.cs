@@ -159,6 +159,12 @@ namespace VaultCrypt.Tests
             return CreateFilledSessionInstance(key, version, vaultPath, encryptedFiles);
         }
 
+        internal static IVaultSession ChangeSessionVaultPath(IVaultSession session, NormalizedPath newPath)
+        {
+            session.GetType().GetProperty(nameof(IVaultSession.VAULTPATH))!.SetValue(session, newPath);
+            return session;
+        }
+
         /// <summary>
         /// Replaces values in <paramref name="session"/> with new ones read from <paramref name="vaultFS"/>
         /// </summary>
@@ -186,6 +192,29 @@ namespace VaultCrypt.Tests
             typeof(VaultSession).GetProperty(nameof(VaultSession.ENCRYPTED_FILES))!.SetValue(session, encryptedFilesListCopy);
 
             return session;
+        }
+
+        private static NormalizedPath Copy(string fileName)
+        {
+            string directory = Path.GetTempPath();
+            //Prefixing random number before file name to prevent throwing if multiple tests method want to copy at the same time, ensuring each test has its own copy of the file, collisions can still happen but the chance of them is very low
+            NormalizedPath fullNewPath = NormalizedPath.From($"{directory}\\{Random.Shared.Next()}_{new FileInfo(fileName).Name}");
+            File.Copy(fileName, fullNewPath);
+            return fullNewPath;
+        }
+
+        public static NormalizedPath CopyEmptyVaultV0()
+        {
+            var path = Copy(EmptyVaultV0Information.Path);
+            ChangeSessionVaultPath(EmptyVaultV0Information.VaultSession, path);
+            return path;
+        }
+
+        public static NormalizedPath CopyFilledVaultV0()
+        {
+            var path = Copy(FilledVaultV0Information.Path);
+            ChangeSessionVaultPath(FilledVaultV0Information.VaultSession, path);
+            return path;
         }
 
         internal static ReadOnlySpan<byte> CreateKey(byte[]? password = null, byte[]? salt = null, int iterations = 1000)
