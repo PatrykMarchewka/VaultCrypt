@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Security.Cryptography;
@@ -8,33 +8,29 @@ using VaultCrypt.Exceptions;
 
 namespace VaultCrypt.Tests.Services
 {
-    public class EncryptionOptionsServiceTests : IDisposable
+    public class EncryptionOptionsServiceTests
     {
         private readonly VaultCrypt.Services.EncryptionOptionsService _service;
-        private readonly VaultSession _vaultSession;
+        private readonly VaultSession _vaultSession = (VaultSession)TestsHelper.EmptyVaultV0Information.VaultSession; //Using existing vault information to ensure VAULT_READER is set correclty
 
         public EncryptionOptionsServiceTests()
         {
-            _vaultSession = TestsHelper.CreateFilledSessionInstanceWithReader();
             _service = new VaultCrypt.Services.EncryptionOptionsService(_vaultSession);
         }
 
-        public void Dispose()
-        {
-            _vaultSession.KEY.Dispose();
-        }
+        public static IEnumerable<object[]> AlgorithmInfo => EncryptionAlgorithm.GetEncryptionAlgorithmInfo.Values.Select(alg => new object[] { alg });
 
-        [Fact]
-        void PrepareEncryptionOptionsReturnsCorrectInformation()
+        [Theory]
+        [MemberData(nameof(AlgorithmInfo))]
+        internal void PrepareEncryptionOptionsReturnsCorrectInformation(EncryptionAlgorithm.EncryptionAlgorithmInfo encryptionAlgorithm)
         {
-            var fileInfo = new FileInfo(TestsHelper.CreateTemporaryFile(32)!);
+            var fileInfo = new FileInfo(TestsHelper.CreateTemporaryFile(32));
             try
             {
-                var encryptionAlgorithm = EncryptionAlgorithm.GetEncryptionAlgorithmInfo.First().Value;
                 using (var actualOptions = _service.PrepareEncryptionOptions(fileInfo, encryptionAlgorithm, 1))
                 {
                     Assert.Equal(1, actualOptions.Version);
-                    Assert.True(actualOptions.FileName.AsSpan.SequenceEqual(Encoding.UTF8.GetBytes(fileInfo.Name)));
+                    Assert.Equal(fileInfo.Name, actualOptions.GetFileName());
                     Assert.Equal(32UL + (ulong)encryptionAlgorithm.Provider().EncryptionAlgorithm.ExtraEncryptionDataSize, actualOptions.FileSize);
                     Assert.Equal(encryptionAlgorithm.ID, actualOptions.EncryptionAlgorithm);
                     Assert.False(actualOptions.IsChunked);
@@ -47,19 +43,19 @@ namespace VaultCrypt.Tests.Services
             }
         }
 
-        [Fact]
-        void PrepareEncryptionOptionsReturnsCorrectInformationChunked()
+        [Theory]
+        [MemberData(nameof(AlgorithmInfo))]
+        internal void PrepareEncryptionOptionsReturnsCorrectInformationChunked(EncryptionAlgorithm.EncryptionAlgorithmInfo encryptionAlgorithm)
         {
             int fileSize = 1024 * 1024 + 3; //1MB + 3 bytes (1 048 579 bytes)
-            var fileInfo = new FileInfo(TestsHelper.CreateTemporaryFile(fileSize)!);
+            var fileInfo = new FileInfo(TestsHelper.CreateTemporaryFile(fileSize));
             try
             {
-                var encryptionAlgorithm = EncryptionAlgorithm.GetEncryptionAlgorithmInfo.First().Value;
 
                 using (var actualOptions = _service.PrepareEncryptionOptions(fileInfo, encryptionAlgorithm, 1))
                 {
                     Assert.Equal(1, actualOptions.Version);
-                    Assert.True(actualOptions.FileName.AsSpan.SequenceEqual(Encoding.UTF8.GetBytes(fileInfo.Name)));
+                    Assert.Equal(fileInfo.Name, actualOptions.GetFileName());
                     Assert.Equal(((ulong)fileSize + ((ulong)encryptionAlgorithm.Provider().EncryptionAlgorithm.ExtraEncryptionDataSize * actualOptions.ChunkInformation!.TotalChunks)), actualOptions.FileSize);
                     Assert.Equal(encryptionAlgorithm.ID, actualOptions.EncryptionAlgorithm);
                     Assert.True(actualOptions.IsChunked);
@@ -75,18 +71,18 @@ namespace VaultCrypt.Tests.Services
         }
 
         [Fact]
-        void PrepareEncryptionOptionsThrowsForNullValues()
+        internal void PrepareEncryptionOptionsThrowsForInvalidFileInfo()
         {
             Assert.Throws<ArgumentNullException>(() => _service.PrepareEncryptionOptions(null!, EncryptionAlgorithm.GetEncryptionAlgorithmInfo.First().Value, 1));
         }
 
         [Fact]
-        void PrepareEncryptionOptionsThrowsForZeroValues()
+        internal void PrepareEncryptionOptionsThrowsForInvalidAlgorithm()
         {
-            var fileInfo = new FileInfo(TestsHelper.CreateTemporaryFile(0)!);
+            var fileInfo = new FileInfo(TestsHelper.CreateTemporaryFile(0));
             try
             {
-                Assert.Throws<ArgumentOutOfRangeException>(() => _service.PrepareEncryptionOptions(fileInfo, EncryptionAlgorithm.GetEncryptionAlgorithmInfo.First().Value, 0));
+                Assert.Throws<ArgumentNullException>(() => _service.PrepareEncryptionOptions(fileInfo, null!, 1));
             }
             finally
             {
@@ -94,16 +90,30 @@ namespace VaultCrypt.Tests.Services
             }
         }
 
-        [Fact]
-        void EncryptAndPadFileEncryptionOptionsReturnsCorrectInformation()
+        [Theory]
+        [InlineData(0)]
+        internal void PrepareEncryptionOptionsThrowsForInvalidChunkSize(ushort chunkSize)
         {
-            var fileInfo = new FileInfo(TestsHelper.CreateTemporaryFile(32)!);
+            var fileInfo = new FileInfo(TestsHelper.CreateTemporaryFile(0));
             try
             {
-                var encryptionAlgorithm = EncryptionAlgorithm.GetEncryptionAlgorithmInfo.First().Value;
-                var options = _service.PrepareEncryptionOptions(fileInfo, encryptionAlgorithm, 1);
+                Assert.Throws<ArgumentOutOfRangeException>(() => _service.PrepareEncryptionOptions(fileInfo, EncryptionAlgorithm.GetEncryptionAlgorithmInfo.First().Value, chunkSize));
+            }
+            finally
+            {
+                fileInfo.Delete();
+            }
+        }
 
-                var encrypted = _service.PadAndEncryptFileEncryptionOptions(options);
+        [Theory]
+        [MemberData(nameof(AlgorithmInfo))]
+        internal void EncryptAndPadFileEncryptionOptionsReturnsCorrectSize(EncryptionAlgorithm.EncryptionAlgorithmInfo encryptionAlgorithm)
+        {
+            var fileInfo = new FileInfo(TestsHelper.CreateTemporaryFile(32));
+            try
+            {
+                using var options = _service.PrepareEncryptionOptions(fileInfo, encryptionAlgorithm, 1);
+                using var encrypted = _service.PadAndEncryptFileEncryptionOptions(options);
 
                 Assert.Equal(_vaultSession.VAULT_READER.EncryptionOptionsSize, encrypted.Length);
                 Assert.False(encrypted.AsSpan.SequenceEqual(new byte[_vaultSession.VAULT_READER.EncryptionOptionsSize]));
@@ -115,77 +125,75 @@ namespace VaultCrypt.Tests.Services
         }
 
         [Fact]
-        void EncryptAndPadFileEncryptionOptionsThrowsForNullValues()
+        internal void EncryptAndPadFileEncryptionOptionsThrowsForInvalidOptions()
         {
             Assert.Throws<ArgumentNullException>(() => _service.PadAndEncryptFileEncryptionOptions(null!));
         }
 
+        //Seperate test due to unmanaged memory behaviour
         [Fact]
-        void EncryptAndPadFileEncryptionOptionsThrowsForTooBigOptions()
+        internal void EncryptAndPadFileEncryptionOptionsThrowsForTooBigOptions()
         {
-            using (SecureBuffer.SecureLargeBuffer tooBigFileName = new SecureBuffer.SecureLargeBuffer(_vaultSession.VAULT_READER.EncryptionOptionsSize + 1))
-            {
-                var options = new EncryptionOptions.FileEncryptionOptions(0, tooBigFileName, 1, EncryptionAlgorithm.GetEncryptionAlgorithmInfo.First().Value.ID, false, null);
+            using SecureBuffer.SecureLargeBuffer tooBigFileName = new SecureBuffer.SecureLargeBuffer(_vaultSession.VAULT_READER.EncryptionOptionsSize + 1);
+            using var options = new EncryptionOptions.FileEncryptionOptions(0, tooBigFileName, 1, EncryptionAlgorithm.GetEncryptionAlgorithmInfo.First().Value.ID, false, null);
 
-                Assert.Throws<VaultException>(() => _service.PadAndEncryptFileEncryptionOptions(options));
-            }
+            Assert.Throws<VaultException>(() => _service.PadAndEncryptFileEncryptionOptions(options));
         }
 
         [Fact]
-        void GetDecryptedFileEncryptionOptionsDecryptsCorrectly()
+        internal void GetDecryptedFileEncryptionOptionsDecryptsCorrectly()
         {
             var stream = new MemoryStream();
-            stream.Write(RandomNumberGenerator.GetBytes(10)); //Writing to stream to ensure the method works despite the stream holding more data
+            stream.Write(RandomNumberGenerator.GetBytes(5000)); //Writing to stream to ensure the method works despite the stream holding more data
             //Precomputed value 
-            byte[] encrypted = new byte[1024] { 187,139,168,54,198,217,9,132,186,56,89,4,72,140,218,29,236,237,214,50,161,171,151,250,189,183,159,52,189,145,162,109,93,117,45,68,109,223,104,19,165,172,98,228,4,32,246,123,29,86,171,99,31,230,102,166,225,179,47,90,79,61,18,81,236,27,112,220,42,246,208,170,229,250,218,163,199,132,112,213,142,223,220,37,121,132,52,109,35,81,77,147,239,82,213,199,245,109,244,211,181,89,152,241,26,75,82,120,57,167,5,81,209,92,216,252,157,186,185,243,165,194,247,150,210,184,91,31,138,70,249,245,51,81,197,233,31,230,201,146,77,188,143,95,182,252,17,201,118,92,99,70,80,168,109,126,159,177,140,54,252,99,121,13,253,63,213,127,143,84,136,75,112,146,244,10,137,96,232,226,44,129,44,219,248,134,217,94,231,254,19,214,95,208,242,116,69,224,11,220,101,35,249,71,8,230,44,23,125,197,72,110,165,239,188,1,54,85,14,66,177,126,205,99,178,214,84,96,99,97,161,107,18,68,62,161,75,204,251,156,7,239,19,31,226,39,108,170,72,233,39,215,177,27,62,30,119,251,214,87,98,158,64,78,165,104,125,115,106,101,9,232,194,142,93,110,226,48,234,233,217,8,133,87,157,142,203,250,247,96,37,202,190,183,238,127,136,78,172,60,84,232,174,18,91,95,177,246,227,185,124,9,87,2,149,153,208,186,199,18,209,239,247,223,126,111,39,83,85,72,202,151,130,167,226,127,85,111,220,241,147,213,151,81,157,177,122,185,246,108,36,137,225,140,250,57,77,82,223,149,138,74,39,61,219,14,220,247,199,23,216,34,160,197,247,223,248,144,176,54,113,135,83,159,152,217,129,203,101,146,109,240,22,179,125,221,236,76,82,69,51,162,38,123,176,105,28,70,252,74,47,39,63,67,104,131,54,76,154,14,166,61,134,219,251,216,127,11,101,29,67,26,39,148,7,27,231,18,52,115,188,23,231,197,86,178,200,52,52,55,126,233,242,229,204,222,252,193,125,12,232,90,115,139,138,230,153,62,161,5,19,11,51,19,99,48,55,22,1,72,120,17,160,225,173,189,213,94,114,67,124,29,11,120,244,151,70,154,138,69,122,232,10,204,186,147,242,74,201,175,212,197,74,229,123,7,89,63,218,135,16,181,81,170,28,183,108,27,145,161,173,241,165,18,177,31,163,118,58,18,115,159,178,134,36,63,162,40,199,237,77,54,17,183,106,204,236,45,207,111,150,172,165,65,36,241,19,24,52,79,71,5,244,135,145,86,5,46,89,213,140,62,84,135,228,99,196,252,93,147,201,203,82,65,33,255,178,106,37,18,6,45,133,14,234,113,38,232,214,98,75,164,25,134,54,218,174,197,98,251,250,33,85,246,46,128,208,32,233,40,6,36,214,209,15,54,209,53,15,113,107,39,253,193,66,139,143,27,27,125,174,61,112,189,201,85,76,38,133,36,163,101,53,34,167,175,26,77,247,11,131,3,153,67,91,11,68,207,98,174,13,31,34,134,216,2,25,153,22,58,17,131,84,36,252,38,61,110,113,198,89,181,115,119,232,182,137,223,1,13,227,97,201,207,175,26,230,219,81,212,139,28,63,134,157,249,171,12,192,131,96,212,116,144,233,246,137,61,140,1,246,191,152,106,187,135,110,54,102,180,206,21,186,140,149,249,27,255,111,128,14,69,83,251,25,229,143,251,83,63,235,221,68,144,252,109,46,38,122,73,25,226,175,207,41,84,86,248,11,244,3,71,242,99,22,247,98,252,128,2,209,252,189,209,136,240,66,40,169,188,91,36,126,49,62,186,39,76,25,152,189,205,253,126,101,92,109,196,138,170,107,21,248,0,2,19,24,196,65,217,159,136,150,196,189,124,81,97,115,178,194,155,86,106,248,130,72,246,131,61,122,180,183,214,243,216,53,236,81,250,192,148,13,147,155,115,190,166,240,149,49,231,242,89,180,141,8,190,149,52,56,117,41,164,231,17,239,94,235,31,229,54,34,13,92,121,11,238,80,173,29,12,121,3,136,169,97,53,1,134,96,185,65,76,117,4,48,129,179,187,133,228,229,50,15,173,95,218,81,252,35,80,187,41,135,69,9,46,86,121,109,61,101,6,165,7,192,109,191,148,17,147,104,100,38,149,26,120,147,120,236,90,184,158,144,85,211,166,242,0,65,78,225,63,8,190,101,126,160,59,167,138,46,153,18,85,145,62,102,103,209,234,233,255,206,232,232,150,21,66,195,229,233,43,146,48,80,237,107,93,137,68,249,83 };
+            byte[] encrypted = new byte[1024] { 71, 13, 170, 35, 158, 234, 197, 31, 213, 209, 30, 157, 185, 49, 199, 154, 206, 119, 161, 85, 75, 80, 207, 237, 159, 243, 239, 203, 246, 218, 170, 13, 232, 140, 249, 246, 35, 6, 90, 147, 175, 13, 135, 121, 214, 6, 72, 232, 8, 106, 15, 202, 28, 209, 32, 132, 235, 29, 115, 118, 62, 131, 227, 245, 198, 196, 128, 234, 176, 84, 154, 82, 214, 209, 39, 221, 186, 126, 125, 109, 177, 94, 76, 66, 55, 123, 186, 213, 61, 191, 171, 209, 95, 1, 167, 145, 177, 126, 116, 224, 167, 29, 107, 53, 116, 70, 198, 197, 59, 174, 218, 159, 16, 239, 240, 15, 159, 244, 163, 207, 191, 153, 134, 39, 225, 14, 78, 247, 83, 212, 21, 176, 18, 241, 219, 177, 141, 107, 171, 160, 169, 32, 252, 246, 27, 162, 73, 198, 21, 195, 71, 81, 85, 149, 63, 14, 146, 226, 69, 221, 200, 23, 212, 64, 190, 100, 71, 29, 4, 214, 177, 47, 178, 96, 183, 142, 48, 143, 194, 249, 16, 56, 77, 68, 22, 9, 15, 183, 253, 186, 46, 228, 162, 75, 8, 166, 77, 184, 165, 85, 224, 159, 207, 43, 157, 101, 90, 122, 68, 228, 226, 118, 161, 155, 207, 233, 163, 216, 210, 50, 134, 35, 139, 221, 182, 22, 42, 234, 192, 172, 235, 118, 30, 1, 28, 27, 105, 121, 160, 63, 20, 117, 46, 190, 53, 163, 152, 200, 130, 159, 109, 58, 33, 225, 199, 189, 211, 67, 226, 232, 64, 139, 176, 253, 87, 105, 222, 52, 84, 138, 155, 171, 24, 129, 169, 84, 83, 199, 242, 11, 168, 72, 246, 11, 26, 183, 250, 32, 175, 146, 44, 135, 191, 201, 39, 103, 68, 163, 67, 167, 190, 229, 188, 52, 138, 223, 131, 48, 236, 130, 209, 38, 63, 64, 189, 83, 154, 115, 86, 36, 71, 198, 127, 69, 113, 222, 131, 56, 167, 102, 139, 202, 215, 132, 157, 157, 224, 159, 33, 97, 3, 224, 186, 203, 113, 50, 59, 22, 37, 73, 63, 105, 46, 162, 108, 4, 53, 74, 239, 103, 147, 65, 177, 193, 194, 143, 214, 78, 70, 48, 185, 73, 139, 154, 88, 144, 164, 255, 190, 160, 93, 230, 64, 48, 137, 141, 152, 81, 207, 209, 30, 163, 179, 249, 182, 180, 134, 43, 55, 208, 97, 225, 224, 92, 197, 179, 17, 100, 162, 100, 40, 106, 216, 93, 17, 127, 243, 64, 128, 194, 54, 138, 183, 214, 226, 61, 199, 110, 200, 252, 2, 13, 142, 190, 54, 185, 66, 30, 66, 217, 140, 99, 41, 174, 187, 51, 85, 28, 136, 228, 60, 39, 113, 11, 66, 209, 122, 59, 85, 112, 158, 84, 73, 27, 155, 226, 168, 73, 233, 198, 67, 120, 243, 246, 228, 94, 207, 152, 153, 75, 161, 165, 137, 220, 163, 29, 186, 211, 9, 78, 60, 147, 217, 154, 96, 141, 144, 80, 113, 11, 74, 208, 206, 48, 95, 59, 176, 42, 155, 169, 184, 212, 224, 217, 94, 221, 112, 79, 191, 5, 113, 207, 86, 93, 74, 78, 79, 4, 120, 254, 63, 130, 113, 234, 237, 97, 61, 57, 203, 227, 212, 227, 181, 191, 185, 8, 240, 210, 71, 100, 177, 137, 109, 194, 120, 255, 161, 218, 223, 201, 4, 123, 220, 87, 64, 199, 61, 100, 180, 33, 71, 185, 104, 239, 141, 107, 181, 134, 69, 192, 141, 28, 190, 202, 0, 40, 153, 213, 58, 61, 105, 61, 230, 178, 9, 241, 255, 39, 132, 234, 45, 212, 47, 251, 207, 103, 143, 104, 230, 57, 40, 182, 136, 169, 196, 144, 141, 71, 129, 214, 192, 66, 140, 190, 15, 225, 45, 82, 250, 112, 231, 2, 149, 112, 185, 106, 230, 191, 76, 219, 222, 157, 190, 248, 169, 69, 44, 123, 1, 252, 193, 194, 65, 53, 46, 12, 133, 195, 137, 194, 238, 153, 209, 11, 141, 65, 49, 69, 27, 128, 222, 162, 251, 248, 212, 249, 93, 98, 61, 196, 146, 3, 69, 188, 236, 185, 76, 111, 160, 187, 117, 172, 48, 82, 21, 111, 18, 202, 217, 41, 124, 177, 35, 66, 218, 166, 226, 23, 54, 206, 35, 173, 21, 104, 213, 203, 133, 17, 115, 17, 171, 128, 13, 63, 204, 66, 11, 140, 6, 220, 188, 237, 59, 235, 18, 254, 143, 137, 172, 30, 142, 65, 161, 153, 45, 196, 37, 57, 54, 15, 121, 161, 208, 69, 27, 180, 95, 213, 213, 230, 25, 141, 136, 34, 8, 158, 25, 255, 110, 42, 106, 212, 126, 85, 203, 199, 104, 39, 41, 40, 30, 147, 71, 176, 122, 1, 36, 131, 24, 238, 213, 71, 32, 161, 94, 23, 116, 197, 42, 57, 19, 110, 107, 67, 149, 66, 115, 36, 51, 76, 23, 80, 110, 131, 102, 111, 239, 207, 175, 153, 46, 192, 21, 201, 155, 67, 235, 110, 51, 32, 213, 1, 121, 160, 59, 140, 54, 148, 144, 213, 123, 170, 240, 16, 122, 220, 146, 8, 96, 162, 161, 166, 143, 133, 177, 146, 215, 128, 73, 220, 73, 229, 38, 142, 68, 223, 176, 5, 220, 167, 63, 225, 171, 214, 51, 93, 123, 142, 84, 252, 108, 123, 49, 62, 167, 148, 121, 3, 207, 57, 54, 96, 15, 7, 49, 226, 118, 169, 89, 14, 40, 20, 227, 228, 223, 187, 243, 188, 235, 200, 139, 2, 108, 214, 18, 93, 176, 170, 226, 159, 116, 125, 114, 49, 72, 196, 193, 133, 236, 205, 82, 248, 128, 152, 60, 28, 250, 245, 106, 130, 228, 183, 239, 142, 147, 26, 76, 9, 22, 154, 150, 204, 214, 175, 173, 158, 36, 167, 18, 100, 218, 145, 70, 187, 94, 137, 76, 29, 70, 225, 231, 103, 116, 44, 124, 123, 55, 151, 48, 130, 165, 44, 72, 250, 27, 243, 236, 172, 32, 245, 150, 21, 61, 225, 105, 166, 148, 146, 93, 19, 216, 221, 195, 59, 253, 59, 62, 250, 42, 54, 31, 226, 38, 206, 153, 232, 171, 116, 52, 202, 104, 201, 97, 70 };
             stream.Write(encrypted);
-            using (SecureBuffer.SecureLargeBuffer expectedFileName = new SecureBuffer.SecureLargeBuffer(13))
-            {
-                new byte[13] { 116, 109, 112, 99, 103, 103, 99, 98, 105, 46, 116, 109, 112 }.CopyTo(expectedFileName.AsSpan); //FileName = tmpcggcbi.tmp
-                EncryptionOptions.FileEncryptionOptions expected = new EncryptionOptions.FileEncryptionOptions(0, expectedFileName, 60, 0, false, null);
+            using SecureBuffer.SecureLargeBuffer expectedFileName = new SecureBuffer.SecureLargeBuffer(13);
+            new byte[13] { 116, 109, 112, 99, 103, 103, 99, 98, 105, 46, 116, 109, 112 }.CopyTo(expectedFileName.AsSpan); //FileName = tmpcggcbi.tmp
+            using EncryptionOptions.FileEncryptionOptions expected = new EncryptionOptions.FileEncryptionOptions(0, expectedFileName, 60, 0, false, null);
+            using var actual = _service.GetDecryptedFileEncryptionOptions(stream, 5000);
 
-                var actual = _service.GetDecryptedFileEncryptionOptions(stream, 10);
-
-                Assert.Equal(expected, actual);
-            }
+            Assert.Equal(expected, actual);
         }
 
         [Fact]
-        void GetDecryptedFileEncryptionOptionsThrowsForNullValues()
+        internal void GetDecryptedFileEncryptionOptionsThrowsForInvalidStream()
         {
             Assert.Throws<ArgumentNullException>(() => _service.GetDecryptedFileEncryptionOptions(null!, 0));
         }
 
-        [Fact]
-        void GetDecryptedFileEncryptionOptionsThrowsForNegativeValues()
+        [Theory]
+        [InlineData(long.MinValue)]
+        [InlineData(4163 - 1)] //V0 Vault header size - 1
+
+        internal void GetDecryptedFileEncryptionOptionsThrowsForInvalidOffset(long offset)
         {
-            Assert.Throws<ArgumentOutOfRangeException>(() => _service.GetDecryptedFileEncryptionOptions(new MemoryStream(), -1));
+            Assert.Throws<ArgumentOutOfRangeException>(() => _service.GetDecryptedFileEncryptionOptions(new MemoryStream(), offset));
         }
 
 
-        [Fact]
-        void PrepareEncryptionOptionsThenEncryptThenDecryptSuccessfully()
+        [Theory]
+        [MemberData(nameof(AlgorithmInfo))]
+        internal void PrepareEncryptionOptionsThenEncryptThenDecryptSuccessfully(EncryptionAlgorithm.EncryptionAlgorithmInfo encryptionAlgorithm)
         {
-            //Create temporary file with random data with size of 1-1024bytes
-            var fileInfo = new FileInfo(TestsHelper.CreateTemporaryFile(RandomNumberGenerator.GetInt32(1, 1024))!);
+            var fileInfo = new FileInfo(TestsHelper.CreateTemporaryFile(1000));
             try
             {
-                var encryptionAlgorithm = EncryptionAlgorithm.GetEncryptionAlgorithmInfo.First().Value;
                 var options = _service.PrepareEncryptionOptions(fileInfo, encryptionAlgorithm, 1);
                 using (SecureBuffer.SecureLargeBuffer encrypted = _service.PadAndEncryptFileEncryptionOptions(options))
                 {
                     //Create stream with other random data to simulate actual vault
                     var stream = new MemoryStream();
-                    int randomNumber = RandomNumberGenerator.GetInt32(1024);
-                    stream.Write(RandomNumberGenerator.GetBytes(randomNumber));
+                    int offsetToEncryptedFile = 5000;
+                    stream.Write(RandomNumberGenerator.GetBytes(offsetToEncryptedFile));
                     stream.Write(encrypted.AsSpan);
                     //Append extra data at the end to mimick actual vault
                     stream.Write(RandomNumberGenerator.GetBytes(10));
 
-
-                    var result = _service.GetDecryptedFileEncryptionOptions(stream, randomNumber);
-
-                    Assert.Equal(options, result);
+                    using (var result = _service.GetDecryptedFileEncryptionOptions(stream, offsetToEncryptedFile))
+                    {
+                        Assert.Equal(options, result);
+                    }
                 }
             }
             finally
