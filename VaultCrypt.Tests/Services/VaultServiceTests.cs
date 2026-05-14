@@ -7,35 +7,37 @@ using System.Threading.Tasks;
 
 namespace VaultCrypt.Tests.Services
 {
-    public class VaultServiceTests : IDisposable
+    public class VaultServiceTests
     {
-        private readonly VaultCrypt.Services.VaultService _service;
-        private readonly VaultCrypt.Services.FileService _fileService;
-        private readonly VaultSession _session;
-        private readonly VaultCrypt.Services.EncryptionOptionsService _encryptionOptionsService;
-        private readonly VaultCrypt.Services.SystemService _systemService;
+        private VaultCrypt.Services.VaultService _service;
+        private readonly VaultCrypt.Services.FileService _fileService = new VaultCrypt.Services.FileService();
+        private VaultSession _session;
+        private VaultCrypt.Services.EncryptionOptionsService _encryptionOptionsService;
+        private VaultCrypt.Services.SystemService _systemService;
 
         public VaultServiceTests()
         {
-            _fileService = new VaultCrypt.Services.FileService();
-            _session = TestsHelper.CreateFilledSessionInstanceWithReader();
+            _session = TestsHelper.EmptySession;
             _encryptionOptionsService = new VaultCrypt.Services.EncryptionOptionsService(_session);
             _systemService = new VaultCrypt.Services.SystemService(_session);
             _service = new VaultCrypt.Services.VaultService(_fileService, _session, _encryptionOptionsService, _systemService, TestsHelper.CreateVaultRegistry(_session));
         }
 
-        public void Dispose()
+        private void ReplaceSession(IVaultSession newSession)
         {
-            _session.KEY.Dispose();
+            _session = (VaultSession)newSession;
+            _encryptionOptionsService = new VaultCrypt.Services.EncryptionOptionsService(_session);
+            _systemService = new VaultCrypt.Services.SystemService(_session);
+            _service = new VaultCrypt.Services.VaultService(_fileService, _session, _encryptionOptionsService, _systemService, TestsHelper.CreateVaultRegistry(_session));
         }
 
         [Fact]
-        void CreateVaultCreatesVaultFile()
+        internal void CreateVaultCreatesVaultFile()
         {
             var path = NormalizedPath.From(Path.GetTempPath());
             var fileName = Path.GetRandomFileName();
             byte[] password = RandomNumberGenerator.GetBytes(32);
-            int iterations = RandomNumberGenerator.GetInt32(1,1000);
+            int iterations = RandomNumberGenerator.GetInt32(1, 1000);
 
             _service.CreateVault(path, fileName, password, iterations);
             try
@@ -55,7 +57,7 @@ namespace VaultCrypt.Tests.Services
         }
 
         [Fact]
-        void CreateVaultCreatesVaultFileInNewDirectory()
+        internal void CreateVaultCreatesVaultFileInNewDirectory()
         {
             var path = NormalizedPath.From(Path.GetTempPath() + $"\\{RandomNumberGenerator.GetHexString(10)}");
             var fileName = Path.GetRandomFileName();
@@ -73,139 +75,120 @@ namespace VaultCrypt.Tests.Services
             }
         }
 
-        [Fact]
-        void CreateVaultThrowsForNullValues()
+        public static IEnumerable<object?[]> InvalidName =>
+        [
+            new object?[]{null, typeof(ArgumentNullException)},
+            new object[]{"  ", typeof(ArgumentException)},
+            new object[]{string.Empty, typeof(ArgumentException)}
+        ];
+
+        [Theory]
+        [MemberData(nameof(TestsHelper.InvalidPath), MemberType = typeof(TestsHelper))]
+        internal void CreateVaultThrowsForInvalidFolderPath(NormalizedPath folderPath, Type expectedException)
         {
-            string nonNullValue = "TEXT";
-            Assert.Throws<ArgumentNullException>(() => _service.CreateVault(null!, nonNullValue, new byte[1], 1));
-            Assert.Throws<ArgumentNullException>(() => _service.CreateVault(NormalizedPath.From(nonNullValue), null!, new byte[1], 1));
+            Assert.Throws(expectedException, () => _service.CreateVault(folderPath, "TEXT", new byte[1], 1));
+        }
+
+        [Theory]
+        [MemberData(nameof(InvalidName))]
+        internal void CreateVaultThrowsForInvalidVaultName(string vaultName, Type expectedException)
+        {
+            Assert.Throws(expectedException, () => _service.CreateVault(NormalizedPath.From("TEXT"), vaultName, new byte[1], 1));
         }
 
         [Fact]
-        void CreateVaultThrowsForInvalidValues()
+        internal void CreateVaultThrowsForInvalidPassword()
         {
-            string nonNullValue = "TEXT";
-            
-            Assert.Throws<ArgumentException>(() => _service.CreateVault(NormalizedPath.From(string.Empty), nonNullValue, new byte[1], 1));
-            Assert.Throws<ArgumentException>(() => _service.CreateVault(NormalizedPath.From("   "), nonNullValue, new byte[1], 1));
-
-            Assert.Throws<ArgumentException>(() => _service.CreateVault(NormalizedPath.From(nonNullValue), string.Empty, new byte[1], 1));
-            Assert.Throws<ArgumentException>(() => _service.CreateVault(NormalizedPath.From(nonNullValue), "    ", new byte[1], 1));
-
-            Assert.Throws<ArgumentException>(() => _service.CreateVault(NormalizedPath.From(nonNullValue), nonNullValue, new byte[0], 1));
+            Assert.Throws<ArgumentException>(() => _service.CreateVault(NormalizedPath.From("TEXT"), "TEXT", new byte[0], 1));
         }
 
-        [Fact]
-        void CreateVaultThrowsForNegativeValues()
+        [Theory]
+        [InlineData(int.MinValue)]
+        [InlineData(-1)]
+        [InlineData(0)]
+        internal void CreateVaultThrowsForInvalidIterations(int iterations)
         {
-            string nonNullValue = "TEXT";
-            Assert.Throws<ArgumentOutOfRangeException>(() => _service.CreateVault(NormalizedPath.From(nonNullValue), nonNullValue, new byte[1], -1));
+            Assert.Throws<ArgumentOutOfRangeException>(() => _service.CreateVault(NormalizedPath.From("TEXT"), "TEXT", new byte[1], iterations));
         }
 
-        [Fact]
-        void CreateVaultThrowsForZeroValues()
+        [Theory]
+        [MemberData(nameof(TestsHelper.VaultFileCombinations), MemberType = typeof(TestsHelper))]
+        internal void CreateSessionFromFileSetsValuesCorrectly(Func<NormalizedPath> vaultMethod, TestsHelper.VaultInformation vaultInformation)
         {
-            string nonNullValue = "TEXT";
-            Assert.Throws<ArgumentOutOfRangeException>(() => _service.CreateVault(NormalizedPath.From(nonNullValue), nonNullValue, new byte[1], 0));
-        }
-
-        [Fact]
-        void CreateSessionFromFileSetsValuesCorrectly()
-        {
-
-            NormalizedPath vaultFile = TestsHelper.CreateVaultFile();
+            var vaultPath = vaultMethod();
             try
             {
-                _service.CreateSessionFromFile(new byte[16], vaultFile);
+                _service.CreateSessionFromFile(vaultInformation.Password, vaultPath);
 
-                Assert.True(TestsHelper.CreateKey(new byte[16], new byte[32], 1000).SequenceEqual(_session.KEY.AsSpan[..PasswordHelper.KeySize]));
-                Assert.Equal(vaultFile, _session.VAULTPATH);
-                Assert.Empty(_session.ENCRYPTED_FILES);
-                Assert.True(_session.VAULT_READER is VaultV0Reader);
+                Assert.True(vaultInformation.VaultSession.KEY.AsSpan.SequenceEqual(_session.KEY.AsSpan));
+                Assert.Equal(vaultPath, _session.VAULTPATH);
+                Assert.Equal(vaultInformation.VaultSession.ENCRYPTED_FILES, _session.ENCRYPTED_FILES);
+                Assert.Equal(vaultInformation.VaultSession.VAULT_READER.GetType(), _session.VAULT_READER.GetType());
             }
             finally
             {
-                File.Delete(vaultFile);
+                File.Delete(vaultPath);
             }
         }
 
         [Fact]
-        void CreateSessionFromFileThrowsForNullValues()
-        {
-            Assert.Throws<ArgumentNullException>(() => _service.CreateSessionFromFile(new byte[1], null!));
-        }
-
-        [Fact]
-        void CreateSessionFromFileThrowsForInvalidValues()
+        internal void CreateSessionFromFileThrowsOnInvalidPassword()
         {
             Assert.Throws<ArgumentException>(() => _service.CreateSessionFromFile(new byte[0], NormalizedPath.From("VALID")));
-            Assert.Throws<ArgumentException>(() => _service.CreateSessionFromFile(new byte[1], NormalizedPath.From("")));
-            Assert.Throws<ArgumentException>(() => _service.CreateSessionFromFile(new byte[1], NormalizedPath.From("    ")));
         }
 
-        [Fact]
-        void RefreshEncryptedFilesListPopulatesFileListAndRefreshses()
+        [Theory]
+        [MemberData(nameof(TestsHelper.InvalidPath), MemberType = typeof(TestsHelper))]
+        internal void CreateSessionFromFileThrowsOnInvalidPath(NormalizedPath path, Type expectedException)
         {
-            _session.ENCRYPTED_FILES.Clear();
-            byte expectedFileListCount = (byte)RandomNumberGenerator.GetInt32(10);
+            Assert.Throws(expectedException, () => _service.CreateSessionFromFile(new byte[1], path));
+        }
 
-            (NormalizedPath, EncryptionOptions.FileEncryptionOptions[]) vaultInformation = (null!, null!);
+        [Theory]
+        [MemberData(nameof(TestsHelper.VaultFileCombinations), MemberType = typeof(TestsHelper))]
+        internal void RefreshEncryptedFilesListPopulatesFileListAndRefreshses(Func<NormalizedPath> vaultMethod, TestsHelper.VaultInformation vaultInformation)
+        {
+            var vaultPath = vaultMethod();
+            ReplaceSession(vaultInformation.VaultSession);
             try
             {
-                vaultInformation = TestsHelper.CreateVaultFileWithEncryptedFileList(expectedFileListCount, _session);
-
-                using (FileStream fs = new FileStream(vaultInformation.Item1, FileMode.Open, FileAccess.Read))
+                using (FileStream fs = new FileStream(vaultPath, FileMode.Open, FileAccess.Read))
                 {
                     _service.RefreshEncryptedFilesList(fs);
                 }
-                var fileList = _session.ENCRYPTED_FILES.ToList();
-                Assert.Equal(expectedFileListCount, _session.ENCRYPTED_FILES.Count);
-                for (int i = 0; i < expectedFileListCount; i++)
-                {
-                    Assert.Equal(vaultInformation.Item2[i].GetFileName(), fileList[i].Value.FileName);
-                    Assert.Equal(EncryptionAlgorithm.GetEncryptionAlgorithmInfo[vaultInformation.Item2[i].EncryptionAlgorithm].Name, fileList[i].Value.EncryptionAlgorithm);
-                }
+                Assert.Equal(vaultInformation.VaultSession.ENCRYPTED_FILES, _session.ENCRYPTED_FILES);
             }
             finally
             {
-                if (vaultInformation.Item1 is not null) File.Delete(vaultInformation.Item1);
-                foreach (var item in vaultInformation.Item2)
-                {
-                    item.Dispose();
-                }
+                File.Delete(vaultPath);
             }
         }
 
         [Fact]
-        void RefreshEncryptedFilesListThrowsForNullValues()
+        internal void RefreshEncryptedFilesListThrowsForInvalidStream()
         {
             Assert.Throws<ArgumentNullException>(() => _service.RefreshEncryptedFilesList(null!));
         }
 
-        [Fact]
-        async Task TrimVaultTrimsVaultAndSavesItToAFile()
-        {
-            byte[] password = Encoding.UTF8.GetBytes("TrimVaultTrims");
+        public static IEnumerable<object[]> FilledVaultFileCombinations => TestsHelper.VaultFileCombinations.Where(combination => ((TestsHelper.VaultInformation)combination[1]).VaultSession.ENCRYPTED_FILES.Count > 0);
 
-            (NormalizedPath, EncryptionOptions.FileEncryptionOptions[]) vaultInformation = (null!, null!);
+
+        [Theory]
+        [MemberData(nameof(FilledVaultFileCombinations))]
+        internal async Task TrimVaultTrimsVaultAndSavesItToAFile(Func<NormalizedPath> vaultMethod, TestsHelper.VaultInformation vaultInformation)
+        {
+            var vaultPath = vaultMethod();
+            ReplaceSession(vaultInformation.VaultSession);
             NormalizedPath newVaultPath = null!;
             try
             {
-                vaultInformation = TestsHelper.CreateVaultFileWithEncryptedFileList(numberOfFiles: 10, _session, password);
-                
-                long oldVaultSize = new FileInfo(vaultInformation.Item1).Length;
-                //Trim vault uses vault provided at VaultSession.VAULTPATH where VaultSession is the one provided when creating service
-                using (FileStream fs = new FileStream(vaultInformation.Item1.Value, FileMode.Open, FileAccess.Read))
-                {
-                    TestsHelper.SetVaultSessionFromStream(_session, fs, password);
-                }
-                _session.ENCRYPTED_FILES.Remove(_session.ENCRYPTED_FILES.First().Key);
-
+                long oldVaultSize = new FileInfo(vaultPath).Length;
                 try
                 {
+                    _session.ENCRYPTED_FILES.Remove(_session.ENCRYPTED_FILES.First().Key);
 
                     await _service.TrimVault(new ProgressionContext());
-                    newVaultPath = NormalizedPath.From(vaultInformation.Item1.Value[..^4] + "_TRIMMED.vlt");
+                    newVaultPath = NormalizedPath.From(vaultPath.Value[..^4] + "_TRIMMED.vlt");
                     long newVaultSize = new FileInfo(newVaultPath).Length;
                     Assert.True(newVaultSize < oldVaultSize);
                 }
@@ -216,106 +199,97 @@ namespace VaultCrypt.Tests.Services
             }
             finally
             {
-                if (vaultInformation.Item1 is not null) File.Delete(vaultInformation.Item1);
-                
+                File.Delete(vaultPath);
             }
-            
         }
 
-        [Fact]
-        async Task TrimVaultReturnsSameVaultIfThereIsNothingToTrim()
+        public static IEnumerable<object[]> EmptyVaultFileCombinations => TestsHelper.VaultFileCombinations.Where(combination => ((TestsHelper.VaultInformation)combination[1]).VaultSession.ENCRYPTED_FILES.Count == 0);
+
+        [Theory]
+        [MemberData(nameof(FilledVaultFileCombinations))]
+        internal async Task TrimVaultReturnsSameVaultIfThereIsNothingToTrim(Func<NormalizedPath> vaultMethod, TestsHelper.VaultInformation vaultInformation)
         {
-            byte[] password = Encoding.UTF8.GetBytes("TrimVaultReturnsSameVaultIfThereIsNothingToTrim");
-
-
-            (NormalizedPath, EncryptionOptions.FileEncryptionOptions[]) vaultInformation = (null!, null!);
+            var vaultPath = vaultMethod();
+            ReplaceSession(vaultInformation.VaultSession);
             NormalizedPath newVaultPath = null!;
             try
             {
-                vaultInformation = TestsHelper.CreateVaultFileWithEncryptedFileList(10, _session, password);
-                //Trim vault uses vault provided at VaultSession.VAULTPATH where VaultSession is the one provided when creating service
-                using (FileStream fs = new FileStream(vaultInformation.Item1.Value, FileMode.Open, FileAccess.Read))
-                {
-                    TestsHelper.SetVaultSessionFromStream(_session, fs, password);
-                }
-                try
-                {
-                    await _service.TrimVault(new ProgressionContext());
-                    newVaultPath = NormalizedPath.From(vaultInformation.Item1.Value[..^4] + "_TRIMMED.vlt");
-                    Assert.Equal(new FileInfo(vaultInformation.Item1).Length, new FileInfo(newVaultPath).Length);
-                }
-                finally
-                {
-                    File.Delete(newVaultPath);
-                }
+                await _service.TrimVault(new ProgressionContext());
+                newVaultPath = NormalizedPath.From(vaultPath.Value[..^4] + "_TRIMMED.vlt");
+                Assert.Equal(new FileInfo(vaultPath).Length, new FileInfo(newVaultPath).Length);
             }
             finally
             {
-                if (vaultInformation.Item1 is not null) File.Delete(vaultInformation.Item1);
+                File.Delete(vaultPath);
+                if (newVaultPath is not null) File.Delete(newVaultPath);
             }
         }
 
         [Fact]
-        void TrimVaultThrowsForNullValues()
+        internal void TrimVaultThrowsForInvalidContext()
         {
             Assert.ThrowsAsync<ArgumentNullException>(() => _service.TrimVault(null!));
         }
 
-        [Fact]
-        async Task DeleteFileFromVaultZeroesOutFile()
+        [Theory]
+        [MemberData(nameof(FilledVaultFileCombinations))]
+        internal async Task DeleteFileFromVaultZeroesOutFile(Func<NormalizedPath> vaultMethod, TestsHelper.VaultInformation vaultInformation)
         {
-            (NormalizedPath, EncryptionOptions.FileEncryptionOptions[]) tuple = TestsHelper.CreateVaultFileWithEncryptedFileList(10, _session);
+            var vaultPath = vaultMethod();
+            ReplaceSession(vaultInformation.VaultSession);
             try
             {
-                var offset = _session.ENCRYPTED_FILES.First().Key;
-                await _service.DeleteFileFromVault(_session.ENCRYPTED_FILES.First().Key, new ProgressionContext());
-
+                var offsetToDelete = vaultInformation.VaultSession.ENCRYPTED_FILES.First().Key;
+                await _service.DeleteFileFromVault(offsetToDelete, new ProgressionContext());
                 byte[] actual = new byte[_session.VAULT_READER.EncryptionOptionsSize];
-                using (FileStream fs = new FileStream(tuple.Item1.Value, FileMode.Open, FileAccess.Read))
+                using (FileStream fs = new FileStream(vaultPath, FileMode.Open, FileAccess.Read))
                 {
-                    fs.Position = offset;
+                    fs.Position = offsetToDelete;
                     fs.Read(actual);
                 }
-
                 Assert.True(new byte[_session.VAULT_READER.EncryptionOptionsSize].SequenceEqual(actual));
             }
             finally
             {
-                File.Delete(tuple.Item1);
+                File.Delete(vaultPath);
             }
         }
 
-        [Fact]
-        async Task DeleteFileFromVaultTrimsVault()
+        [Theory]
+        [MemberData(nameof(FilledVaultFileCombinations))]
+        internal async Task DeleteFileFromVaultTrimsVault(Func<NormalizedPath> vaultMethod, TestsHelper.VaultInformation vaultInformation)
         {
-            (NormalizedPath, EncryptionOptions.FileEncryptionOptions[]) tuple = TestsHelper.CreateVaultFileWithEncryptedFileList(10, _session);
+            var vaultPath = vaultMethod();
+            ReplaceSession(vaultInformation.VaultSession);
             try
             {
-                long oldVaultSize = new FileInfo(tuple.Item1).Length;
+                long oldVaultSize = new FileInfo(vaultPath).Length;
 
                 await _service.DeleteFileFromVault(_session.ENCRYPTED_FILES.Last().Key, new ProgressionContext());
 
-                long newVaultSize = new FileInfo(tuple.Item1).Length;
+                long newVaultSize = new FileInfo(vaultPath).Length;
 
                 Assert.True(newVaultSize < oldVaultSize);
             }
             finally
             {
-                File.Delete(tuple.Item1);
+                File.Delete(vaultPath);
             }
         }
 
-        [Fact]
-        async Task DeleteFileFromVaultChangesEncryptedFileListCount()
+        [Theory]
+        [MemberData(nameof(FilledVaultFileCombinations))]
+        internal async Task DeleteFileFromVaultChangesEncryptedFileListCount(Func<NormalizedPath> vaultMethod, TestsHelper.VaultInformation vaultInformation)
         {
-            (NormalizedPath, EncryptionOptions.FileEncryptionOptions[]) tuple = TestsHelper.CreateVaultFileWithEncryptedFileList(10, _session);
+            var vaultPath = vaultMethod();
+            ReplaceSession(vaultInformation.VaultSession);
             try
             {
-                long oldVaultSize = new FileInfo(tuple.Item1).Length;
+                long oldVaultSize = new FileInfo(vaultPath).Length;
 
                 var oldFileListCount = _session.ENCRYPTED_FILES.Count;
                 await _service.DeleteFileFromVault(_session.ENCRYPTED_FILES.Last().Key, new ProgressionContext());
-                using (FileStream vaultFS = new FileStream(_session.VAULTPATH, FileMode.Open, FileAccess.Read))
+                using (FileStream vaultFS = new FileStream(vaultPath, FileMode.Open, FileAccess.Read))
                 {
                     _service.RefreshEncryptedFilesList(vaultFS);
                 }
@@ -325,20 +299,22 @@ namespace VaultCrypt.Tests.Services
             }
             finally
             {
-                File.Delete(tuple.Item1);
+                File.Delete(vaultPath);
             }
         }
 
-        [Fact]
-        void DeleteFileThrowsForNullValues()
+        [Theory]
+        [MemberData(nameof(TestsHelper.VaultFileCombinations), MemberType = typeof(TestsHelper))]
+        internal void DeleteFileThrowsForInvalidOffset(Func<NormalizedPath> _, TestsHelper.VaultInformation vaultInformation)
         {
-            Assert.ThrowsAsync<ArgumentNullException>(() => _service.DeleteFileFromVault(1, null!));
+            ReplaceSession(vaultInformation.VaultSession);
+            Assert.ThrowsAsync<ArgumentOutOfRangeException>(() => _service.DeleteFileFromVault(vaultInformation.VaultSession.VAULT_READER.HeaderSize - 1, new ProgressionContext()));
         }
 
         [Fact]
-        void DeleteFileThrowsForNegativeValues()
+        internal void DeleteFileThrowsForInvalidContext()
         {
-            Assert.ThrowsAsync<ArgumentOutOfRangeException>(() => _service.DeleteFileFromVault(-1, new ProgressionContext()));
+            Assert.ThrowsAsync<ArgumentNullException>(() => _service.DeleteFileFromVault(long.MaxValue, null!));
         }
     }
 }
