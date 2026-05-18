@@ -10,22 +10,17 @@ using VaultCrypt.ViewModels;
 
 namespace VaultCrypt.Tests.ViewModels
 {
-    public class OpenVaultViewModelTests : IDisposable
+    public class OpenVaultViewModelTests
     {
         private VaultCrypt.ViewModels.OpenVaultViewModel _viewModel;
         private readonly FakeFileDialogService fakeFileDialogService = new();
         private readonly FakeVaultService fakeVaultService = new();
         private readonly FakeDecryptionService fakeDecryptionService = new();
-        private readonly FakeVaultSession fakeVaultSession = FakeVaultSession.EmptyMockSession();
+        private readonly FakeVaultSession fakeVaultSession = FakeVaultSession.EmptyMockSession;
 
         public OpenVaultViewModelTests()
         {
             this._viewModel = new VaultCrypt.ViewModels.OpenVaultViewModel(fakeFileDialogService, fakeVaultService, fakeDecryptionService, fakeVaultSession);
-        }
-
-        public void Dispose()
-        {
-            fakeVaultSession.KEY.Dispose();
         }
 
         private void CreateVMWithFileDialogService(string? returnValue)
