@@ -128,15 +128,29 @@ namespace VaultCrypt
                 }
             }
 
-            public void Dispose()
+            private void Dispose(bool disposing)
             {
+                if (disposing)
+                {
+                    ChunkInformation?.Dispose();
+                    FileName.Dispose();
+                }
                 Version = 0;
-                FileName.Dispose();
                 FileSize = 0;
                 EncryptionAlgorithm = 0;
                 IsChunked = false;
-                ChunkInformation?.Dispose();
                 ChunkInformation = null;
+            }
+
+            public void Dispose()
+            {
+                Dispose(true);
+                GC.SuppressFinalize(this);
+            }
+
+            ~FileEncryptionOptions()
+            {
+                Dispose(false);
             }
         }
 
