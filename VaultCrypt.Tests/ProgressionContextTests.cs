@@ -255,4 +255,25 @@ namespace VaultCrypt.Tests
             Assert.Equal(expected, actual);
         }
     }
+
+    public class ProgressRepotedTests
+    {
+        [Fact]
+        internal void ConstructorAssignsValuesCorrectly()
+        {
+            var progressReport = new ProgressReported("first", "second");
+
+            Assert.Equal("first", progressReport.Message);
+            Assert.Equal("second", progressReport.TempMessage);
+        }
+
+        [Fact]
+        internal void ConstructorAssignsValuesCorrectlyDefault()
+        {
+            var progressReport = new ProgressReported();
+
+            Assert.Null(progressReport.Message);
+            Assert.Null(progressReport.TempMessage);
+        }
+    }
 }
