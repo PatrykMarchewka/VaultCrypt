@@ -62,8 +62,9 @@ namespace VaultCrypt.Tests.ViewModels
         }
 
         [Fact]
-        void FilteredTextCallsFilterMethod_ReturnsEmpty()
+        internal void FilteredTextCallsFilterMethod_ReturnsEmpty()
         {
+            _viewModel.EncryptedFilesCollectionView.Filter = null;
             //Asserts that changing FilteredText calls Filter method by ensuring that the filtered text matches no hits  
             Assert.False(_viewModel.EncryptedFilesCollectionView.IsEmpty);
             string text = "IMPOSSIBLEITEMTHATWILLNEVERAPPEARINTESTS";
@@ -73,8 +74,9 @@ namespace VaultCrypt.Tests.ViewModels
         }
 
         [Fact]
-        void FilteredTextCallsFilterMethod_ReturnsFull()
+        internal void FilteredTextCallsFilterMethod_ReturnsFull()
         {
+            _viewModel.EncryptedFilesCollectionView.Filter = null;
             //Asserts that changing FilteredText calls Filter method by ensuring that the filtered text matches every hit
             Assert.False(_viewModel.EncryptedFilesCollectionView.IsEmpty);
             string text = "";
@@ -86,8 +88,9 @@ namespace VaultCrypt.Tests.ViewModels
         }
 
         [Fact]
-        void FilteredTextCallsFilterMethod_ReturnsSingle()
+        internal void FilteredTextCallsFilterMethod_ReturnsSingle()
         {
+            _viewModel.EncryptedFilesCollectionView.Filter = null;
             //Asserts that changing FilteredText calls Filter method by ensuring that the filtered text matches single hit
             Assert.False(_viewModel.EncryptedFilesCollectionView.IsEmpty);
             string text = "TEST";
