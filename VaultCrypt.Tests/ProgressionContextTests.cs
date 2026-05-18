@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Linq;
@@ -53,16 +53,12 @@ namespace VaultCrypt.Tests
             Assert.Equal(1, progressReported);
         }
 
-        [Fact]
-        void IncrementThrowsOnZeroValue()
+        [Theory]
+        [InlineData(0)]
+        [InlineData(ulong.MaxValue)]
+        internal void IncrementThrowsOnInvalidAmount(ulong amount)
         {
-            Assert.Throws<ArgumentOutOfRangeException>(() => _progressionContext.Increment(0));
-        }
-
-        [Fact]
-        void IncrementThrowsOnCompletedGreaterThanTotal()
-        {
-            Assert.Throws<ArgumentOutOfRangeException>(() => _progressionContext.Increment(int.MaxValue));
+            Assert.Throws<ArgumentOutOfRangeException>(() => _progressionContext.Increment(amount));
         }
 
         [Theory]
@@ -99,17 +95,11 @@ namespace VaultCrypt.Tests
             Assert.Throws<ArgumentOutOfRangeException>(() => _progressionContext.SetTotal(total - 1));
         }
 
-        [Fact]
-        void SetTotalThrowsOnZeroTotal()
-        {
-            Assert.Throws<ArgumentOutOfRangeException>(() => _progressionContext.SetTotal(0));
-        }
-
         [Theory]
+        [InlineData(ulong.MinValue)]
         [InlineData(-1)]
-        [InlineData(-2)]
-        [InlineData(int.MinValue)]
-        void SetTotalThrowsOnNegativeTotal(int total)
+        [InlineData(0)]
+        internal void SetTotalThrowsOnInvalidTotal(ulong total)
         {
             Assert.Throws<ArgumentOutOfRangeException>(() => _progressionContext.SetTotal(total));
         }
@@ -156,33 +146,33 @@ namespace VaultCrypt.Tests
             Assert.Equal(1, progressReported);
         }
 
-        [Fact]
-        void ReportPermStatusThrowsOnNullMessage()
+        [Theory]
+        [InlineData(default(ProgressFailure.ProgressPermFailure))]
+        internal void ReportPermStatusThrowsOnInvalidFailure(ProgressFailure.ProgressPermFailure failure)
         {
-            Assert.Throws<ArgumentNullException>(() => _progressionContext.ReportPermStatus((ProgressFailure.ProgressPermFailure)1, null!));
+            Assert.Throws<ArgumentException>(() => _progressionContext.ReportPermStatus(failure, "message"));
         }
 
+        public static IEnumerable<object?[]> InvalidMessages =>
+        [
+            new object?[]{null, typeof(ArgumentNullException)},
+            new object[]{"  ", typeof(ArgumentException)},
+            new object[]{string.Empty, typeof(ArgumentException)}
+        ];
+
         [Theory]
-        [InlineData("")]
-        [InlineData("   ")]
-        void ReportPermStatusThrowsOnInvalidMessage(string message)
+        [MemberData(nameof(InvalidMessages))]
+        internal void ReportPermStatusThrowsOnInvalidMessage(string message, Type exceptionType)
         {
-            Assert.Throws<ArgumentException>(() => _progressionContext.ReportPermStatus((ProgressFailure.ProgressPermFailure)1, message));
+            Assert.Throws(exceptionType, () => _progressionContext.ReportPermStatus((ProgressFailure.ProgressPermFailure)1, message));
         }
 
         [Theory]
         [InlineData(-1)]
         [InlineData(int.MinValue)]
-        void ReportPermStatusThrowsOnNegativeNumber(int number)
+        internal void ReportPermStatusThrowsOnInvalidNumber(int number)
         {
             Assert.Throws<ArgumentOutOfRangeException>(() => _progressionContext.ReportPermStatus((ProgressFailure.ProgressPermFailure)1, number));
-        }
-
-        [Theory]
-        [InlineData(default(ProgressFailure.ProgressPermFailure))]
-        void ReportPermStatusThrowsOnInvalidFailure(ProgressFailure.ProgressPermFailure failure)
-        {
-            Assert.Throws<ArgumentException>(() => _progressionContext.ReportPermStatus(failure, "message"));
         }
 
         [Fact]
