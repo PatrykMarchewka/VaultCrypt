@@ -97,9 +97,16 @@ namespace VaultCrypt.Tests
 
         [Theory]
         [InlineData(ulong.MinValue)]
-        [InlineData(-1)]
         [InlineData(0)]
         internal void SetTotalThrowsOnInvalidTotal(ulong total)
+        {
+            Assert.Throws<ArgumentOutOfRangeException>(() => _progressionContext.SetTotal(total));
+        }
+
+        [Theory]
+        [InlineData(int.MinValue)]
+        [InlineData(-1)]
+        internal void SetTotalThrowsOnInvalidTotalInt(int total)
         {
             Assert.Throws<ArgumentOutOfRangeException>(() => _progressionContext.SetTotal(total));
         }
