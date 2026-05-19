@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.ComponentModel.Design;
 using System.Linq;
@@ -21,13 +21,14 @@ namespace VaultCrypt.Tests
         }
 
         [Fact]
-        async Task ExecuteCallsAsyncFunction()
+        internal async Task ExecuteCallsAsyncFunction()
         {
+            var completionSource = new TaskCompletionSource();
             bool called = false;
-            var command = new RelayCommand(async _ => { await Task.Delay(1); called = true; });
+            var command = new RelayCommand(async _ => { called = true; completionSource.SetResult(); });
 
             command.Execute(null);
-            await Task.Delay(100); //Waiting for async method to complete
+            await completionSource.Task;
 
             Assert.True(called);
         }
