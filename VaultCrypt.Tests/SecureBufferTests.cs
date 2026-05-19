@@ -14,18 +14,9 @@ namespace VaultCrypt.Tests
         public class SecureLargeBufferTests
         {
             [Fact]
-            void SecureLargeBufferSetsCorrectLength()
+            internal void SecureLargeBufferSetsCorrectLength()
             {
-                SecureBuffer.SecureLargeBuffer memory = new SecureBuffer.SecureLargeBuffer(length: RandomNumberGenerator.GetInt32(1, 1000));
-                Assert.Equal(memory.AsSpan.Length, memory.Length);
-
-                memory.Dispose();
-            }
-
-            [Fact]
-            void SecureLargeBufferAllocatesCorrectSize()
-            {
-                int expectedSize = RandomNumberGenerator.GetInt32(1, 1000);
+                int expectedSize = 100;
                 SecureBuffer.SecureLargeBuffer memory = new SecureBuffer.SecureLargeBuffer(length: expectedSize);
                 Assert.Equal(expectedSize, memory.Length);
 
@@ -33,63 +24,70 @@ namespace VaultCrypt.Tests
             }
 
             [Fact]
-            void SecureLargeBufferAllocatesZeroedMemory()
+            internal void SecureLargeBufferAllocatesCorrectSize()
             {
-                int randomLength = RandomNumberGenerator.GetInt32(1, 1000);
+                SecureBuffer.SecureLargeBuffer memory = new SecureBuffer.SecureLargeBuffer(length: 100);
+                Assert.Equal(memory.AsSpan.Length, memory.Length);
+                Assert.Equal(memory.AsMemory.Length, memory.Length);
+
+                memory.Dispose();
+            }
+
+            [Fact]
+            internal void SecureLargeBufferAllocatesZeroedMemory()
+            {
+                int randomLength = 100;
                 SecureBuffer.SecureLargeBuffer memory = new SecureBuffer.SecureLargeBuffer(randomLength);
                 Assert.True(memory.AsSpan.SequenceEqual(new byte[randomLength]));
 
                 memory.Dispose();
             }
 
-            [Fact]
-            void SecureLargeBufferThrowsForZeroLength()
+            [Theory]
+            [InlineData(int.MinValue)]
+            [InlineData(-1)]
+            [InlineData(0)]
+            internal void SecureLargeBufferThrowsForInvalidLength(int length)
             {
-                Assert.Throws<ArgumentOutOfRangeException>(() => new SecureBuffer.SecureLargeBuffer(0));
+                Assert.Throws<ArgumentOutOfRangeException>(() => new SecureBuffer.SecureLargeBuffer(length));
             }
 
             [Fact]
-            void SecureLargeBufferThrowsForNegativeLength()
+            internal void AsSpanThrowsForDisposedValue()
             {
-                Assert.Throws<ArgumentOutOfRangeException>(() => new SecureBuffer.SecureLargeBuffer(-1));
-            }
-
-            [Fact]
-            void AsSpanThrowsForDisposedValue()
-            {
-                SecureBuffer.SecureLargeBuffer memory = new SecureBuffer.SecureLargeBuffer(length: RandomNumberGenerator.GetInt32(1, 1000));
+                SecureBuffer.SecureLargeBuffer memory = new SecureBuffer.SecureLargeBuffer(length: 10);
                 memory.Dispose();
 
                 Assert.Throws<ObjectDisposedException>(() => { var test = memory.AsSpan; });
             }
 
             [Fact]
-            void LengthThrowsForDisposedValue()
+            internal void LengthThrowsForDisposedValue()
             {
-                SecureBuffer.SecureLargeBuffer memory = new SecureBuffer.SecureLargeBuffer(length: RandomNumberGenerator.GetInt32(1, 1000));
+                SecureBuffer.SecureLargeBuffer memory = new SecureBuffer.SecureLargeBuffer(length: 10);
                 memory.Dispose();
 
                 Assert.Throws<ObjectDisposedException>(() => { var test = memory.Length; });
             }
 
             [Fact]
-            void AsMemoryThrowsForDisposedValue()
+            internal void AsMemoryThrowsForDisposedValue()
             {
-                SecureBuffer.SecureLargeBuffer memory = new SecureBuffer.SecureLargeBuffer(length: RandomNumberGenerator.GetInt32(1, 1000));
+                SecureBuffer.SecureLargeBuffer memory = new SecureBuffer.SecureLargeBuffer(length: 10);
                 memory.Dispose();
 
                 Assert.Throws<ObjectDisposedException>(() => { var test = memory.AsMemory; });
             }
 
             [Fact]
-            unsafe void DisposeZeroesMemory()
+            unsafe internal void DisposeZeroesMemory()
             {
-                int randomLength =  RandomNumberGenerator.GetInt32(1, 1000);
+                int randomLength =  100;
                 SecureBuffer.SecureLargeBuffer memory = new SecureBuffer.SecureLargeBuffer(randomLength);
                 //Fill memory buffer with random values
                 for (int i = 0; i < randomLength; i++)
                 {
-                    memory.AsSpan[i] = (byte)RandomNumberGenerator.GetInt32(255);
+                    memory.AsSpan[i] = (byte)Random.Shared.Next(255);
                 }
 
                 //Get pointer to memory that stays after Dispose gets called
@@ -124,62 +122,73 @@ namespace VaultCrypt.Tests
         public class SecureKeyBufferTests
         {
             [Fact]
-            void SecureKeyBufferSetsCorrectLength()
+            internal void SecureKeyBufferSetsCorrectLength()
             {
-                SecureBuffer.SecureKeyBuffer memory = new SecureBuffer.SecureKeyBuffer(length: RandomNumberGenerator.GetInt32(1, 1000));
+                int expectedSize = 100;
+                SecureBuffer.SecureKeyBuffer memory = new SecureBuffer.SecureKeyBuffer(length: expectedSize);
+                //Memory gets allocated in blocks defined by OS page size, because of that we can't force exact size unless it aligns perfectly
+                //Because of that we know that if we ask for X bytes we will get a memory region that contains X bytes or more
+                Assert.True(expectedSize <= memory.Length);
+
+                memory.Dispose();
+            }
+
+            [Fact]
+            internal void SecureKeyBufferAllocatesCorrectSize()
+            {
+                SecureBuffer.SecureKeyBuffer memory = new SecureBuffer.SecureKeyBuffer(length: 100);
                 Assert.Equal(memory.AsSpan.Length, memory.Length);
 
                 memory.Dispose();
             }
 
             [Fact]
-            void SecureKeyBufferAllocatesCorrectSize()
+            internal void SecureKeyBufferPadsLengthToSystemPageSize()
             {
-                int expectedSize = RandomNumberGenerator.GetInt32(1, 10_000);
+                int expectedSize = 100;
                 SecureBuffer.SecureKeyBuffer memory = new SecureBuffer.SecureKeyBuffer(length: expectedSize);
-                //Memory gets allocated in blocks defined by OS page size, because of that we can't force exact size just that it will create atleast x bytes
-                Assert.True(expectedSize < memory.Length);
+                Assert.True(memory.Length % Environment.SystemPageSize == 0);
 
                 memory.Dispose();
             }
 
             [Fact]
-            void SecureKeyBufferAllocatesZeroedMemory()
+            internal void SecureKeyBufferDoesntOverAllocateForAlignedMemorySize()
             {
-                int randomLength = RandomNumberGenerator.GetInt32(1, 10_000);
+                int expectedSize = Environment.SystemPageSize;
+                SecureBuffer.SecureKeyBuffer memory = new SecureBuffer.SecureKeyBuffer(length: expectedSize);
+                //Asserting that perfectly aligned memory size allocates fully without forcing empty regions
+                Assert.Equal(expectedSize, memory.Length);
+                memory.Dispose();
+            }
+
+            [Fact]
+            internal void SecureKeyBufferAllocatesZeroedMemory()
+            {
+                int randomLength = 100;
                 SecureBuffer.SecureKeyBuffer memory = new SecureBuffer.SecureKeyBuffer(randomLength);
                 Assert.True(memory.AsSpan.SequenceEqual(new byte[memory.Length]));
 
                 memory.Dispose();
             }
 
-            [Fact]
-            void SecureKeyBufferThrowsForZeroLength()
+            public static TheoryData<int, Type> InvalidLengthAndException = new TheoryData<int, Type>()
             {
-                Assert.Throws<ArgumentOutOfRangeException>(() => new SecureBuffer.SecureKeyBuffer(0));
+                {int.MinValue, typeof(ArgumentOutOfRangeException) },
+                {-1, typeof(ArgumentOutOfRangeException) },
+                {0, typeof(ArgumentOutOfRangeException) },
+                {10_485_760, typeof(SecurityException) }
+            };
+
+            [Theory]
+            [MemberData(nameof(InvalidLengthAndException))]
+            internal void SecureKeyBufferThrowsForInvalidLength(int length, Type exception)
+            {
+                Assert.Throws(exception, () => new SecureBuffer.SecureKeyBuffer(length));
             }
 
             [Fact]
-            void SecureKeyBufferThrowsForNegativeLength()
-            {
-                Assert.Throws<ArgumentOutOfRangeException>(() => new SecureBuffer.SecureKeyBuffer(-1));
-            }
-
-            [Fact]
-            void SecureKeyBufferThrowsForMassiveLength()
-            {
-                int tenMB = 10_485_760;
-                Assert.Throws<SecurityException>(() => new SecureBuffer.SecureKeyBuffer(tenMB));
-            }
-
-            [Fact]
-            void AsSpanProvidesCorrectSpan()
-            {
-                SecureBuffer.SecureKeyBuffer memory = new SecureBuffer.SecureKeyBuffer(length: RandomNumberGenerator.GetInt32(1, 1000));
-            }
-
-            [Fact]
-            void AsSpanThrowsForDisposedValue()
+            internal void AsSpanThrowsForDisposedValue()
             {
                 SecureBuffer.SecureKeyBuffer memory = new SecureBuffer.SecureKeyBuffer(length: RandomNumberGenerator.GetInt32(1, 1000));
                 memory.Dispose();
@@ -188,7 +197,7 @@ namespace VaultCrypt.Tests
             }
 
             [Fact]
-            void LengthThrowsForDisposedValue()
+            internal void LengthThrowsForDisposedValue()
             {
                 SecureBuffer.SecureKeyBuffer memory = new SecureBuffer.SecureKeyBuffer(length: RandomNumberGenerator.GetInt32(1, 1000));
                 memory.Dispose();
