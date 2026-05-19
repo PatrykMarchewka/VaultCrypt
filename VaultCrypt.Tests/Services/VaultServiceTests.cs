@@ -111,6 +111,15 @@ namespace VaultCrypt.Tests.Services
             Assert.Throws<ArgumentOutOfRangeException>(() => _service.CreateVault(NormalizedPath.From("TEXT"), "TEXT", new byte[1], iterations));
         }
 
+        private bool CompareEncryptedFilesKVP(Dictionary<long, EncryptedFileInfo> first, Dictionary<long, EncryptedFileInfo> second)
+        {
+            return first.Count == second.Count && 
+                first.All(kvp => second.TryGetValue(kvp.Key, out EncryptedFileInfo info) && 
+                kvp.Value.FileName == info.FileName && 
+                kvp.Value.FileSize == info.FileSize &&
+                kvp.Value.EncryptionAlgorithm == info.EncryptionAlgorithm);
+        }
+
         [Theory]
         [MemberData(nameof(TestsHelper.VaultFileCombinations), MemberType = typeof(TestsHelper))]
         internal void CreateSessionFromFileSetsValuesCorrectly(Func<NormalizedPath> vaultMethod, TestsHelper.VaultInformation vaultInformation)
@@ -122,7 +131,7 @@ namespace VaultCrypt.Tests.Services
 
                 Assert.True(vaultInformation.VaultSession.KEY.AsSpan.SequenceEqual(_session.KEY.AsSpan));
                 Assert.Equal(vaultPath, _session.VAULTPATH);
-                Assert.Equal(vaultInformation.VaultSession.ENCRYPTED_FILES, _session.ENCRYPTED_FILES);
+                Assert.True(CompareEncryptedFilesKVP(vaultInformation.VaultSession.ENCRYPTED_FILES, _session.ENCRYPTED_FILES));
                 Assert.Equal(vaultInformation.VaultSession.VAULT_READER.GetType(), _session.VAULT_READER.GetType());
             }
             finally
