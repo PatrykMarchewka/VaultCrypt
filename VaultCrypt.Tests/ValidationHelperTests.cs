@@ -25,6 +25,19 @@ namespace VaultCrypt.Tests
         }
 
         [Fact]
+        internal void NotEmptyStringUsesFallbackValue()
+        {
+            try
+            {
+                ValidationHelper.NotEmptyString(null, "");
+            }
+            catch (Exception ex)
+            {
+                Assert.Contains("[Unknown field]", ex.Message);
+            }
+        }
+
+        [Fact]
         internal void NotEmptySecureStringDoesNotThrowForValidInput()
         {
             SecureString input = new SecureString();
@@ -39,6 +52,19 @@ namespace VaultCrypt.Tests
         internal void NotEmptySecureStringThrowsForInvalidInput(SecureString input)
         {
             Assert.Throws<VaultCrypt.Exceptions.VaultUIException>(() => ValidationHelper.NotEmptySecureString(input, ""));
+        }
+
+        [Fact]
+        internal void NotEmptySecureStringUsesFallbackValue()
+        {
+            try
+            {
+                ValidationHelper.NotEmptySecureString(null, "");
+            }
+            catch (Exception ex)
+            {
+                Assert.Contains("[Unknown field]", ex.Message);
+            }
         }
     }
 }
