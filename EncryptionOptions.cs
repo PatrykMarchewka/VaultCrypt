@@ -47,6 +47,7 @@ namespace VaultCrypt
                 catch (Exception)
                 {
                     fileName.Dispose();
+                    ChunkInformation?.Dispose();
                     throw;
                 }
             }
