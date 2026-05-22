@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
@@ -9,7 +9,7 @@ namespace VaultCrypt.Tests.ViewModels
 {
     public class EncryptFileViewModelTests
     {
-        private VaultCrypt.ViewModels.EncryptFileViewModel _viewModel;
+        private readonly VaultCrypt.ViewModels.EncryptFileViewModel _viewModel;
         private readonly FakeEncryptionService fakeEncryptionService = new();
 
         public EncryptFileViewModelTests()
@@ -17,52 +17,51 @@ namespace VaultCrypt.Tests.ViewModels
             this._viewModel = new VaultCrypt.ViewModels.EncryptFileViewModel(fakeEncryptionService);
         }
 
-        [Fact]
-        void ChunkSizePresetsInitializedCorrectly()
+        public static TheoryData<int, string, int> ChunkSizePresets = new TheoryData<int, string, int>()
         {
-            Assert.Equal(12, _viewModel.ChunkSizePresets.Count);
+            {0, "1MB", 1 },
+            {1, "2MB", 2 },
+            {2, "4MB", 4 },
+            {3, "8MB", 8 },
+            {4, "16MB", 16 },
+            {5, "32MB", 32 },
+            {6, "64MB", 64 },
+            {7, "128MB", 128 },
+            {8, "256MB", 256 },
+            {9, "512MB", 512 },
+            {10, "1024MB", 1024 },
+            {11, "2048MB", 2048 }
+        };
 
-            Assert.Equal("1MB", _viewModel.ChunkSizePresets[0].Name);
-            Assert.Equal(1, _viewModel.ChunkSizePresets[0].SizeInMB);
-            Assert.Equal("2MB", _viewModel.ChunkSizePresets[1].Name);
-            Assert.Equal(2, _viewModel.ChunkSizePresets[1].SizeInMB);
-            Assert.Equal("4MB", _viewModel.ChunkSizePresets[2].Name);
-            Assert.Equal(4, _viewModel.ChunkSizePresets[2].SizeInMB);
-            Assert.Equal("8MB", _viewModel.ChunkSizePresets[3].Name);
-            Assert.Equal(8, _viewModel.ChunkSizePresets[3].SizeInMB);
-            Assert.Equal("16MB", _viewModel.ChunkSizePresets[4].Name);
-            Assert.Equal(16, _viewModel.ChunkSizePresets[4].SizeInMB);
-            Assert.Equal("32MB", _viewModel.ChunkSizePresets[5].Name);
-            Assert.Equal(32, _viewModel.ChunkSizePresets[5].SizeInMB);
-            Assert.Equal("64MB", _viewModel.ChunkSizePresets[6].Name);
-            Assert.Equal(64, _viewModel.ChunkSizePresets[6].SizeInMB);
-            Assert.Equal("128MB", _viewModel.ChunkSizePresets[7].Name);
-            Assert.Equal(128, _viewModel.ChunkSizePresets[7].SizeInMB);
-            Assert.Equal("256MB", _viewModel.ChunkSizePresets[8].Name);
-            Assert.Equal(256, _viewModel.ChunkSizePresets[8].SizeInMB);
-            Assert.Equal("512MB", _viewModel.ChunkSizePresets[9].Name);
-            Assert.Equal(512, _viewModel.ChunkSizePresets[9].SizeInMB);
-            Assert.Equal("1024MB", _viewModel.ChunkSizePresets[10].Name);
-            Assert.Equal(1024, _viewModel.ChunkSizePresets[10].SizeInMB);
-            Assert.Equal("2048MB", _viewModel.ChunkSizePresets[11].Name);
-            Assert.Equal(2048, _viewModel.ChunkSizePresets[11].SizeInMB);
+        [Fact]
+        internal void ChunkSizePresetsHasCorrectAmountOfItems()
+        {
+            Assert.Equal(ChunkSizePresets.Count(), _viewModel.ChunkSizePresets.Count);
         }
 
         [Theory]
-        [InlineData(0,1)]
-        [InlineData(1,2)]
-        [InlineData(2, 3)]
-        [InlineData(3, 4)]
-        [InlineData(4, 5)]
-        [InlineData(5, 6)]
-        [InlineData(6, 7)]
-        [InlineData(7, 8)]
-        [InlineData(8, 9)]
-        [InlineData(9, 10)]
-        [InlineData(10, 11)]
-        void ChunkSizePresetsIncreaseInSize(int firstIndex, int secondIndex)
+        [MemberData(nameof(ChunkSizePresets))]
+        internal void ChunkSizePresetsInitializedCorrectly(int position, string name, int sizeInMB)
         {
-            Assert.True(_viewModel.ChunkSizePresets[firstIndex].SizeInMB < _viewModel.ChunkSizePresets[secondIndex].SizeInMB);
+            Assert.Equal(name, _viewModel.ChunkSizePresets[position].Name);
+            Assert.Equal(sizeInMB, _viewModel.ChunkSizePresets[position].SizeInMB);
+        }
+
+        [Theory]
+        [MemberData(nameof(ChunkSizePresets))]
+        internal void ChunkSizeHaveUniqueValues(int _, string name, int sizeInMB)
+        {
+            Assert.Single(_viewModel.ChunkSizePresets.Where(preset => preset.Name == name));
+            Assert.Single(_viewModel.ChunkSizePresets.Where(preset => preset.SizeInMB == sizeInMB));
+        }
+
+        [Fact]
+        internal void ChunkSizePresetsIncreaseInSize()
+        {
+            for (int i = 1; i < _viewModel.ChunkSizePresets.Count; i++)
+            {
+                Assert.True(_viewModel.ChunkSizePresets[i].SizeInMB > _viewModel.ChunkSizePresets[i].SizeInMB);
+            }
         }
 
         [Fact]
@@ -146,7 +145,19 @@ namespace VaultCrypt.Tests.ViewModels
         }
 
         [Fact]
-        void NavigationRequestedRaised()
+        internal void OnNavigatedToSetsValues()
+        {
+            NormalizedPath expected = NormalizedPath.From("OnNavigatedToTest");
+            _viewModel.OnNavigatedTo(expected);
+
+            //Reflection because _viewmodel.filePath is private
+            //TODO: Replace reflection with something better
+            NormalizedPath actual = (NormalizedPath)_viewModel.GetType().GetField("filePath", System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance)!.GetValue(_viewModel)!;
+            Assert.Equal(expected, actual);
+        }
+
+        [Fact]
+        internal void NavigationRequestedRaised()
         {
             int eventRaisedCount = 0;
             _viewModel.NavigationRequested += (request) => { eventRaisedCount++; };
