@@ -29,6 +29,29 @@ namespace VaultCrypt.Tests.ViewModels
             this._viewModel = new VaultCrypt.ViewModels.OpenVaultViewModel(fileDialogService, fakeVaultService, fakeDecryptionService, fakeVaultSession);
         }
 
+        private (SecureString password, NormalizedPath vaultPath) GetViewModelValues()
+        {
+            //Reflection in order to read private field, replace with something better when possible
+            //TODO: Use something less brittle than reflection
+            SecureString password = (SecureString)_viewModel.GetType().GetField("_password", System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.NonPublic)!.GetValue(_viewModel)!;
+            NormalizedPath vaultPath = (NormalizedPath)_viewModel.GetType().GetField("_vaultPath", System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.NonPublic)!.GetValue(_viewModel)!;
+
+            return (password, vaultPath);
+        }
+
+        private void SetViewModelValues(char newPasswordChar = 'c', string newVaultPath = "NewVaultPath")
+        {
+            //Reflection in order to modify private field, replace with something better when possible
+            //TODO: Use something less brittle than reflection
+            SecureString newPassword = new SecureString();
+            newPassword.AppendChar(newPasswordChar);
+            var reflectionPassword = typeof(VaultCrypt.ViewModels.OpenVaultViewModel).GetField("_password", System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance);
+            reflectionPassword!.SetValue(_viewModel, newPassword);
+            var reflectionVaultPath = typeof(VaultCrypt.ViewModels.OpenVaultViewModel).GetField("_vaultPath", System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance);
+            reflectionVaultPath!.SetValue(_viewModel, NormalizedPath.From(newVaultPath));
+        }
+
+
         [Fact]
         void FilteredTextRaisesPropertyChanged()
         {
@@ -162,23 +185,61 @@ namespace VaultCrypt.Tests.ViewModels
         }
 
         [Fact]
-        void CreateSessionCallsMethod()
+        internal void CreateSessionCallsMethod()
         {
-            //Reflection in order to modify private field, replace with something better when possible
-            //CreateSession calls PasswordHelper.SecureStringToBytes() on password
-            //TODO: Use something less brittle than reflection
-            SecureString newPassword = new SecureString();
-            newPassword.AppendChar('c');
-            var reflectionPassword = typeof(OpenVaultViewModel).GetField("_password", System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance);
-            reflectionPassword!.SetValue(_viewModel, newPassword);
-            var reflectionVaultPath = typeof(OpenVaultViewModel).GetField("_vaultPath", System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance);
-            reflectionVaultPath!.SetValue(_viewModel, NormalizedPath.From("CreateSessionCallsMethodTest"));
+            SetViewModelValues();
             _viewModel.CreateSession();
             Assert.True(fakeVaultService.CreateSessionFromFileWasCalled);
         }
 
         [Fact]
-        void AddNewFileRaisesNavigationRequest()
+        internal void CreateSessionSetsVaultName()
+        {
+            string vaultPath = "CreateSessionSetsVaultPathTest";
+            SetViewModelValues(newVaultPath: vaultPath);
+            _viewModel.CreateSession();
+            Assert.Equal(vaultPath, _viewModel.VaultName);
+        }
+
+        [Fact]
+        internal void RefreshCollectionCallsMethod()
+        {
+            //RefreshCollection opens FileStream to _session.VAULTPATH
+            var vaultFilePath = TestsHelper.CreateTemporaryFile(0);
+            fakeVaultSession.VAULTPATH = vaultFilePath;
+            try
+            {
+                _viewModel.RefreshCollection();
+                Assert.True(fakeVaultService.RefreshEncryptedFilesListWasCalled);
+            }
+            finally
+            {
+                File.Delete(vaultFilePath);
+            }
+        }
+
+        [Fact]
+        internal void GoBackDisposesClass()
+        {
+            _viewModel.GoBack();
+            (SecureString, NormalizedPath) actualValues = GetViewModelValues();
+            Assert.True(actualValues.Item1.Length == 0);
+            Assert.Null(actualValues.Item2);
+            Assert.Null(_viewModel.SelectedFile);
+        }
+
+        [Fact]
+        internal void GoBackRaisesNavigationRequest()
+        {
+            int eventRaisedCount = 0;
+            _viewModel.NavigationRequested += (request) => { eventRaisedCount++; };
+            _viewModel.GoBack();
+
+            Assert.Equal(1, eventRaisedCount);
+        }
+
+        [Fact]
+        internal void AddNewFileRaisesNavigationRequest()
         {
             CreateVMWithFileDialogService("return");
             int eventRaisedCount = 0;
@@ -254,21 +315,31 @@ namespace VaultCrypt.Tests.ViewModels
         }
 
         [Fact]
-        void NavigationRequestedRaised()
+        internal void OnNavigatedToSetsValues()
         {
-            //Reflection in order to modify private field, replace with something better when possible
-            //GoBack command calls Dispose which calls .Clear() on password
-            //TODO: Use something less brittle than reflection
-            SecureString newPassword = new SecureString();
-            newPassword.AppendChar('c');
-            var reflection = typeof(OpenVaultViewModel).GetField("_password", System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance);
-            reflection!.SetValue(_viewModel, newPassword);
+            SecureString expectedSecureString = new SecureString();
+            expectedSecureString.AppendChar('a');
+            NormalizedPath expectedPath = NormalizedPath.From("OnNavigatedToSetsValuesTest");
+            object expected = new { Password = expectedSecureString, VaultPath = expectedPath };
 
-            int eventRaisedCount = 0;
-            _viewModel.NavigationRequested += (request) => { eventRaisedCount++; };
-            _viewModel.GoBackCommand.Execute(null);
+            _viewModel.OnNavigatedTo(expected);
+            (SecureString password, NormalizedPath vaultPath) actual = GetViewModelValues();
 
-            Assert.Equal(1, eventRaisedCount);
+            Assert.Equal(expectedSecureString, actual.password);
+            Assert.Equal(expectedPath, actual.vaultPath);
+        }
+
+        [Fact]
+        internal void OnNavigatedToCallsCreateSession()
+        {
+            SecureString expectedSecureString = new SecureString();
+            expectedSecureString.AppendChar('a');
+            NormalizedPath expectedPath = NormalizedPath.From("OnNavigatedToCallsCreateSessionTest");
+            object expected = new { Password = expectedSecureString, VaultPath = expectedPath };
+            _viewModel.OnNavigatedTo(expected);
+
+            //Because viewmodel is not spoofed there is no clear way to prove that CreateSession was called so we're asserting that CreateSession changed _viewmodel.VaultName
+            Assert.Equal(expectedPath, _viewModel.VaultName);
         }
     }
 }
