@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Security;
@@ -115,31 +115,45 @@ namespace VaultCrypt.Tests.ViewModels
             Assert.Equal(0, eventRaisedCount);
         }
 
-        [Fact]
-        void IterationPresetsInitializedCorrectly()
+        private static readonly (int position, string name, int iterations)[] IterationPresets =
         {
-            Assert.Equal(4, _viewModel.IterationPresets.Count);
+            (0, "Fast", 200_000),
+            (1, "Balanced", 500_000),
+            (2, "Strong", 1_000_000),
+            (3, "Ultra Strong", 1_500_000)
+        };
 
-            Assert.Equal("Fast", _viewModel.IterationPresets[0].Name);
-            Assert.Equal(200_000, _viewModel.IterationPresets[0].Iterations);
+        public static IEnumerable<object[]> IterationPresetValues => IterationPresets.Select(preset => new object[] { preset.position, preset.name, preset.iterations });
 
-            Assert.Equal("Balanced", _viewModel.IterationPresets[1].Name);
-            Assert.Equal(500_000, _viewModel.IterationPresets[1].Iterations);
-
-            Assert.Equal("Strong", _viewModel.IterationPresets[2].Name);
-            Assert.Equal(1_000_000, _viewModel.IterationPresets[2].Iterations);
-
-            Assert.Equal("Ultra Strong", _viewModel.IterationPresets[3].Name);
-            Assert.Equal(1_500_000, _viewModel.IterationPresets[3].Iterations);
+        [Fact]
+        internal void IterationPresetsHasCorrectAmountOfItems()
+        {
+            Assert.Equal(IterationPresets.Length, _viewModel.IterationPresets.Count);
         }
 
         [Theory]
-        [InlineData(0,1)]
-        [InlineData(1,2)]
-        [InlineData(2,3)]
-        void IterationPresetsIncreaseInIterations(int firstIndex, int secondIndex)
+        [MemberData(nameof(IterationPresetValues))]
+        internal void IterationPresetsInitializedCorrectly(int position, string name, int iterations)
         {
-            Assert.True(_viewModel.IterationPresets[firstIndex].Iterations < _viewModel.IterationPresets[secondIndex].Iterations);
+            Assert.Equal(name, _viewModel.IterationPresets[position].Name);
+            Assert.Equal(iterations, _viewModel.IterationPresets[position].Iterations);
+        }
+
+        [Theory]
+        [MemberData(nameof(IterationPresetValues))]
+        internal void IterationPresetsHaveUniqueValues(int _, string name, int iterations)
+        {
+            Assert.Single(_viewModel.IterationPresets.Where(preset => preset.Name == name));
+            Assert.Single(_viewModel.IterationPresets.Where(preset => preset.Iterations == iterations));
+        }
+
+        [Fact]
+        internal void IterationPresetsIncreaseInIterations()
+        {
+            for (int i = 1; i < IterationPresets.Length; i++)
+            {
+                Assert.True(_viewModel.IterationPresets[i].Iterations > _viewModel.IterationPresets[i - 1].Iterations);
+            }
         }
 
         [Fact]
@@ -212,47 +226,42 @@ namespace VaultCrypt.Tests.ViewModels
 
         }
 
-        [Fact]
-        void CreateVaultThrowsForEmptyStringFolder()
+        private static SecureString NotEmptySecureString()
         {
-            _viewModel.VaultFolder = "";
-            _viewModel.VaultName = "name";
-            SecureString password = new SecureString();
-            password.AppendChar('a');
+            SecureString secureString = new();
+            secureString.AppendChar('a');
+            return secureString;
+        }
+
+        public static TheoryData<string?, string?, SecureString?> InvalidCreateVaultParameters = new TheoryData<string?, string?, SecureString?>()
+        {
+            {string.Empty, "Name", NotEmptySecureString() },
+            {"  ", "Name", NotEmptySecureString()},
+            {null, "Name", NotEmptySecureString() },
+            {"Folder", string.Empty, NotEmptySecureString() },
+            {"Folder", "    ", NotEmptySecureString() },
+            {"Folder", null, NotEmptySecureString() },
+            {"Folder", "Name", null },
+            {"Folder", "Name", new SecureString() }
+        };
+
+        [Theory]
+        [MemberData(nameof(InvalidCreateVaultParameters))]
+        internal void CreateVaultThrowsForInvalidParameters(string folder, string name, SecureString password)
+        {
+            _viewModel.VaultFolder = folder;
+            _viewModel.VaultName = name;
             _viewModel.Password = password;
 
             Assert.Throws<VaultCrypt.Exceptions.VaultUIException>(() => _viewModel.CreateVault());
         }
 
         [Fact]
-        void CreateVaultThrowsForEmptyStringName()
-        {
-            _viewModel.VaultFolder = "folder";
-            _viewModel.VaultName = "";
-            SecureString password = new SecureString();
-            password.AppendChar('a');
-            _viewModel.Password = password;
-
-            Assert.Throws<VaultCrypt.Exceptions.VaultUIException>(() => _viewModel.CreateVault());
-        }
-
-        [Fact]
-        void CreateVaultThrowsForEmptyStringPassword()
-        {
-            _viewModel.VaultFolder = "folder";
-            _viewModel.VaultName = "name";
-            _viewModel.Password = new SecureString();
-
-            Assert.Throws<VaultCrypt.Exceptions.VaultUIException>(() => _viewModel.CreateVault());
-        }
-
-        [Fact]
-        void NavigationRequestedRaised()
+        internal void NavigationRequestedRaised()
         {
             int eventRaisedCount = 0;
             _viewModel.NavigationRequested += (request) => { eventRaisedCount++; };
             _viewModel.GoBackCommand.Execute(null);
-
             Assert.Equal(1, eventRaisedCount);
         }
     }
