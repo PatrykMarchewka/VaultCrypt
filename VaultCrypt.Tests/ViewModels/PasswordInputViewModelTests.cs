@@ -1,4 +1,4 @@
-﻿using Microsoft.VisualBasic;
+using Microsoft.VisualBasic;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -72,6 +72,20 @@ namespace VaultCrypt.Tests.ViewModels
             _viewModel.NavigationRequested += (request) => { eventRaisedCount++; };
             Assert.Throws<VaultUIException>(() => _viewModel.OpenVault());
             Assert.Equal(0, eventRaisedCount);
+        }
+
+        [Fact]
+        internal void OnNavigatedToSetsValues()
+        {
+            NormalizedPath expected = NormalizedPath.From("OnNavigatedToTest");
+
+            _viewModel.OnNavigatedTo(expected);
+
+            //Reflection because _viewmodel._vaultPath is private
+            //TODO: Replace reflection with something better
+            NormalizedPath actual = (NormalizedPath)_viewModel.GetType().GetField("_vaultPath", System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance)!.GetValue(_viewModel)!;
+
+            Assert.Equal(expected, actual);
         }
 
         [Fact]
