@@ -60,7 +60,7 @@ namespace VaultCrypt.Tests.ViewModels
         {
             for (int i = 1; i < _viewModel.ChunkSizePresets.Count; i++)
             {
-                Assert.True(_viewModel.ChunkSizePresets[i].SizeInMB > _viewModel.ChunkSizePresets[i].SizeInMB);
+                Assert.True(_viewModel.ChunkSizePresets[i].SizeInMB > _viewModel.ChunkSizePresets[i - 1].SizeInMB);
             }
         }
 

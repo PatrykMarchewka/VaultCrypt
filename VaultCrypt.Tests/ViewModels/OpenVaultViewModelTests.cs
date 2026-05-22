@@ -221,6 +221,8 @@ namespace VaultCrypt.Tests.ViewModels
         [Fact]
         internal void GoBackDisposesClass()
         {
+            SetViewModelValues();
+
             _viewModel.GoBack();
             (SecureString, NormalizedPath) actualValues = GetViewModelValues();
             Assert.True(actualValues.Item1.Length == 0);
@@ -231,6 +233,8 @@ namespace VaultCrypt.Tests.ViewModels
         [Fact]
         internal void GoBackRaisesNavigationRequest()
         {
+            SetViewModelValues();
+
             int eventRaisedCount = 0;
             _viewModel.NavigationRequested += (request) => { eventRaisedCount++; };
             _viewModel.GoBack();
