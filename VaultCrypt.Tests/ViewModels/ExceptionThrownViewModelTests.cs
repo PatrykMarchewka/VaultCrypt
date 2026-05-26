@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
@@ -8,12 +8,7 @@ namespace VaultCrypt.Tests.ViewModels
 {
     public class ExceptionThrownViewModelTests
     {
-        private VaultCrypt.ViewModels.ExceptionThrownViewModel _viewModel;
-
-        public ExceptionThrownViewModelTests()
-        {
-            this._viewModel = new();
-        }
+        private readonly VaultCrypt.ViewModels.ExceptionThrownViewModel _viewModel = new();
 
         [Fact]
         internal void ExceptionMessageRaisesPropertyChanged()
