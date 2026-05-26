@@ -25,7 +25,7 @@ namespace VaultCrypt.Tests.ViewModels
 
 
         [Fact]
-        void VaultFolderRaisesPropertyChanged()
+        internal void VaultFolderRaisesPropertyChanged()
         {
             string? changedProperty = null;
             _viewModel.PropertyChanged += (sender, args) => { changedProperty = args.PropertyName; };
@@ -36,7 +36,7 @@ namespace VaultCrypt.Tests.ViewModels
         }
 
         [Fact]
-        void VaultFolderDoesNotRaisePropertyChanged()
+        internal void VaultFolderDoesNotRaisePropertyChanged()
         {
             string value = "C:\\DoesntRaiseProperty";
             _viewModel.VaultFolder = value;
@@ -48,7 +48,7 @@ namespace VaultCrypt.Tests.ViewModels
         }
 
         [Fact]
-        void VaultFolderChangesValue()
+        internal void VaultFolderChangesValue()
         {
             string expected = "C:\\ChangedValue";
             _viewModel.VaultFolder = expected;
@@ -59,7 +59,7 @@ namespace VaultCrypt.Tests.ViewModels
 
 
         [Fact]
-        void VaultNameRaisesPropertyChanged()
+        internal void VaultNameRaisesPropertyChanged()
         {
             string? changedProperty = null;
             _viewModel.PropertyChanged += (sender, args) => { changedProperty = args.PropertyName; };
@@ -70,7 +70,7 @@ namespace VaultCrypt.Tests.ViewModels
         }
 
         [Fact]
-        void VaultNameDoesNotRaisePropertyChanged()
+        internal void VaultNameDoesNotRaisePropertyChanged()
         {
             string value = "DoesntRaiseProperty";
             _viewModel.VaultName = value;
@@ -82,7 +82,7 @@ namespace VaultCrypt.Tests.ViewModels
         }
 
         [Fact]
-        void VaultNameChangesValue()
+        internal void VaultNameChangesValue()
         {
             string expected = "ChangedValue";
             _viewModel.VaultName = expected;
@@ -91,7 +91,7 @@ namespace VaultCrypt.Tests.ViewModels
         }
 
         [Fact]
-        void PasswordRaisesPropertyChanged()
+        internal void PasswordRaisesPropertyChanged()
         {
             string? changedProperty = null;
             _viewModel.PropertyChanged += (sender, args) => { changedProperty = args.PropertyName; };
@@ -104,7 +104,7 @@ namespace VaultCrypt.Tests.ViewModels
         }
 
         [Fact]
-        void PasswordDoesNotRaisePropertyChanged()
+        internal void PasswordDoesNotRaisePropertyChanged()
         {
             SecureString value = new SecureString();
             _viewModel.Password = value;
@@ -157,7 +157,7 @@ namespace VaultCrypt.Tests.ViewModels
         }
 
         [Fact]
-        void SelectedPresetRaisesPropertyChanged()
+        internal void SelectedPresetRaisesPropertyChanged()
         {
             string? changedProperty = null;
             _viewModel.PropertyChanged += (sender, args) => { changedProperty = args.PropertyName; };
@@ -168,7 +168,7 @@ namespace VaultCrypt.Tests.ViewModels
         }
 
         [Fact]
-        void SelectedPresetDoesNotRaisePropertyChanged()
+        internal void SelectedPresetDoesNotRaisePropertyChanged()
         {
             _viewModel.SelectedPreset = _viewModel.IterationPresets[2];
             int eventRaisedCount = 0;
@@ -179,7 +179,7 @@ namespace VaultCrypt.Tests.ViewModels
         }
 
         [Fact]
-        void SelectFolderSetsVaultFolder()
+        internal void SelectFolderSetsVaultFolder()
         {
             CreateVMWithDialogService("value");
             _viewModel.SelectFolder();
@@ -188,7 +188,7 @@ namespace VaultCrypt.Tests.ViewModels
         }
 
         [Fact]
-        void SelectFolderDoesNotSetVaultFolder()
+        internal void SelectFolderDoesNotSetVaultFolder()
         {
             string expected = _viewModel.VaultFolder;
             CreateVMWithDialogService(null);
@@ -198,7 +198,7 @@ namespace VaultCrypt.Tests.ViewModels
         }
 
         [Fact]
-        void CreateVaultCallsMethod()
+        internal void CreateVaultCallsMethod()
         {
             _viewModel.VaultFolder = "folder";
             _viewModel.VaultName = "name";
@@ -211,7 +211,7 @@ namespace VaultCrypt.Tests.ViewModels
         }
 
         [Fact]
-        void CreateVaultRaisesNavigationRequest()
+        internal void CreateVaultRaisesNavigationRequest()
         {
             _viewModel.VaultFolder = "folder";
             _viewModel.VaultName = "name";

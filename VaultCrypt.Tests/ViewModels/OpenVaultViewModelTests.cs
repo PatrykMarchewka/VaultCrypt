@@ -53,7 +53,7 @@ namespace VaultCrypt.Tests.ViewModels
 
 
         [Fact]
-        void FilteredTextRaisesPropertyChanged()
+        internal void FilteredTextRaisesPropertyChanged()
         {
             string? changedProperty = null;
             _viewModel.PropertyChanged += (sender, args) => { changedProperty = args.PropertyName; };
@@ -64,7 +64,7 @@ namespace VaultCrypt.Tests.ViewModels
         }
 
         [Fact]
-        void FilteredTextDoesNotRaisePropertyChanged()
+        internal void FilteredTextDoesNotRaisePropertyChanged()
         {
             string text = "text";
             _viewModel.FilteredText = text;
@@ -76,7 +76,7 @@ namespace VaultCrypt.Tests.ViewModels
         }
 
         [Fact]
-        void FilteredTextChangesValues()
+        internal void FilteredTextChangesValues()
         {
             string expected = "changed";
             _viewModel.FilteredText = expected;
@@ -126,7 +126,7 @@ namespace VaultCrypt.Tests.ViewModels
 
 
         [Fact]
-        void SelectedFileRaisesPropertyChanged()
+        internal void SelectedFileRaisesPropertyChanged()
         {
             string? changedProperty = null;
             _viewModel.PropertyChanged += (sender, args) => { changedProperty = args.PropertyName; };
@@ -137,7 +137,7 @@ namespace VaultCrypt.Tests.ViewModels
         }
 
         [Fact]
-        void SelectedFileDoesNotRaisePropertyChanged()
+        internal void SelectedFileDoesNotRaisePropertyChanged()
         {
             _viewModel.SelectedFile = null;
             int eventRaisedCount = 0;
@@ -148,7 +148,7 @@ namespace VaultCrypt.Tests.ViewModels
         }
 
         [Fact]
-        void SelectedFileChangesValue()
+        internal void SelectedFileChangesValue()
         {
             var kvp = new KeyValuePair<long, EncryptedFileInfo>(0, new EncryptedFileInfo("SelectedFileChangesValue test", 0));
             _viewModel.SelectedFile = kvp;
@@ -157,7 +157,7 @@ namespace VaultCrypt.Tests.ViewModels
         }
 
         [Fact]
-        void SelectedFileDecryptCommandCanExecuteChanges()
+        internal void SelectedFileDecryptCommandCanExecuteChanges()
         {
             int eventRaisedCount = 0;
             (_viewModel.DecryptFileCommand as RelayCommand)!.CanExecuteChanged += (sender, args) => { eventRaisedCount++; };
@@ -171,7 +171,7 @@ namespace VaultCrypt.Tests.ViewModels
         }
 
         [Fact]
-        void SelectedFileDeleteCommandCanExecuteChanges()
+        internal void SelectedFileDeleteCommandCanExecuteChanges()
         {
             int eventRaisedCount = 0;
             (_viewModel.DeleteFileCommand as RelayCommand)!.CanExecuteChanged += (sender, args) => { eventRaisedCount++; };
@@ -253,7 +253,7 @@ namespace VaultCrypt.Tests.ViewModels
         }
 
         [Fact]
-        void AddNewFileDoesNotRaiseNavigationRequest()
+        internal void AddNewFileDoesNotRaiseNavigationRequest()
         {
             int eventRaisedCount = 0;
             _viewModel.NavigationRequested += (request) => { eventRaisedCount++; };
@@ -262,7 +262,7 @@ namespace VaultCrypt.Tests.ViewModels
         }
 
         [Fact]
-        async void DecryptFileRaisesNavigationRequest()
+        internal async void DecryptFileRaisesNavigationRequest()
         {
             CreateVMWithFileDialogService("return");
             _viewModel.SelectedFile = new KeyValuePair<long, EncryptedFileInfo>(0, new EncryptedFileInfo(null, 0, null));
@@ -274,7 +274,7 @@ namespace VaultCrypt.Tests.ViewModels
         }
 
         [Fact]
-        async void DecryptFileDoesNotRaiseNavigationRequest()
+        internal async void DecryptFileDoesNotRaiseNavigationRequest()
         {
             _viewModel.SelectedFile = new KeyValuePair<long, EncryptedFileInfo>(0, new EncryptedFileInfo(null, 0, null));
 
@@ -285,7 +285,7 @@ namespace VaultCrypt.Tests.ViewModels
         }
 
         [Fact]
-        async void DeleteFileRaisesNavigationRequest()
+        internal async void DeleteFileRaisesNavigationRequest()
         {
             _viewModel.SelectedFile = new KeyValuePair<long, EncryptedFileInfo>(0, new EncryptedFileInfo(null, 0, null));
 
@@ -295,7 +295,7 @@ namespace VaultCrypt.Tests.ViewModels
         }
 
         [Fact]
-        async void DeleteFileCallsMethod()
+        internal async void DeleteFileCallsMethod()
         {
             _viewModel.SelectedFile = new KeyValuePair<long, EncryptedFileInfo>(0, new EncryptedFileInfo(null, 0, null));
 
@@ -304,7 +304,7 @@ namespace VaultCrypt.Tests.ViewModels
         }
 
         [Fact]
-        async void TrimRaisesNavigationRequest()
+        internal async void TrimRaisesNavigationRequest()
         {
             int eventRaisedCount = 0;
             _viewModel.NavigationRequested += (request) => { eventRaisedCount++; };
@@ -312,7 +312,7 @@ namespace VaultCrypt.Tests.ViewModels
         }
 
         [Fact]
-        async void TrimCallsMethod()
+        internal async void TrimCallsMethod()
         {
             await _viewModel.Trim();
             Assert.True(fakeVaultService.TrimVaultWasCalled);

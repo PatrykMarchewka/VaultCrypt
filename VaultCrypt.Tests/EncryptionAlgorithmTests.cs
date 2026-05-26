@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Security.Cryptography;
@@ -31,7 +31,7 @@ namespace VaultCrypt.Tests
 
 
         [Fact]
-        void CalculateHMAC_SameOutput()
+        internal void CalculateHMAC_SameOutput()
         {
             byte[] result1 = EncryptionAlgorithm.CalculateHMAC(this._key, this._data1, this._data2);
             byte[] result2 = EncryptionAlgorithm.CalculateHMAC(this._key.AsSpan(), this._data1.AsSpan(), this._data2.AsSpan());
@@ -40,7 +40,7 @@ namespace VaultCrypt.Tests
         }
 
         [Fact]
-        void CalculateHMAC_SameDataSameOutput()
+        internal void CalculateHMAC_SameDataSameOutput()
         {
             byte[] concat = new byte[this._data1.Length + this._data2.Length];
             Buffer.BlockCopy(this._data1, 0, concat, 0, this._data1.Length);
@@ -52,7 +52,7 @@ namespace VaultCrypt.Tests
         }
 
         [Fact]
-        void CalculateHMAC_CorrectSize()
+        internal void CalculateHMAC_CorrectSize()
         {
             byte[] result = EncryptionAlgorithm.CalculateHMAC(this._key, this._data1);
 
@@ -60,7 +60,7 @@ namespace VaultCrypt.Tests
         }
 
         [Fact]
-        void CalculateHMAC_NotEmpty()
+        internal void CalculateHMAC_NotEmpty()
         {
             byte[] empty = new byte[64];
             byte[] result1 = EncryptionAlgorithm.CalculateHMAC(this._key, this._data1);
@@ -69,7 +69,7 @@ namespace VaultCrypt.Tests
         }
 
         [Fact]
-        void CalculateHMAC_DifferentOutput_DifferentKey()
+        internal void CalculateHMAC_DifferentOutput_DifferentKey()
         {
             byte[] newKey = new byte[] { 0, 1, 2 };
             byte[] result1 = EncryptionAlgorithm.CalculateHMAC(this._key, this._data1);
@@ -79,7 +79,7 @@ namespace VaultCrypt.Tests
         }
 
         [Fact]
-        void CalculateHMAC_DifferentOutput_DifferentData()
+        internal void CalculateHMAC_DifferentOutput_DifferentData()
         {
             byte[] newData = new byte[] { 0, 1, 2 };
             byte[] result1 = EncryptionAlgorithm.CalculateHMAC(this._key, this._data1);
@@ -96,7 +96,7 @@ namespace VaultCrypt.Tests
         }
 
         [Fact]
-        void EncryptionAlgorithm_UniqueNames()
+        internal void EncryptionAlgorithm_UniqueNames()
         {
             var names = EncryptionAlgorithm.GetEncryptionAlgorithmInfo.Values.Select(v => v.Name).ToList();
             Assert.Equal(names.Count, names.Distinct().Count());
@@ -135,7 +135,7 @@ namespace VaultCrypt.Tests
         [InlineData(29, 24)]  // Camelia-192-CTR
         [InlineData(30, 32)]  // Camelia-256-CTR
         [InlineData(31, 32)]  // XSalsa20
-        void Provider_CorrectKeySize(byte id, byte expectedKeySize)
+        internal void Provider_CorrectKeySize(byte id, byte expectedKeySize)
         {
             byte actual = EncryptionAlgorithm.GetEncryptionAlgorithmInfo[id].Provider().KeySize;
             Assert.Equal(expectedKeySize, actual);
@@ -162,7 +162,7 @@ namespace VaultCrypt.Tests
         [InlineData(25)] // Camelia-128-OCB
         [InlineData(26)] // Camelia-192-OCB
         [InlineData(27)] // Camelia-256-OCB
-        void ExtraDataSize_Is28ForAeadModes(byte id)
+        internal void ExtraDataSize_Is28ForAeadModes(byte id)
         {
             Assert.Equal(28, EncryptionAlgorithm.GetEncryptionAlgorithmInfo[id].Provider().EncryptionAlgorithm.ExtraEncryptionDataSize);
         }
@@ -181,7 +181,7 @@ namespace VaultCrypt.Tests
         [InlineData(28)] // Camelia-128-CTR
         [InlineData(29)] // Camelia-192-CTR
         [InlineData(30)] // Camelia-256-CTR
-        void ExtraDataSize_Is76ForCtrModes(byte id)
+        internal void ExtraDataSize_Is76ForCtrModes(byte id)
         {
             Assert.Equal(76, EncryptionAlgorithm.GetEncryptionAlgorithmInfo[id].Provider().EncryptionAlgorithm.ExtraEncryptionDataSize);
         }
@@ -189,7 +189,7 @@ namespace VaultCrypt.Tests
         // 88 bytes (24 IV + 64 tag)
         [Theory]
         [InlineData(31)]
-        void ExtraDataSize_Is88ForXSalsa20(byte id)
+        internal void ExtraDataSize_Is88ForXSalsa20(byte id)
         {
             Assert.Equal(88, EncryptionAlgorithm.GetEncryptionAlgorithmInfo[id].Provider().EncryptionAlgorithm.ExtraEncryptionDataSize);
         }

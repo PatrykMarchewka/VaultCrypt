@@ -20,7 +20,7 @@ namespace VaultCrypt.Tests.ViewModels
         }
 
         [Fact]
-        void FilteredTextRaisesPropertyChanged()
+        internal void FilteredTextRaisesPropertyChanged()
         {
             string? changedProperty = null;
             _viewModel.PropertyChanged += (sender, args) => { changedProperty = args.PropertyName; };
@@ -31,7 +31,7 @@ namespace VaultCrypt.Tests.ViewModels
         }
 
         [Fact]
-        void FilteredTextDoesNotRaisePropertyChanged()
+        internal void FilteredTextDoesNotRaisePropertyChanged()
         {
             ProgressionContext context = new();
             _viewModel.Context = context;
@@ -43,7 +43,7 @@ namespace VaultCrypt.Tests.ViewModels
         }
 
         [Fact]
-        void FilteredTextChangesValues()
+        internal void FilteredTextChangesValues()
         {
             ProgressionContext expected = new();
             _viewModel.Context = expected;
@@ -90,7 +90,7 @@ namespace VaultCrypt.Tests.ViewModels
         }
 
         [Fact]
-        void CancelRequestsCancellation()
+        internal void CancelRequestsCancellation()
         {
             _viewModel.Context = new();
             _viewModel.Cancel();
@@ -138,7 +138,7 @@ namespace VaultCrypt.Tests.ViewModels
         }
 
         [Fact]
-        void NavigationRequestedRaised()
+        internal void NavigationRequestedRaised()
         {
             int eventRaisedCount = 0;
             _viewModel.NavigationRequested += (request) => { eventRaisedCount++; };

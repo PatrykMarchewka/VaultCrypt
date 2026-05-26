@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
@@ -17,7 +17,7 @@ namespace VaultCrypt.Tests.ViewModels
         }
 
         [Fact]
-        void CurrentViewRaisesPropertyChanged()
+        internal void CurrentViewRaisesPropertyChanged()
         {
             string? changedProperty = null;
             _viewModel.PropertyChanged += (sender, args) => { changedProperty = args.PropertyName; };
@@ -28,7 +28,7 @@ namespace VaultCrypt.Tests.ViewModels
         }
 
         [Fact]
-        void CurrentViewDoesNotRaisePropertyChanged()
+        internal void CurrentViewDoesNotRaisePropertyChanged()
         {
             IViewModel fake = new FakeViewModel();
             _viewModel.CurrentView = fake;
@@ -40,7 +40,7 @@ namespace VaultCrypt.Tests.ViewModels
         }
 
         [Fact]
-        void CurrentViewChangesValue()
+        internal void CurrentViewChangesValue()
         {
             IViewModel expected = new FakeViewModel();
             _viewModel.CurrentView = expected;

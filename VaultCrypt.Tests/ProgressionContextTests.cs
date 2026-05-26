@@ -18,7 +18,7 @@ namespace VaultCrypt.Tests
         }
 
         [Fact]
-        void ProgressionContextInitializesCorrectly()
+        internal void ProgressionContextInitializesCorrectly()
         {
             Assert.Equal(0UL, _progressionContext.Completed);
             Assert.Equal(1UL, _progressionContext.Total);
@@ -27,7 +27,7 @@ namespace VaultCrypt.Tests
         }
 
         [Fact]
-        void IncrementIncreasesCompletedValue()
+        internal void IncrementIncreasesCompletedValue()
         {
             _progressionContext.SetTotal(ulong.MaxValue);
             _progressionContext.Increment();
@@ -39,7 +39,7 @@ namespace VaultCrypt.Tests
         }
 
         [Fact]
-        void IncrementCallsProgressReport()
+        internal void IncrementCallsProgressReport()
         {
             //Event block to either return given item or wait desired time
             var eventBlock = new BlockingCollection<object>();
@@ -65,14 +65,14 @@ namespace VaultCrypt.Tests
         [InlineData(1)]
         [InlineData(2)]
         [InlineData(ulong.MaxValue)]
-        void SetTotalChangesValue(ulong total)
+        internal void SetTotalChangesValue(ulong total)
         {
             _progressionContext.SetTotal(total);
             Assert.Equal(total, _progressionContext.Total);
         }
 
         [Fact]
-        void SetTotalCallsProgressReport()
+        internal void SetTotalCallsProgressReport()
         {
             //Event block to either return given item or wait desired time
             var eventBlock = new BlockingCollection<object>();
@@ -87,7 +87,7 @@ namespace VaultCrypt.Tests
         }
 
         [Fact]
-        void SetTotalThrowsOnTotalLessThanCompleted()
+        internal void SetTotalThrowsOnTotalLessThanCompleted()
         {
             int total = 100;
             _progressionContext.SetTotal(total);
@@ -112,7 +112,7 @@ namespace VaultCrypt.Tests
         }
 
         [Fact]
-        void ForceFinishSetsCompletedToTotal()
+        internal void ForceFinishSetsCompletedToTotal()
         {
             ulong value = 1000;
             _progressionContext.SetTotal(value);
@@ -124,7 +124,7 @@ namespace VaultCrypt.Tests
         }
 
         [Fact]
-        void ForceFinishCallsProgressReport()
+        internal void ForceFinishCallsProgressReport()
         {
             //Event block to either return given item or wait desired time
             var eventBlock = new BlockingCollection<object>();
@@ -139,7 +139,7 @@ namespace VaultCrypt.Tests
         }
 
         [Fact]
-        void ReportPermStatusCallsProgressReport()
+        internal void ReportPermStatusCallsProgressReport()
         {
             //Event block to either return given item or wait desired time
             var eventBlock = new BlockingCollection<object>();
@@ -183,7 +183,7 @@ namespace VaultCrypt.Tests
         }
 
         [Fact]
-        void ReportTempStatusCallsProgressReport()
+        internal void ReportTempStatusCallsProgressReport()
         {
             //Event block to either return given item or wait desired time
             var eventBlock = new BlockingCollection<object>();
@@ -199,13 +199,13 @@ namespace VaultCrypt.Tests
 
         [Theory]
         [InlineData(default(ProgressFailure.ProgressTempFailure))]
-        void ReportTempStatusThrowsOnInvalidFailure(ProgressFailure.ProgressTempFailure failure)
+        internal void ReportTempStatusThrowsOnInvalidFailure(ProgressFailure.ProgressTempFailure failure)
         {
             Assert.Throws<ArgumentException>(() => _progressionContext.ReportTempStatus(failure));
         }
 
         [Fact]
-        void CancelUpdatesToken()
+        internal void CancelUpdatesToken()
         {
             _progressionContext.Cancel();
             Assert.True(_progressionContext.CancellationToken.IsCancellationRequested);
@@ -215,7 +215,7 @@ namespace VaultCrypt.Tests
     public class ProgressFailureTests()
     {
         [Fact]
-        void GetMessageReturnsCorrectPermFailureString()
+        internal void GetMessageReturnsCorrectPermFailureString()
         {
             string expected = "Failed to decrypt chunk";
             string actual = ProgressFailure.GetMessage(ProgressFailure.ProgressPermFailure.ChunkDecryptFailed);
@@ -223,7 +223,7 @@ namespace VaultCrypt.Tests
         }
 
         [Fact]
-        void GetMessageReturnsCorrectDefaultPermFailureString()
+        internal void GetMessageReturnsCorrectDefaultPermFailureString()
         {
             string expected = string.Empty;
             string actual = ProgressFailure.GetMessage(default(ProgressFailure.ProgressPermFailure));
@@ -231,7 +231,7 @@ namespace VaultCrypt.Tests
         }
 
         [Fact]
-        void GetMessageReturnsCorrectFallbackPermFailureString()
+        internal void GetMessageReturnsCorrectFallbackPermFailureString()
         {
             string expected = "Unknown error!";
             string actual = ProgressFailure.GetMessage((ProgressFailure.ProgressPermFailure)int.MaxValue);
@@ -239,7 +239,7 @@ namespace VaultCrypt.Tests
         }
 
         [Fact]
-        void GetMessageReturnsCorrectTempFailureString()
+        internal void GetMessageReturnsCorrectTempFailureString()
         {
             string expected = "Failed to read required information from stream";
             string actual = ProgressFailure.GetMessage(ProgressFailure.ProgressTempFailure.ReadingFromStreamFailed);
@@ -247,7 +247,7 @@ namespace VaultCrypt.Tests
         }
 
         [Fact]
-        void GetMessageReturnsCorrectDefaultTempFailureString()
+        internal void GetMessageReturnsCorrectDefaultTempFailureString()
         {
             string expected = string.Empty;
             string actual = ProgressFailure.GetMessage(default(ProgressFailure.ProgressTempFailure));
@@ -255,7 +255,7 @@ namespace VaultCrypt.Tests
         }
 
         [Fact]
-        void GetMessageReturnsCorrectFallbackTempFailureString()
+        internal void GetMessageReturnsCorrectFallbackTempFailureString()
         {
             string expected = "Unknown error!";
             string actual = ProgressFailure.GetMessage((ProgressFailure.ProgressPermFailure)int.MaxValue);

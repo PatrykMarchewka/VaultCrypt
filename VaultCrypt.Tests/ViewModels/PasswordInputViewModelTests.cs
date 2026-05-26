@@ -19,7 +19,7 @@ namespace VaultCrypt.Tests.ViewModels
         }
 
         [Fact]
-        void PasswordRaisesPropertyChanged()
+        internal void PasswordRaisesPropertyChanged()
         {
             string? changedProperty = null;
             _viewModel.PropertyChanged += (sender, args) => { changedProperty = args.PropertyName; };
@@ -30,7 +30,7 @@ namespace VaultCrypt.Tests.ViewModels
         }
 
         [Fact]
-        void PasswordDoesNotRaisePropertyChanged()
+        internal void PasswordDoesNotRaisePropertyChanged()
         {
             SecureString password = new SecureString();
             password.AppendChar('a');
@@ -43,7 +43,7 @@ namespace VaultCrypt.Tests.ViewModels
         }
 
         [Fact]
-        void PasswordChangesValues()
+        internal void PasswordChangesValues()
         {
             SecureString expected = new SecureString();
             expected.AppendChar('b');
@@ -53,7 +53,7 @@ namespace VaultCrypt.Tests.ViewModels
         }
 
         [Fact]
-        void OpenVaultRaisesNavigationRequest()
+        internal void OpenVaultRaisesNavigationRequest()
         {
             SecureString password = new SecureString();
             password.AppendChar('c');
@@ -66,7 +66,7 @@ namespace VaultCrypt.Tests.ViewModels
         }
 
         [Fact]
-        void OpenVaultDoesNotRaiseNavigationRequestAndThrows()
+        internal void OpenVaultDoesNotRaiseNavigationRequestAndThrows()
         {
             int eventRaisedCount = 0;
             _viewModel.NavigationRequested += (request) => { eventRaisedCount++; };
@@ -89,7 +89,7 @@ namespace VaultCrypt.Tests.ViewModels
         }
 
         [Fact]
-        void NavigationRequestedRaised()
+        internal void NavigationRequestedRaised()
         {
             int eventRaisedCount = 0;
             _viewModel.NavigationRequested += (request) => { eventRaisedCount++; };

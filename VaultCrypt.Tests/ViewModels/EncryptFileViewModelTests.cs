@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
@@ -65,7 +65,7 @@ namespace VaultCrypt.Tests.ViewModels
         }
 
         [Fact]
-        void SelectedPresetRaisesPropertyChanged()
+        internal void SelectedPresetRaisesPropertyChanged()
         {
             string? changedProperty = null;
             _viewModel.PropertyChanged += (sender, args) => { changedProperty = args.PropertyName; };
@@ -76,7 +76,7 @@ namespace VaultCrypt.Tests.ViewModels
         }
 
         [Fact]
-        void SelectedPresetDoesNotRaisePropertyChanged()
+        internal void SelectedPresetDoesNotRaisePropertyChanged()
         {
             _viewModel.SelectedPreset = _viewModel.ChunkSizePresets[2];
             int eventRaisedCount = 0;
@@ -87,7 +87,7 @@ namespace VaultCrypt.Tests.ViewModels
         }
 
         [Fact]
-        void SelectedPresetChangesValue()
+        internal void SelectedPresetChangesValue()
         {
             var expected = _viewModel.ChunkSizePresets[3];
             _viewModel.SelectedPreset = expected;
@@ -96,7 +96,7 @@ namespace VaultCrypt.Tests.ViewModels
         }
 
         [Fact]
-        void SelectedAlgorithmRaisesPropertyChanged()
+        internal void SelectedAlgorithmRaisesPropertyChanged()
         {
             string? changedProperty = null;
             _viewModel.PropertyChanged += (sender, args) => { changedProperty = args.PropertyName; };
@@ -107,7 +107,7 @@ namespace VaultCrypt.Tests.ViewModels
         }
 
         [Fact]
-        void SelectedAlgorithmDoesNotRaisePropertyChanged()
+        internal void SelectedAlgorithmDoesNotRaisePropertyChanged()
         {
             _viewModel.SelectedAlgorithm = _viewModel.EncryptionAlgorithms.Last();
             int eventRaisedCount = 0;
@@ -118,7 +118,7 @@ namespace VaultCrypt.Tests.ViewModels
         }
 
         [Fact]
-        void SelectedAlgorithmChangesValue()
+        internal void SelectedAlgorithmChangesValue()
         {
             var expected = _viewModel.EncryptionAlgorithms.Last();
             _viewModel.SelectedAlgorithm = expected;
@@ -127,7 +127,7 @@ namespace VaultCrypt.Tests.ViewModels
         }
 
         [Fact]
-        async void EncryptRaisesNavigationRequest()
+        internal async void EncryptRaisesNavigationRequest()
         {
             int eventRaisedCount = 0;
             _viewModel.NavigationRequested += (request) => { eventRaisedCount++; };
@@ -137,7 +137,7 @@ namespace VaultCrypt.Tests.ViewModels
         }
 
         [Fact]
-        async void EncryptCallsMethod()
+        internal async void EncryptCallsMethod()
         {
             await _viewModel.Encrypt(NormalizedPath.From("value")!);
 

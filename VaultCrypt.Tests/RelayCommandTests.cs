@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.ComponentModel.Design;
 using System.Linq;
@@ -10,7 +10,7 @@ namespace VaultCrypt.Tests
     public class RelayCommandTests
     {
         [Fact]
-        void ExecuteCallsAction()
+        internal void ExecuteCallsAction()
         {
             bool called = false;
             var command = new RelayCommand(_ => called = true);
@@ -36,7 +36,7 @@ namespace VaultCrypt.Tests
         public static TheoryData<Exception> testException = new TheoryData<Exception>() { new Exception(), new ArgumentOutOfRangeException(), new ArgumentNullException(), new ArgumentException(), new VaultCrypt.Exceptions.VaultException(VaultCrypt.Exceptions.VaultException.ErrorContext.VaultSession, VaultCrypt.Exceptions.VaultException.ErrorReason.Other) };
         [Theory]
         [MemberData(nameof(testException))]
-        void ExecuteCatchesExceptions(Exception ex)
+        internal void ExecuteCatchesExceptions(Exception ex)
         {
             Exception exception = null!;
             RelayCommand.SubscribeToExceptionThrowEvent(thrown => exception = thrown);
@@ -49,7 +49,7 @@ namespace VaultCrypt.Tests
         }
 
         [Fact]
-        void CanExecuteReturnsTrueForNoCondition()
+        internal void CanExecuteReturnsTrueForNoCondition()
         {
             var command = new RelayCommand(_ => { });
 
@@ -57,7 +57,7 @@ namespace VaultCrypt.Tests
         }
 
         [Fact]
-        void CanExecuteEvaluatesProperly()
+        internal void CanExecuteEvaluatesProperly()
         {
             var command = new RelayCommand(_ => { }, integer => (int)integer! > 0);
 
@@ -66,7 +66,7 @@ namespace VaultCrypt.Tests
         }
 
         [Fact]
-        void RaiseCanExecuteRaisesCanExecuteChanged()
+        internal void RaiseCanExecuteRaisesCanExecuteChanged()
         {
             var command = new RelayCommand(_ => { });
             bool eventCalled = false;

@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
@@ -16,7 +16,7 @@ namespace VaultCrypt.Tests.ViewModels
         }
 
         [Fact]
-        void ExceptionMessageRaisesPropertyChanged()
+        internal void ExceptionMessageRaisesPropertyChanged()
         {
             string? changedProperty = null;
             _viewModel.PropertyChanged += (sender, args) => { changedProperty = args.PropertyName; };
@@ -27,7 +27,7 @@ namespace VaultCrypt.Tests.ViewModels
         }
 
         [Fact]
-        void ExceptionMessagedDoesNotRaisePropertyChanged()
+        internal void ExceptionMessagedDoesNotRaisePropertyChanged()
         {
             string message = "new";
             _viewModel.ExceptionMessage = message;
@@ -39,7 +39,7 @@ namespace VaultCrypt.Tests.ViewModels
         }
 
         [Fact]
-        void ExceptionMessageChangesValue()
+        internal void ExceptionMessageChangesValue()
         {
             string message = "changed";
             _viewModel.ExceptionMessage = message;
@@ -48,7 +48,7 @@ namespace VaultCrypt.Tests.ViewModels
         }
 
         [Fact]
-        void InitializeInvokesAction()
+        internal void InitializeInvokesAction()
         {
             var wasCalled = false;
             var vm = new VaultCrypt.ViewModels.ExceptionThrownViewModel(() => wasCalled = true);
@@ -58,7 +58,7 @@ namespace VaultCrypt.Tests.ViewModels
         }
 
         [Fact]
-        void NavigationRequestedRaised()
+        internal void NavigationRequestedRaised()
         {
             int eventRaisedCount = 0;
             _viewModel.NavigationRequested += (request) => { eventRaisedCount++; };
@@ -71,7 +71,7 @@ namespace VaultCrypt.Tests.ViewModels
         public static TheoryData<Exception?> testException = new TheoryData<Exception?>() { new Exception(), null };
         [Theory]
         [MemberData(nameof(testException))]
-        void OnNavigatedToChangesValue(Exception? exception)
+        internal void OnNavigatedToChangesValue(Exception? exception)
         {
             _viewModel.OnNavigatedTo(exception);
 
