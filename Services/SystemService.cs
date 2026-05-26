@@ -18,6 +18,8 @@ namespace VaultCrypt.Services
         /// Checks whether there is enough free space on <see cref="IVaultSession.VAULTPATH"/> drive to perform operation
         /// </summary>
         /// <param name="filePath">Path of the file to check</param>
+        /// <exception cref="ArgumentNullException">Thrown when <paramref name="filePath"/> is set to null</exception>
+        /// <exception cref="ArgumentException">Thrown when <paramref name="filePath"/> is set to empty or whitespace only characters</exception>
         /// <exception cref="VaultException">Thrown when there is not enough free space on drive</exception>
         public void CheckFreeSpace(NormalizedPath filePath);
         /// <summary>
@@ -26,6 +28,7 @@ namespace VaultCrypt.Services
         /// <param name="chunked">Dictates whether file is meant to be chunked</param>
         /// <param name="chunkSizeInMB">Maximum size of each chunk</param>
         /// <returns>Returns 1 if <paramref name="chunked"/> is set to false, otherwise 1 or higher number</returns>
+        /// <exception cref="ArgumentOutOfRangeException">Thrown when <paramref name="chunkSizeInMB"/> is set to zero</exception>
         public int CalculateConcurrency(bool chunked, ushort chunkSizeInMB);
     }
 
@@ -41,7 +44,7 @@ namespace VaultCrypt.Services
 
         public void CheckFreeSpace(NormalizedPath filePath)
         {
-            ArgumentNullException.ThrowIfNull(filePath);
+            ArgumentNullException.ThrowIfNullOrWhiteSpace(filePath);
 
             long availableBytes = new DriveInfo(Path.GetPathRoot(_session.VAULTPATH)!).AvailableFreeSpace;
             if (availableBytes < (GetTotalBytes(filePath) * 1.05))
