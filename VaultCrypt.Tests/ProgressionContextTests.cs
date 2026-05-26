@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Linq;
@@ -160,15 +160,8 @@ namespace VaultCrypt.Tests
             Assert.Throws<ArgumentException>(() => _progressionContext.ReportPermStatus(failure, "message"));
         }
 
-        public static IEnumerable<object?[]> InvalidMessages =>
-        [
-            new object?[]{null, typeof(ArgumentNullException)},
-            new object[]{"  ", typeof(ArgumentException)},
-            new object[]{string.Empty, typeof(ArgumentException)}
-        ];
-
         [Theory]
-        [MemberData(nameof(InvalidMessages))]
+        [MemberData(nameof(TestsHelper.InvalidStrings), MemberType = typeof(TestsHelper))]
         internal void ReportPermStatusThrowsOnInvalidMessage(string message, Type exceptionType)
         {
             Assert.Throws(exceptionType, () => _progressionContext.ReportPermStatus((ProgressFailure.ProgressPermFailure)1, message));

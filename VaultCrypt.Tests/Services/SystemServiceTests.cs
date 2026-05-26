@@ -31,7 +31,7 @@ namespace VaultCrypt.Tests.Services
         }
 
         [Theory]
-        [MemberData(nameof(TestsHelper.InvalidPath), MemberType = typeof(TestsHelper))]
+        [MemberData(nameof(TestsHelper.InvalidPaths), MemberType = typeof(TestsHelper))]
         internal void CheckFreeSpaceThrowsForInvalidFilePath(NormalizedPath filePath, Type expectedException)
         {
             Assert.Throws(expectedException, () => _service.CheckFreeSpace(NormalizedPath.From(filePath)));

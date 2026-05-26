@@ -30,10 +30,10 @@ namespace VaultCrypt.Tests.Services
             _service = new VaultCrypt.Services.DecryptionService(_fileService, _encryptionOptionsService, _session, _systemService);
         }
 
-        public static IEnumerable<object[]> FilledVaultFileCombinations => TestsHelper.VaultFileCombinations.Where(combination => ((TestsHelper.VaultInformation)combination[1]).VaultSession.ENCRYPTED_FILES.Count > 0);
+
 
         [Theory]
-        [MemberData(nameof(FilledVaultFileCombinations))]
+        [MemberData(nameof(TestsHelper.FilledVaultFileCombinations), MemberType = typeof(TestsHelper))]
         internal async Task DecryptCorrectlyDecryptsData(Func<NormalizedPath> vaultMethod, TestsHelper.VaultInformation vaultInformation)
         {
             var vault = vaultMethod();
@@ -63,7 +63,7 @@ namespace VaultCrypt.Tests.Services
         }
 
         [Theory]
-        [MemberData(nameof(TestsHelper.InvalidPath), MemberType = typeof(TestsHelper))]
+        [MemberData(nameof(TestsHelper.InvalidPaths), MemberType = typeof(TestsHelper))]
         internal void DecryptThrowsForInvalidFilePath(NormalizedPath filePath, Type expectedException)
         {
             Assert.ThrowsAsync(expectedException, async () => await _service.Decrypt(long.MaxValue, filePath, new ProgressionContext()));

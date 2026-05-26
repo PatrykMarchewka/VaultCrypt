@@ -75,22 +75,15 @@ namespace VaultCrypt.Tests.Services
             }
         }
 
-        public static IEnumerable<object?[]> InvalidName =>
-        [
-            new object?[]{null, typeof(ArgumentNullException)},
-            new object[]{"  ", typeof(ArgumentException)},
-            new object[]{string.Empty, typeof(ArgumentException)}
-        ];
-
         [Theory]
-        [MemberData(nameof(TestsHelper.InvalidPath), MemberType = typeof(TestsHelper))]
+        [MemberData(nameof(TestsHelper.InvalidPaths), MemberType = typeof(TestsHelper))]
         internal void CreateVaultThrowsForInvalidFolderPath(NormalizedPath folderPath, Type expectedException)
         {
             Assert.Throws(expectedException, () => _service.CreateVault(folderPath, "TEXT", new byte[1], 1));
         }
 
         [Theory]
-        [MemberData(nameof(InvalidName))]
+        [MemberData(nameof(TestsHelper.InvalidStrings), MemberType = typeof(TestsHelper))]
         internal void CreateVaultThrowsForInvalidVaultName(string vaultName, Type expectedException)
         {
             Assert.Throws(expectedException, () => _service.CreateVault(NormalizedPath.From("TEXT"), vaultName, new byte[1], 1));
@@ -147,7 +140,7 @@ namespace VaultCrypt.Tests.Services
         }
 
         [Theory]
-        [MemberData(nameof(TestsHelper.InvalidPath), MemberType = typeof(TestsHelper))]
+        [MemberData(nameof(TestsHelper.InvalidPaths), MemberType = typeof(TestsHelper))]
         internal void CreateSessionFromFileThrowsOnInvalidPath(NormalizedPath path, Type expectedException)
         {
             Assert.Throws(expectedException, () => _service.CreateSessionFromFile(new byte[1], path));
@@ -212,7 +205,7 @@ namespace VaultCrypt.Tests.Services
             }
         }
 
-        public static IEnumerable<object[]> EmptyVaultFileCombinations => TestsHelper.VaultFileCombinations.Where(combination => ((TestsHelper.VaultInformation)combination[1]).VaultSession.ENCRYPTED_FILES.Count == 0);
+        
 
         [Theory]
         [MemberData(nameof(FilledVaultFileCombinations))]

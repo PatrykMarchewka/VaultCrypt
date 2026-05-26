@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Security.Cryptography;
@@ -18,10 +18,8 @@ namespace VaultCrypt.Tests.Services
             _service = new VaultCrypt.Services.EncryptionOptionsService(_vaultSession);
         }
 
-        public static IEnumerable<object[]> AlgorithmInfo => EncryptionAlgorithm.GetEncryptionAlgorithmInfo.Values.Select(alg => new object[] { alg });
-
         [Theory]
-        [MemberData(nameof(AlgorithmInfo))]
+        [MemberData(nameof(TestsHelper.EncryptionAlgorithms), MemberType = typeof(TestsHelper))]
         internal void PrepareEncryptionOptionsReturnsCorrectInformation(EncryptionAlgorithm.EncryptionAlgorithmInfo encryptionAlgorithm)
         {
             var fileInfo = new FileInfo(TestsHelper.CreateTemporaryFile(32));
@@ -44,7 +42,7 @@ namespace VaultCrypt.Tests.Services
         }
 
         [Theory]
-        [MemberData(nameof(AlgorithmInfo))]
+        [MemberData(nameof(TestsHelper.EncryptionAlgorithms), MemberType = typeof(TestsHelper))]
         internal void PrepareEncryptionOptionsReturnsCorrectInformationChunked(EncryptionAlgorithm.EncryptionAlgorithmInfo encryptionAlgorithm)
         {
             int fileSize = 1024 * 1024 + 3; //1MB + 3 bytes (1 048 579 bytes)
@@ -106,7 +104,7 @@ namespace VaultCrypt.Tests.Services
         }
 
         [Theory]
-        [MemberData(nameof(AlgorithmInfo))]
+        [MemberData(nameof(TestsHelper.EncryptionAlgorithms), MemberType = typeof(TestsHelper))]
         internal void EncryptAndPadFileEncryptionOptionsReturnsCorrectSize(EncryptionAlgorithm.EncryptionAlgorithmInfo encryptionAlgorithm)
         {
             var fileInfo = new FileInfo(TestsHelper.CreateTemporaryFile(32));
@@ -173,7 +171,7 @@ namespace VaultCrypt.Tests.Services
 
 
         [Theory]
-        [MemberData(nameof(AlgorithmInfo))]
+        [MemberData(nameof(TestsHelper.EncryptionAlgorithms), MemberType = typeof(TestsHelper))]
         internal void PrepareEncryptionOptionsThenEncryptThenDecryptSuccessfully(EncryptionAlgorithm.EncryptionAlgorithmInfo encryptionAlgorithm)
         {
             var fileInfo = new FileInfo(TestsHelper.CreateTemporaryFile(1000));

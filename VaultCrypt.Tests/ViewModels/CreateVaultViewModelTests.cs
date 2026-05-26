@@ -123,7 +123,18 @@ namespace VaultCrypt.Tests.ViewModels
             (3, "Ultra Strong", 1_500_000)
         };
 
-        public static IEnumerable<object[]> IterationPresetValues => IterationPresets.Select(preset => new object[] { preset.position, preset.name, preset.iterations });
+        public static TheoryData<int, string, int> IterationPresetValues
+        {
+            get
+            {
+                var data = new TheoryData<int, string, int>();
+                foreach (var item in IterationPresets)
+                {
+                    data.Add(item.position, item.name, item.iterations);
+                }
+                return data;
+            }
+        }
 
         [Fact]
         internal void IterationPresetsHasCorrectAmountOfItems()
