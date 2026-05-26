@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Security.Cryptography;
@@ -177,7 +177,7 @@ namespace VaultCrypt.Tests.Services
             var fileInfo = new FileInfo(TestsHelper.CreateTemporaryFile(1000));
             try
             {
-                var options = _service.PrepareEncryptionOptions(fileInfo, encryptionAlgorithm, 1);
+                using var options = _service.PrepareEncryptionOptions(fileInfo, encryptionAlgorithm, 1);
                 using (SecureBuffer.SecureLargeBuffer encrypted = _service.PadAndEncryptFileEncryptionOptions(options))
                 {
                     //Create stream with other random data to simulate actual vault
