@@ -11,7 +11,7 @@ namespace VaultCrypt.Tests.ViewModels
 {
     public class PasswordInputViewModelTests
     {
-        private VaultCrypt.ViewModels.PasswordInputViewModel _viewModel;
+        private readonly VaultCrypt.ViewModels.PasswordInputViewModel _viewModel;
 
         public PasswordInputViewModelTests()
         {

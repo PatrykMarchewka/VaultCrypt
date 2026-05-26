@@ -9,7 +9,7 @@ namespace VaultCrypt.Tests.ViewModels
 {
     public class MainWindowViewModelTests
     {
-        private VaultCrypt.ViewModels.MainWindowViewModel _viewModel;
+        private readonly VaultCrypt.ViewModels.MainWindowViewModel _viewModel;
 
         public MainWindowViewModelTests()
         {
