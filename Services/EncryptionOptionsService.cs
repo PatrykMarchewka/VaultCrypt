@@ -18,14 +18,15 @@ namespace VaultCrypt.Services
         /// <param name="algorithm">Algorithm to use when encrypting or decrypting this file</param>
         /// <param name="chunkSizeInMB">Maximum size of each chunk in megabytes, if file size is lower than chunk size then it gets encrypted in one singular chunk</param>
         /// <returns></returns>
-        /// <exception cref="ArgumentNullException">Thrown when provided <paramref name="fileInfo"/> is set to null</exception>
+        /// <exception cref="ArgumentNullException">Thrown when provided <paramref name="fileInfo"/> or <paramref name="algorithm"/> is set to null</exception>
         /// <exception cref="ArgumentOutOfRangeException">Thrown when <paramref name="chunkSizeInMB"/> value is set to zero</exception>
         public EncryptionOptions.FileEncryptionOptions PrepareEncryptionOptions(FileInfo fileInfo, EncryptionAlgorithm.EncryptionAlgorithmInfo algorithm, ushort chunkSizeInMB);
         /// <summary>
         /// Pads <paramref name="options"/> and encrypts it ensuring final output length is exactly <see cref="IVaultReader.EncryptionOptionsSize"/> bytes
         /// </summary>
         /// <param name="options">Options to pad and then encrypt</param>
-        /// <returns></returns>
+        /// <returns>Encrypted and padded options</returns>
+        /// <exception cref="ArgumentNullException">Thrown when <paramref name="options"/> is set to null</exception>
         public SecureBuffer.SecureLargeBuffer PadAndEncryptFileEncryptionOptions(EncryptionOptions.FileEncryptionOptions options);
         /// <summary>
         /// Gets encrypted options at <paramref name="metadataOffset"/> from vault and decrypts it
@@ -33,6 +34,8 @@ namespace VaultCrypt.Services
         /// <param name="vaultFS">Vault to read from</param>
         /// <param name="metadataOffset">Offset at which to start reading</param>
         /// <returns>Decrypted options</returns>
+        /// <exception cref="ArgumentNullException">Thrown when <paramref name="vaultFS"/> is set to null</exception>
+        /// <exception cref="ArgumentOutOfRangeException">Thrown when <paramref name="metadataOffset"/> points to vault header or is set to negative value</exception>
         public EncryptionOptions.FileEncryptionOptions GetDecryptedFileEncryptionOptions(Stream vaultFS, long metadataOffset);
     }
 
@@ -47,6 +50,7 @@ namespace VaultCrypt.Services
         public EncryptionOptions.FileEncryptionOptions PrepareEncryptionOptions(FileInfo fileInfo, EncryptionAlgorithm.EncryptionAlgorithmInfo algorithm, ushort chunkSizeInMB)
         {
             ArgumentNullException.ThrowIfNull(fileInfo);
+            ArgumentNullException.ThrowIfNull(algorithm);
             ArgumentOutOfRangeException.ThrowIfZero(chunkSizeInMB);
 
             ulong fileLength = (ulong)fileInfo.Length;
@@ -100,7 +104,7 @@ namespace VaultCrypt.Services
         public EncryptionOptions.FileEncryptionOptions GetDecryptedFileEncryptionOptions(Stream vaultFS, long metadataOffset)
         {
             ArgumentNullException.ThrowIfNull(vaultFS);
-            ArgumentOutOfRangeException.ThrowIfNegative(metadataOffset);
+            ArgumentOutOfRangeException.ThrowIfLessThan(metadataOffset, _session.VAULT_READER.HeaderSize);
 
             IVaultReader vaultReader = _session.VAULT_READER;
 
