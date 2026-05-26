@@ -20,7 +20,7 @@ namespace VaultCrypt.Tests
         [Fact]
         internal void InitializeFull()
         {
-            var full = new EncryptedFileInfo("test", 1, EncryptionAlgorithm.GetEncryptionAlgorithmInfo[0]);
+            var full = new EncryptedFileInfo("test", 1, EncryptionAlgorithm.EncryptionAlgorithmInfo.AES128GCM);
             Assert.Equal("test", full.FileName);
             Assert.Equal("1B", full.FileSize);
             Assert.Equal(EncryptionAlgorithm.GetEncryptionAlgorithmInfo[0].Name, full.EncryptionAlgorithm);
