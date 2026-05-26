@@ -13,7 +13,7 @@ namespace VaultCrypt.Services
     public interface IFileService
     {
         /// <summary>
-        /// Writes chunks to <paramref name="fileFS"/> in order
+        /// Writes chunks to <paramref name="fileFS"/> in correct order. Items in <paramref name="results"/> gets disposed after writing
         /// </summary>
         /// <param name="results">Dictionary containing chunk number and chunk to write</param>
         /// <param name="nextToWrite">Number indicating which chunk should be written next</param>
@@ -40,6 +40,8 @@ namespace VaultCrypt.Services
         /// <param name="length">Length in bytes to read</param>
         /// <param name="destination">Stream to write into</param>
         /// <param name="destinationOffset">Offset at which to start writing</param>
+        /// <exception cref="ArgumentNullException">Thrown when <paramref name="source"/> or <paramref name="destination"/> is set to null</exception>
+        /// <exception cref="ArgumentOutOfRangeException">Thrown when <paramref name="offset"/> is set to negative value, <paramref name="length"/> is set to zero or <paramref name="destinationOffset"/> is set to negative value</exception>
         public void CopyPartOfFile(Stream source, long offset, ulong length, Stream destination, long destinationOffset);
     }
 
