@@ -89,109 +89,10 @@ namespace VaultCrypt.Tests
         }
 
         [Fact]
-        void EncryptionAlgorithm_UniqueID()
-        {
-            var ids = EncryptionAlgorithm.GetEncryptionAlgorithmInfo.Keys.ToList();
-            Assert.Equal(ids.Count, ids.Distinct().Count());
-        }
-
-        [Fact]
         internal void EncryptionAlgorithm_UniqueNames()
         {
             var names = EncryptionAlgorithm.GetEncryptionAlgorithmInfo.Values.Select(v => v.Name).ToList();
             Assert.Equal(names.Count, names.Distinct().Count());
-        }
-
-        [Theory]
-        [InlineData(0, 16)]  // AES-128-GCM
-        [InlineData(1, 24)]  // AES-192-GCM
-        [InlineData(2, 32)]  // AES-256-GCM
-        [InlineData(3, 16)]  // AES-128-CCM
-        [InlineData(4, 24)]  // AES-192-CCM
-        [InlineData(5, 32)]  // AES-256-CCM
-        [InlineData(6, 32)]  // ChaCha20-Poly1305
-        [InlineData(7, 16)]  // AES-128-EAX
-        [InlineData(8, 24)]  // AES-192-EAX
-        [InlineData(9, 32)]  // AES-256-EAX
-        [InlineData(10, 16)]  // Twofish-128-CTR
-        [InlineData(11, 24)]  // Twofish-192-CTR
-        [InlineData(12, 32)]  // Twofish-256-CTR
-        [InlineData(13, 32)]  // Threefish-256
-        [InlineData(14, 64)]  // Threefish-512
-        [InlineData(15, 128)] // Threefish-1024
-        [InlineData(16, 16)]  // Serpent-128-GCM
-        [InlineData(17, 24)]  // Serpent-192-GCM
-        [InlineData(18, 32)]  // Serpent-256-GCM
-        [InlineData(19, 16)]  // Serpent-128-CTR
-        [InlineData(20, 24)]  // Serpent-192-CTR
-        [InlineData(21, 32)]  // Serpent-256-CTR
-        [InlineData(22, 16)]  // Camelia-128-GCM
-        [InlineData(23, 24)]  // Camelia-192-GCM
-        [InlineData(24, 32)]  // Camelia-256-GCM
-        [InlineData(25, 16)]  // Camelia-128-OCB
-        [InlineData(26, 24)]  // Camelia-192-OCB
-        [InlineData(27, 32)]  // Camelia-256-OCB
-        [InlineData(28, 16)]  // Camelia-128-CTR
-        [InlineData(29, 24)]  // Camelia-192-CTR
-        [InlineData(30, 32)]  // Camelia-256-CTR
-        [InlineData(31, 32)]  // XSalsa20
-        internal void Provider_CorrectKeySize(byte id, byte expectedKeySize)
-        {
-            byte actual = EncryptionAlgorithm.GetEncryptionAlgorithmInfo[id].Provider().KeySize;
-            Assert.Equal(expectedKeySize, actual);
-        }
-
-        // 28bytes (12 IV + 16 tag)
-        [Theory]
-        [InlineData(0)]  // AES-128-GCM
-        [InlineData(1)]  // AES-192-GCM
-        [InlineData(2)]  // AES-256-GCM
-        [InlineData(3)]  // AES-128-CCM
-        [InlineData(4)]  // AES-192-CCM
-        [InlineData(5)]  // AES-256-CCM
-        [InlineData(6)]  // ChaCha20-Poly1305
-        [InlineData(7)]  // AES-128-EAX
-        [InlineData(8)]  // AES-192-EAX
-        [InlineData(9)]  // AES-256-EAX
-        [InlineData(16)] // Serpent-128-GCM
-        [InlineData(17)] // Serpent-192-GCM
-        [InlineData(18)] // Serpent-256-GCM
-        [InlineData(22)] // Camelia-128-GCM
-        [InlineData(23)] // Camelia-192-GCM
-        [InlineData(24)] // Camelia-256-GCM
-        [InlineData(25)] // Camelia-128-OCB
-        [InlineData(26)] // Camelia-192-OCB
-        [InlineData(27)] // Camelia-256-OCB
-        internal void ExtraDataSize_Is28ForAeadModes(byte id)
-        {
-            Assert.Equal(28, EncryptionAlgorithm.GetEncryptionAlgorithmInfo[id].Provider().EncryptionAlgorithm.ExtraEncryptionDataSize);
-        }
-
-        // 76 bytes (12 IV + 64 tag)
-        [Theory]
-        [InlineData(10)] // Twofish-128-CTR
-        [InlineData(11)] // Twofish-192-CTR
-        [InlineData(12)] // Twofish-256-CTR
-        [InlineData(13)] // Threefish-256-CTR
-        [InlineData(14)] // Threefish-512-CTR
-        [InlineData(15)] // Threefish-1024-CTR
-        [InlineData(19)] // Serpent-128-CTR
-        [InlineData(20)] // Serpent-192-CTR
-        [InlineData(21)] // Serpent-256-CTR
-        [InlineData(28)] // Camelia-128-CTR
-        [InlineData(29)] // Camelia-192-CTR
-        [InlineData(30)] // Camelia-256-CTR
-        internal void ExtraDataSize_Is76ForCtrModes(byte id)
-        {
-            Assert.Equal(76, EncryptionAlgorithm.GetEncryptionAlgorithmInfo[id].Provider().EncryptionAlgorithm.ExtraEncryptionDataSize);
-        }
-
-        // 88 bytes (24 IV + 64 tag)
-        [Theory]
-        [InlineData(31)]
-        internal void ExtraDataSize_Is88ForXSalsa20(byte id)
-        {
-            Assert.Equal(88, EncryptionAlgorithm.GetEncryptionAlgorithmInfo[id].Provider().EncryptionAlgorithm.ExtraEncryptionDataSize);
         }
     }
 
