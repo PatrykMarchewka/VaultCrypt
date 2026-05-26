@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Security.Cryptography;
@@ -7,177 +7,109 @@ using System.Threading.Tasks;
 
 namespace VaultCrypt.Tests.Services
 {
-    public class EncryptionServiceTests : IDisposable
+    public class EncryptionServiceTests
     {
-        private readonly VaultCrypt.Services.EncryptionService _service;
-        private readonly VaultCrypt.Services.FileService _fileService;
-        private readonly VaultCrypt.Services.EncryptionOptionsService _encryptionOptionsService;
-        private readonly VaultSession _session;
-        private readonly VaultCrypt.Services.SystemService _systemService;
+        private VaultCrypt.Services.EncryptionService _service;
+        private readonly VaultCrypt.Services.FileService _fileService = new VaultCrypt.Services.FileService();
+        private VaultCrypt.Services.EncryptionOptionsService _encryptionOptionsService;
+        private VaultSession _session = TestsHelper.EmptySession;
+        private VaultCrypt.Services.SystemService _systemService;
 
         public EncryptionServiceTests()
         {
             _fileService = new VaultCrypt.Services.FileService();
-            _session = TestsHelper.CreateFilledSessionInstanceWithReader();
             _encryptionOptionsService = new VaultCrypt.Services.EncryptionOptionsService(_session);
             _systemService = new VaultCrypt.Services.SystemService(_session);
             _service = new VaultCrypt.Services.EncryptionService(_fileService, _encryptionOptionsService, _session, _systemService);
         }
 
-        public void Dispose()
+        private void ReplaceSession(IVaultSession newSession)
         {
-            _session.KEY.Dispose();
+            _session = (VaultSession)newSession;
+            _encryptionOptionsService = new VaultCrypt.Services.EncryptionOptionsService(_session);
+            _systemService = new VaultCrypt.Services.SystemService(_session);
+            _service = new VaultCrypt.Services.EncryptionService(_fileService, _encryptionOptionsService, _session, _systemService);
         }
 
-        public static IEnumerable<object[]> EncryptionAlgorithms => new List<object[]>
-        {
-            new object[]{ EncryptionAlgorithm.EncryptionAlgorithmInfo.AES128GCM},
-            new object[]{ EncryptionAlgorithm.EncryptionAlgorithmInfo.AES192GCM},
-            new object[]{ EncryptionAlgorithm.EncryptionAlgorithmInfo.AES256GCM},
-            new object[]{ EncryptionAlgorithm.EncryptionAlgorithmInfo.AES128CCM},
-            new object[]{ EncryptionAlgorithm.EncryptionAlgorithmInfo.AES192CCM},
-            new object[]{ EncryptionAlgorithm.EncryptionAlgorithmInfo.AES256CCM},
-            new object[]{ EncryptionAlgorithm.EncryptionAlgorithmInfo.ChaCha20Poly1305},
-            new object[]{ EncryptionAlgorithm.EncryptionAlgorithmInfo.AES128EAX},
-            new object[]{ EncryptionAlgorithm.EncryptionAlgorithmInfo.AES192EAX},
-            new object[]{ EncryptionAlgorithm.EncryptionAlgorithmInfo.AES256EAX},
-            new object[]{ EncryptionAlgorithm.EncryptionAlgorithmInfo.Twofish128CTR},
-            new object[]{ EncryptionAlgorithm.EncryptionAlgorithmInfo.Twofish192CTR},
-            new object[]{ EncryptionAlgorithm.EncryptionAlgorithmInfo.Twofish256CTR},
-            new object[]{ EncryptionAlgorithm.EncryptionAlgorithmInfo.Threefish256CTR},
-            new object[]{ EncryptionAlgorithm.EncryptionAlgorithmInfo.Threefish512CTR},
-            new object[]{ EncryptionAlgorithm.EncryptionAlgorithmInfo.Threefish1024CTR},
-            new object[]{ EncryptionAlgorithm.EncryptionAlgorithmInfo.Serpent128GCM},
-            new object[]{ EncryptionAlgorithm.EncryptionAlgorithmInfo.Serpent192GCM},
-            new object[]{ EncryptionAlgorithm.EncryptionAlgorithmInfo.Serpent256GCM},
-            new object[]{ EncryptionAlgorithm.EncryptionAlgorithmInfo.Serpent128CTR},
-            new object[]{ EncryptionAlgorithm.EncryptionAlgorithmInfo.Serpent192CTR},
-            new object[]{ EncryptionAlgorithm.EncryptionAlgorithmInfo.Serpent256CTR},
-            new object[]{ EncryptionAlgorithm.EncryptionAlgorithmInfo.Camelia128GCM},
-            new object[]{ EncryptionAlgorithm.EncryptionAlgorithmInfo.Camelia192GCM},
-            new object[]{ EncryptionAlgorithm.EncryptionAlgorithmInfo.Camelia256GCM},
-            new object[]{ EncryptionAlgorithm.EncryptionAlgorithmInfo.Camelia128OCB},
-            new object[]{ EncryptionAlgorithm.EncryptionAlgorithmInfo.Camelia192OCB},
-            new object[]{ EncryptionAlgorithm.EncryptionAlgorithmInfo.Camelia256OCB},
-            new object[]{ EncryptionAlgorithm.EncryptionAlgorithmInfo.Camelia128CTR},
-            new object[]{ EncryptionAlgorithm.EncryptionAlgorithmInfo.Camelia192CTR},
-            new object[]{ EncryptionAlgorithm.EncryptionAlgorithmInfo.Camelia256CTR},
-            new object[]{ EncryptionAlgorithm.EncryptionAlgorithmInfo.XSalsa20}
-        };
+        
 
         [Theory]
-        [MemberData(nameof(EncryptionAlgorithms))]
-        async Task EncryptEncryptsAndSavesToVaultChunked(EncryptionAlgorithm.EncryptionAlgorithmInfo algorithm)
+        [MemberData(nameof(TestsHelper.EncryptionAlgorithmsAndVaultFileCombinationsCartesian), MemberType = typeof(TestsHelper))]
+        internal async Task EncryptEncryptsDataToVaultChunked(EncryptionAlgorithm.EncryptionAlgorithmInfo algorithm, Func<NormalizedPath> vaultMethod, TestsHelper.VaultInformation vaultInformation)
         {
-            var vaultPath = TestsHelper.CreateVaultFile();
-            //Create a massive file to make sure that after encryption the chunks modify EncryptedFileInfo.FileSize value
-            int oneMBBytes = (1024 * 1024);
-            var fileToEncrypt = TestsHelper.CreateTemporaryFile(RandomNumberGenerator.GetInt32(oneMBBytes * 400 + 1, oneMBBytes * 500));
-
+            var vaultPath = vaultMethod();
+            ReplaceSession(vaultInformation.VaultSession);
+            var fileByteSize = (1024 * 1024 * 5) + 1; //5MB + 1 byte
+            var expectedEncryptedByteSize = fileByteSize + vaultInformation.VaultSession.VAULT_READER.EncryptionOptionsSize + (6 * algorithm.Provider().EncryptionAlgorithm.ExtraEncryptionDataSize); //Original file + Encryption options + extra data per chunk (6 chunks, with last one being 1 byte, rest 1MB)
+            var fileToEncrypt = TestsHelper.CreateTemporaryFile(fileByteSize);
             try
             {
                 FileInfo vaultInfo = new FileInfo(vaultPath);
                 long vaultFileSize = vaultInfo.Length;
-                using (FileStream vaultFS = new FileStream(vaultPath, FileMode.Open, FileAccess.ReadWrite))
-                {
-
-                    TestsHelper.SetVaultSessionFromStream(_session, vaultFS);
-                }
                 await _service.Encrypt(algorithm, chunkSizeInMB: 1, fileToEncrypt, new ProgressionContext());
 
                 vaultInfo.Refresh();
                 long newVaultFileSize = vaultInfo.Length;
-                FileInfo expectedFileInfo = new FileInfo(fileToEncrypt);
-                EncryptedFileInfo expectedEncryptedFileInfo = new EncryptedFileInfo(expectedFileInfo.Name, (ulong)(expectedFileInfo.Length + algorithm.Provider().EncryptionAlgorithm.ExtraEncryptionDataSize), algorithm);
-                EncryptedFileInfo actualEncryptedFileInfo = null!;
-                using (FileStream vaultFS = new FileStream(vaultPath, FileMode.Open, FileAccess.ReadWrite))
-                {
-
-                    actualEncryptedFileInfo = TestsHelper.GetOffsetKVPFromVaultAtPosition(0, vaultFS, _session).Value;
-                }
-
-                Assert.Equal(expectedEncryptedFileInfo.FileName, actualEncryptedFileInfo.FileName);
-                Assert.True(expectedEncryptedFileInfo.FileSize != actualEncryptedFileInfo.FileSize); //We cant predict how many chunks will be created, however with how many are created due to file they should generate atleast 1KB extra shifting the fileSize output
-                Assert.Equal(expectedEncryptedFileInfo.EncryptionAlgorithm, actualEncryptedFileInfo.EncryptionAlgorithm);
-
-                Assert.True((vaultFileSize + expectedFileInfo.Length + algorithm.Provider().EncryptionAlgorithm.ExtraEncryptionDataSize + _session.VAULT_READER.EncryptionOptionsSize) < newVaultFileSize); //We cant predict how many chunks will be created so we just assert that the final file size is bigger than one chunk encrypt
-
+                Assert.Equal(vaultFileSize + expectedEncryptedByteSize, newVaultFileSize);
             }
             finally
             {
                 File.Delete(vaultPath);
                 File.Delete(fileToEncrypt);
-                //Session dispose here to prevent issues with allocating too much memory as XUnit cleans only after ALL theory tests finish
-                _session.Dispose();
             }
         }
 
         [Theory]
-        [MemberData(nameof(EncryptionAlgorithms))]
-        async Task EncryptEncryptsAndSavesToVaultNotChunked(EncryptionAlgorithm.EncryptionAlgorithmInfo algorithm)
+        [MemberData(nameof(TestsHelper.EncryptionAlgorithmsAndVaultFileCombinationsCartesian), MemberType = typeof(TestsHelper))]
+        internal async Task EncryptEncryptsAndSavesToVaultNotChunked(EncryptionAlgorithm.EncryptionAlgorithmInfo algorithm, Func<NormalizedPath> vaultMethod, TestsHelper.VaultInformation vaultInformation)
         {
-            var vaultPath = TestsHelper.CreateVaultFile();
-            FileInfo vaultInfo = new FileInfo(vaultPath);
-            long vaultFileSize = vaultInfo.Length;
-            var fileToEncrypt = TestsHelper.CreateTemporaryFile(RandomNumberGenerator.GetInt32(1, (1024 * 1024) - 1));
+            var vaultPath = vaultMethod();
+            ReplaceSession(vaultInformation.VaultSession);
+            var fileByteSize = (1024 * 1024) - 1; //1MB - 1 byte
+            var expectedEncryptedByteSize = fileByteSize + vaultInformation.VaultSession.VAULT_READER.EncryptionOptionsSize + algorithm.Provider().EncryptionAlgorithm.ExtraEncryptionDataSize;
+            var fileToEncrypt = TestsHelper.CreateTemporaryFile(fileByteSize);
             try
             {
-                using (FileStream vaultFS = new FileStream(vaultPath, FileMode.Open, FileAccess.ReadWrite))
-                {
-
-                    TestsHelper.SetVaultSessionFromStream(_session, vaultFS);
-                }
-                
-
-                await _service.Encrypt(algorithm, 1, fileToEncrypt, new ProgressionContext());
+                FileInfo vaultInfo = new FileInfo(vaultPath);
+                long vaultFileSize = vaultInfo.Length;
+                await _service.Encrypt(algorithm, chunkSizeInMB: 1, fileToEncrypt, new ProgressionContext());
 
                 vaultInfo.Refresh();
                 long newVaultFileSize = vaultInfo.Length;
-                FileInfo expectedFileInfo = new FileInfo(fileToEncrypt);
-                EncryptedFileInfo expectedEncryptedFileInfo = new EncryptedFileInfo(expectedFileInfo.Name, (ulong)(expectedFileInfo.Length + algorithm.Provider().EncryptionAlgorithm.ExtraEncryptionDataSize), algorithm);
-                EncryptedFileInfo actualEncryptedFileInfo = null!;
-                using (FileStream vaultFS = new FileStream(vaultPath, FileMode.Open, FileAccess.ReadWrite))
-                {
-
-                    actualEncryptedFileInfo = TestsHelper.GetOffsetKVPFromVaultAtPosition(0, vaultFS, _session).Value;
-                }
-
-                Assert.Equal(expectedEncryptedFileInfo.FileName, actualEncryptedFileInfo.FileName);
-                Assert.Equal(expectedEncryptedFileInfo.FileSize, actualEncryptedFileInfo.FileSize);
-                Assert.Equal(expectedEncryptedFileInfo.EncryptionAlgorithm, actualEncryptedFileInfo.EncryptionAlgorithm);
-
-                Assert.Equal((vaultFileSize + expectedFileInfo.Length + algorithm.Provider().EncryptionAlgorithm.ExtraEncryptionDataSize + _session.VAULT_READER.EncryptionOptionsSize), newVaultFileSize);
+                Assert.Equal(vaultFileSize + expectedEncryptedByteSize, newVaultFileSize);
             }
             finally
             {
                 File.Delete(vaultPath);
                 File.Delete(fileToEncrypt);
-                //Session dispose here to prevent issues with allocating too much memory as XUnit cleans only after ALL theory tests finish
-                _session.Dispose();
             }
         }
 
+
         [Fact]
-        void EncryptThrowsForNullValues()
+        internal void EncryptThrowsForInvalidAlgorithm()
         {
             Assert.ThrowsAsync<ArgumentNullException>(async () => await _service.Encrypt(null!, 1, NormalizedPath.From("VALID"), new ProgressionContext()));
-            Assert.ThrowsAsync<ArgumentNullException>(async () => await _service.Encrypt(EncryptionAlgorithm.EncryptionAlgorithmInfo.AES128GCM, 1, null!, new ProgressionContext()));
+        }
+
+        [Theory]
+        [InlineData(0)]
+        internal void EncryptThrowsForInvalidChunkSize(ushort chunkSize)
+        {
+            Assert.ThrowsAsync<ArgumentOutOfRangeException>(async () => await _service.Encrypt(EncryptionAlgorithm.EncryptionAlgorithmInfo.AES128GCM, chunkSize, NormalizedPath.From("VALID"), new ProgressionContext()));
+        }
+
+        [Theory]
+        [MemberData(nameof(TestsHelper.InvalidPaths), MemberType = typeof(TestsHelper))]
+        internal void EncryptThrowsForInvalidFilePath(NormalizedPath filePath, Type expectedException)
+        {
+            Assert.ThrowsAsync(expectedException, async () => await _service.Encrypt(EncryptionAlgorithm.EncryptionAlgorithmInfo.AES128GCM, 1, filePath, new ProgressionContext()));
+        }
+
+        [Fact]
+        internal void EncryptThrowsForInvalidProgressionContext()
+        {
             Assert.ThrowsAsync<ArgumentNullException>(async () => await _service.Encrypt(EncryptionAlgorithm.EncryptionAlgorithmInfo.AES128GCM, 1, NormalizedPath.From("VALID"), null!));
         }
-
-        [Fact]
-        void EncryptThrowsForZeroValues()
-        {
-            Assert.ThrowsAsync<ArgumentOutOfRangeException>(async () => await _service.Encrypt(EncryptionAlgorithm.EncryptionAlgorithmInfo.AES128GCM, 0, NormalizedPath.From("VALID"), new ProgressionContext()));
-        }
-
-        [Fact]
-        void EncryptThrowsForInvalidValues()
-        {
-            Assert.ThrowsAsync<ArgumentException>(async () => await _service.Encrypt(EncryptionAlgorithm.EncryptionAlgorithmInfo.AES128GCM, 1, NormalizedPath.From("    "), new ProgressionContext()));
-            Assert.ThrowsAsync<ArgumentException>(async () => await _service.Encrypt(EncryptionAlgorithm.EncryptionAlgorithmInfo.AES128GCM, 1, NormalizedPath.From(string.Empty), new ProgressionContext()));
-        }
-
-
     }
 }

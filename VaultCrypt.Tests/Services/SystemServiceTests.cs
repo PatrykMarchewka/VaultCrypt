@@ -6,23 +6,18 @@ using System.Threading.Tasks;
 
 namespace VaultCrypt.Tests.Services
 {
-    public class SystemServiceTests : IDisposable
+    public class SystemServiceTests
     {
         private readonly VaultCrypt.Services.SystemService _service;
-        private readonly FakeVaultSession _session = FakeVaultSession.EmptyMockSession();
+        private readonly VaultSession _session = (VaultSession)TestsHelper.EmptyVaultV0Information.VaultSession; //Using existing vault information to ensure VAULTPATH is set correclty
 
         public SystemServiceTests()
         {
             _service = new VaultCrypt.Services.SystemService(_session);
         }
 
-        public void Dispose()
-        {
-            _session.KEY.Dispose();
-        }
-
         [Fact]
-        void CheckFreeSpaceDoesNotThrowForValidValues()
+        internal void CheckFreeSpaceDoesNotThrowForValidValues()
         {
             var path = TestsHelper.CreateTemporaryFile(0);
             try
@@ -35,41 +30,30 @@ namespace VaultCrypt.Tests.Services
             }
         }
 
-        [Fact]
-        void CheckFreeSpaceThrowsForInvalidValues()
+        [Theory]
+        [MemberData(nameof(TestsHelper.InvalidPaths), MemberType = typeof(TestsHelper))]
+        internal void CheckFreeSpaceThrowsForInvalidFilePath(NormalizedPath filePath, Type expectedException)
         {
-            var path = Path.GetTempPath();
-            _session.VAULTPATH = NormalizedPath.From("WRONG VALUE");
-
-            Assert.Throws<ArgumentException>(() => _service.CheckFreeSpace(NormalizedPath.From(path)));
-            Assert.Throws<ArgumentException>(() => _service.CheckFreeSpace(NormalizedPath.From(string.Empty)));
+            Assert.Throws(expectedException, () => _service.CheckFreeSpace(NormalizedPath.From(filePath)));
         }
 
         [Fact]
-        void CheckFreeSpaceThrowsForNullValues()
-        {
-            Assert.Throws<ArgumentNullException>(() => _service.CheckFreeSpace(null!));
-        }
-
-        [Fact]
-        void CalculateConcurrencyReturnsOneForNonChunkedFile()
+        internal void CalculateConcurrencyReturnsOneForNonChunkedFile()
         {
             Assert.Equal(1, _service.CalculateConcurrency(false, 1));
         }
 
         [Fact]
-        void CalculateConcurrencyOneOrHigherForChunkedFile()
+        internal void CalculateConcurrencyOneOrHigherForChunkedFile()
         {
             Assert.True(_service.CalculateConcurrency(true, 1) >= 1);
         }
 
-        [Fact]
-        void CalculateConcurrencyThrowsForZeroValues()
+        [Theory]
+        [InlineData(0)]
+        internal void CalculateConcurrencyThrowsForInvalidChunkSize(ushort chunkSize)
         {
-            Assert.Throws<ArgumentOutOfRangeException>(() => _service.CalculateConcurrency(false, 0));
+            Assert.Throws<ArgumentOutOfRangeException>(() => _service.CalculateConcurrency(false, chunkSize));
         }
-
-        
-
     }
 }

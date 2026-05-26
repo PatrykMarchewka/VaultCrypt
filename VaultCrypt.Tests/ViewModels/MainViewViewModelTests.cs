@@ -22,7 +22,7 @@ namespace VaultCrypt.Tests.ViewModels
         }
 
         [Fact]
-        void SelectVaultFileRaisesNavigationRequest()
+        internal void SelectVaultFileRaisesNavigationRequest()
         {
             int eventRaisedCount = 0;
             CreateVMWithFileDialogService("not null");
@@ -33,7 +33,7 @@ namespace VaultCrypt.Tests.ViewModels
         }
 
         [Fact]
-        void SelectVaultFileDoesNotRaiseNavigationRequest()
+        internal void SelectVaultFileDoesNotRaiseNavigationRequest()
         {
             int eventRaisedCount = 0;
             _viewModel.NavigationRequested += (request) => { eventRaisedCount++; };
@@ -43,7 +43,7 @@ namespace VaultCrypt.Tests.ViewModels
         }
 
         [Fact]
-        void NavigationRequestedRaised()
+        internal void NavigationRequestedRaised()
         {
             int eventRaisedCount = 0;
             _viewModel.NavigationRequested += (request) => { eventRaisedCount++; };

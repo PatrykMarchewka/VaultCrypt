@@ -23,7 +23,7 @@ namespace VaultCrypt.Tests
         [InlineData(2)]
         [InlineData(3)]
         [InlineData(ushort.MaxValue)]
-        void GenerateRandomSaltReturnsCorrectLength(ushort length)
+        internal void GenerateRandomSaltReturnsCorrectLength(ushort length)
         {
             var salt = PasswordHelper.GenerateRandomSalt(length);
 
@@ -31,7 +31,7 @@ namespace VaultCrypt.Tests
         }
 
         [Fact]
-        void GenerateRandomSaltReturnsNonZeroedArray()
+        internal void GenerateRandomSaltReturnsNonZeroedArray()
         {
             var salt = PasswordHelper.GenerateRandomSalt(10);
 
@@ -39,7 +39,7 @@ namespace VaultCrypt.Tests
         }
 
         [Fact]
-        void GenerateRandomSaltReturnsDifferentValues()
+        internal void GenerateRandomSaltReturnsDifferentValues()
         {
             var salt = PasswordHelper.GenerateRandomSalt(10);
             var salt2 = PasswordHelper.GenerateRandomSalt(10);
@@ -48,7 +48,7 @@ namespace VaultCrypt.Tests
         }
 
         [Fact]
-        void DeriveKeyOutputsSameKeyForSameInput()
+        internal void DeriveKeyOutputsSameKeyForSameInput()
         {
             Span<byte> key = stackalloc byte[PasswordHelper.KeySize];
             Span<byte> key2 = stackalloc byte[PasswordHelper.KeySize];
@@ -59,7 +59,7 @@ namespace VaultCrypt.Tests
         }
 
         [Fact]
-        void DeriveKeyThrowsForTooSmallSpanSize()
+        internal void DeriveKeyThrowsForTooSmallSpanSize()
         {
             Assert.Throws<ArgumentOutOfRangeException>(() => {
                 Span<byte> key = stackalloc byte[PasswordHelper.KeySize - 1];
@@ -68,7 +68,7 @@ namespace VaultCrypt.Tests
         }
 
         [Fact]
-        void SecureStringToBytesReturnsCorrectString()
+        internal void SecureStringToBytesReturnsCorrectString()
         {
             SecureString secureString = new SecureString();
             secureString.AppendChar('h');

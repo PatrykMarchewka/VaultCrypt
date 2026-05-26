@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Security;
@@ -24,7 +24,7 @@ namespace VaultCrypt.Tests.Workflow
         public WorkflowTests()
         {
             this._fileService = new FileService();
-            this._vaultSession = TestsHelper.CreateEmptySessionInstance();
+            this._vaultSession = TestsHelper.EmptySession;
             this._encryptionOptionsService = new EncryptionOptionsService(_vaultSession);
             this._systemService = new SystemService(_vaultSession);
             this._encryptionService = new EncryptionService(_fileService, _encryptionOptionsService, _vaultSession, _systemService);
@@ -34,110 +34,31 @@ namespace VaultCrypt.Tests.Workflow
         }
 
         #region Helper methods and fields
-        private byte[] PasswordBytes = new byte[] { 82, 0, 111, 0, 117, 0, 110, 0, 100, 0, 84, 0, 114, 0, 105, 0, 112, 0, 84, 0, 101, 0, 115, 0, 116, 0, 115, 0 }; //Translates to "RoundTripTests"
-        private const int Iterations = 1_000_000;
 
-        private string GetWorkflowDirectory
+        private void ChangeSession(NormalizedPath vaultPath, ReadOnlySpan<byte> password)
         {
-            get
-            {
-                var appDirectory = AppContext.BaseDirectory;
-
-                while (!Directory.Exists(Path.Combine(appDirectory, "Workflow")))
-                {
-                    appDirectory = Directory.GetParent(appDirectory)!.FullName;
-                }
-
-                return appDirectory;
-            }
-        }
-        /// <summary>
-        /// Empty vault with no files with it. V0 version created using release v1.3.0
-        /// </summary>
-        private NormalizedPath EmptyVaultV0FilePath => NormalizedPath.From($"{GetWorkflowDirectory}\\Workflow\\TestData\\EmptyVault_v0.vlt");
-
-        /// <summary>
-        /// Vault with lorem ipsum and pattern files in it. V0 version created using release v1.3.0
-        /// </summary>
-        private NormalizedPath FilledVaultV0FilePath => NormalizedPath.From($"{GetWorkflowDirectory}\\Workflow\\TestData\\FilledVault_v0.vlt");
-
-        /// <summary>
-        /// Lorem ipsum text file
-        /// </summary>
-        private NormalizedPath LoremIpsumFilePath => NormalizedPath.From($"{GetWorkflowDirectory}\\Workflow\\TestData\\LoremIpsum.txt");
-
-        /// <summary>
-        /// 17MB text file with repeating pattern data
-        /// </summary>
-        private NormalizedPath PatternFilePath => NormalizedPath.From($"{GetWorkflowDirectory}\\Workflow\\TestData\\PatternFile.txt");
-
-        private string CreateRandomFileName(int nameLength = 10)
-        {
-            byte[] nameBytes = new byte[nameLength];
-            for (int i = 0; i < nameLength; i++)
-            {
-                nameBytes[i] = (byte)RandomNumberGenerator.GetInt32(97, 123); //ASCII codes a-z
-            }
-
-            return Encoding.UTF8.GetString(nameBytes);
+            //Mutates the object affecting all references
+            _vaultService.CreateSessionFromFile(password, vaultPath);
         }
 
-        private NormalizedPath CreateEmptyVault(bool changeSession)
+        private void RefreshEncryptedFilesList()
         {
-            string directory = Path.GetTempPath();
-            string random = CreateRandomFileName();
-            var fullPath = NormalizedPath.From($"{directory}\\{random}.vlt");
-            _vaultService.CreateVault(folderPath: NormalizedPath.From(directory), vaultName: random, password: PasswordBytes, Iterations);
-            if (changeSession)
+            using (var vaultFS = new FileStream(_vaultSession.VAULTPATH, FileMode.Open, FileAccess.Read))
             {
-                _vaultService.CreateSessionFromFile(PasswordBytes, fullPath);
+                _vaultService.RefreshEncryptedFilesList(vaultFS);
             }
-            return fullPath;
-        }
-
-        private NormalizedPath Copy(string fileName)
-        {
-            string directory = Path.GetTempPath();
-            NormalizedPath fullNewPath = NormalizedPath.From($"{directory}\\{new FileInfo(fileName).Name}");
-            File.Copy(fileName, fullNewPath);
-            return fullNewPath;
-        }
-
-        private NormalizedPath CopyEmptyVaultV0(bool changeSession)
-        {
-            var copyPath = Copy(EmptyVaultV0FilePath);
-            if (changeSession)
-            {
-                _vaultService.CreateSessionFromFile(PasswordBytes, copyPath);
-            }
-
-            return copyPath;
-        }
-
-        private NormalizedPath CopyFilledVaultV0(bool changeSession)
-        {
-            var copyPath = Copy(FilledVaultV0FilePath);
-            if (changeSession)
-            {
-                _vaultService.CreateSessionFromFile(PasswordBytes, copyPath);
-            }
-
-            return copyPath;
         }
 
         private async Task<long> EncryptFile(NormalizedPath filePath)
         {
             await _encryptionService.Encrypt(EncryptionAlgorithm.EncryptionAlgorithmInfo.AES256GCM, chunkSizeInMB: 1, filePath, new ProgressionContext());
-            using (var vaultFS = new FileStream(_vaultSession.VAULTPATH, FileMode.Open, FileAccess.Read))
-            {
-                _vaultService.RefreshEncryptedFilesList(vaultFS);
-            }
-            return _vaultSession.ENCRYPTED_FILES.Last().Key; ;
+            RefreshEncryptedFilesList();
+            return _vaultSession.ENCRYPTED_FILES.Last().Key;
         } 
 
         private async Task<NormalizedPath> DecryptFile(long offset)
         {
-            NormalizedPath randomFileName = NormalizedPath.From($"{Path.GetTempPath()}\\{CreateRandomFileName()}");
+            NormalizedPath randomFileName = NormalizedPath.From($"{Path.GetTempPath()}\\{TestsHelper.CreateRandomFileName()}");
             await _decryptionService.Decrypt(offset, randomFileName, new ProgressionContext());
             return randomFileName;
         }
@@ -148,22 +69,27 @@ namespace VaultCrypt.Tests.Workflow
             await _vaultService.TrimVault(new ProgressionContext());
             if (changeSession)
             {
-                _vaultService.CreateSessionFromFile(PasswordBytes, trimmedVault);
+                _vaultService.CreateSessionFromFile(TestsHelper.TestDataVaultPassword, trimmedVault);
             }
             return trimmedVault;
         }
         #endregion
 
-
-        async Task VaultEncryptsAndDecryptsCorrectlyNotChunked(NormalizedPath vaultPath)
+        [Theory]
+        [MemberData(nameof(TestsHelper.VaultFileCombinations), MemberType = typeof(TestsHelper))]
+        internal async Task VaultEncryptsAndDecryptsCorrectlyNotChunked(Func<NormalizedPath> vaultMethod, TestsHelper.VaultInformation _)
         {
+            NormalizedPath vaultPath = vaultMethod();
+            ChangeSession(vaultPath, TestsHelper.TestDataVaultPassword);
             try
             {
-                long offset = await EncryptFile(LoremIpsumFilePath);
+                await EncryptFile(TestsHelper.LoremIpsumFilePath);
+                RefreshEncryptedFilesList();
+                var offset = _vaultSession.ENCRYPTED_FILES.Last().Key;
                 NormalizedPath actualPattern = await DecryptFile(offset);
                 try
                 {
-                    Assert.True(File.ReadAllBytes(LoremIpsumFilePath).SequenceEqual(File.ReadAllBytes(actualPattern)));
+                    Assert.True(File.ReadAllBytes(TestsHelper.LoremIpsumFilePath).SequenceEqual(File.ReadAllBytes(actualPattern)));
                 }
                 finally
                 {
@@ -176,25 +102,19 @@ namespace VaultCrypt.Tests.Workflow
             }
         }
 
-        [Fact]
-        async Task RunVaultEncryptsAndDecryptsCorrectlyNotChunked()
+        [Theory]
+        [MemberData(nameof(TestsHelper.VaultFileCombinations), MemberType = typeof(TestsHelper))]
+        internal async Task VaultEncryptsAndDecryptsCorrectlyChunked(Func<NormalizedPath> vaultMethod, TestsHelper.VaultInformation _)
         {
-            await VaultEncryptsAndDecryptsCorrectlyNotChunked(CreateEmptyVault(changeSession: true));
-            await VaultEncryptsAndDecryptsCorrectlyNotChunked(CopyEmptyVaultV0(changeSession: true));
-            await VaultEncryptsAndDecryptsCorrectlyNotChunked(CopyFilledVaultV0(changeSession: true));
-        }
-
-        
-
-        async Task VaultEncryptsAndDecryptsCorrectlyChunked(NormalizedPath vaultPath)
-        {
+            NormalizedPath vaultPath = vaultMethod();
+            ChangeSession(vaultPath, TestsHelper.TestDataVaultPassword);
             try
             {
-                long offset = await EncryptFile(PatternFilePath);
+                long offset = await EncryptFile(TestsHelper.PatternFilePath);
                 NormalizedPath actualPattern = await DecryptFile(offset);
                 try
                 {
-                    Assert.True(File.ReadAllBytes(PatternFilePath).SequenceEqual(File.ReadAllBytes(actualPattern)));
+                    Assert.True(File.ReadAllBytes(TestsHelper.PatternFilePath).SequenceEqual(File.ReadAllBytes(actualPattern)));
                 }
                 finally
                 {
@@ -207,26 +127,22 @@ namespace VaultCrypt.Tests.Workflow
             }
         }
 
-        [Fact]
-        async Task RunVaultEncryptsAndDecryptsCorrectlyChunked()
+        [Theory]
+        [MemberData(nameof(TestsHelper.VaultFileCombinations), MemberType = typeof(TestsHelper))]
+        internal async Task VaultEncryptsAndDecryptsCorrectlyMixed(Func<NormalizedPath> vaultMethod, TestsHelper.VaultInformation _)
         {
-            await VaultEncryptsAndDecryptsCorrectlyChunked(CreateEmptyVault(changeSession: true));
-            await VaultEncryptsAndDecryptsCorrectlyChunked(CopyEmptyVaultV0(changeSession: true));
-            await VaultEncryptsAndDecryptsCorrectlyChunked(CopyFilledVaultV0(changeSession: true));
-        }
-
-        async Task VaultEncryptsAndDecryptsCorrectlyMixed(NormalizedPath vaultPath)
-        {
+            NormalizedPath vaultPath = vaultMethod();
+            ChangeSession(vaultPath, TestsHelper.TestDataVaultPassword);
             try
             {
-                long offsetLorem = await EncryptFile(LoremIpsumFilePath);
-                long offsetPattern = await EncryptFile(PatternFilePath);
+                long offsetLorem = await EncryptFile(TestsHelper.LoremIpsumFilePath);
+                long offsetPattern = await EncryptFile(TestsHelper.PatternFilePath);
                 NormalizedPath actualLorem = await DecryptFile(offsetLorem);
                 NormalizedPath actualPattern = await DecryptFile(offsetPattern);
                 try
                 {
-                    Assert.True(File.ReadAllBytes(LoremIpsumFilePath).SequenceEqual(File.ReadAllBytes(actualLorem)));
-                    Assert.True(File.ReadAllBytes(PatternFilePath).SequenceEqual(File.ReadAllBytes(actualPattern)));
+                    Assert.True(File.ReadAllBytes(TestsHelper.LoremIpsumFilePath).SequenceEqual(File.ReadAllBytes(actualLorem)));
+                    Assert.True(File.ReadAllBytes(TestsHelper.PatternFilePath).SequenceEqual(File.ReadAllBytes(actualPattern)));
                 }
                 finally
                 {
@@ -240,20 +156,16 @@ namespace VaultCrypt.Tests.Workflow
             }
         }
 
-        [Fact]
-        async Task RunVaultEncryptsAndDecryptsCorrectlyMixed()
+        [Theory]
+        [MemberData(nameof(TestsHelper.VaultFileCombinations), MemberType = typeof(TestsHelper))]
+        internal async Task VaultLowersFileSizeWhenDeletingLast(Func<NormalizedPath> vaultMethod, TestsHelper.VaultInformation _)
         {
-            await VaultEncryptsAndDecryptsCorrectlyMixed(CreateEmptyVault(changeSession: true));
-            await VaultEncryptsAndDecryptsCorrectlyMixed(CopyEmptyVaultV0(changeSession: true));
-            await VaultEncryptsAndDecryptsCorrectlyMixed(CopyFilledVaultV0(changeSession: true));
-        }
-
-        async Task VaultLowersFileSizeWhenDeletingLast(NormalizedPath vaultPath)
-        {
+            NormalizedPath vaultPath = vaultMethod();
+            ChangeSession(vaultPath, TestsHelper.TestDataVaultPassword);
             try
             {
-                long offsetLorem = await EncryptFile(LoremIpsumFilePath);
-                long offsetPattern = await EncryptFile(PatternFilePath);
+                long offsetLorem = await EncryptFile(TestsHelper.LoremIpsumFilePath);
+                long offsetPattern = await EncryptFile(TestsHelper.PatternFilePath);
                 await _vaultService.DeleteFileFromVault(offsetPattern, new ProgressionContext());
 
                 Assert.Equal(offsetPattern, new FileInfo(vaultPath).Length);
@@ -264,29 +176,25 @@ namespace VaultCrypt.Tests.Workflow
             }
         }
 
-        [Fact]
-        async Task RunVaultLowersFileSizeWhenDeletingLast()
+        [Theory]
+        [MemberData(nameof(TestsHelper.VaultFileCombinations), MemberType = typeof(TestsHelper))]
+        internal async Task VaultZeroesDataWhenDeletingNotLast(Func<NormalizedPath> vaultMethod, TestsHelper.VaultInformation _)
         {
-            await VaultLowersFileSizeWhenDeletingLast(CreateEmptyVault(changeSession: true));
-            await VaultLowersFileSizeWhenDeletingLast(CopyEmptyVaultV0(changeSession: true));
-            await VaultLowersFileSizeWhenDeletingLast(CopyFilledVaultV0(changeSession: true));
-        }
-
-        async Task VaultZeroesDataWhenDeletingNotLast(NormalizedPath vaultPath)
-        {
+            NormalizedPath vaultPath = vaultMethod();
+            ChangeSession(vaultPath, TestsHelper.TestDataVaultPassword);
             try
             {
-                long offsetLorem = await EncryptFile(LoremIpsumFilePath);
-                long offsetPattern = await EncryptFile(PatternFilePath);
+                long offsetLorem = await EncryptFile(TestsHelper.LoremIpsumFilePath);
+                long offsetPattern = await EncryptFile(TestsHelper.PatternFilePath);
                 await _vaultService.DeleteFileFromVault(offsetLorem, new ProgressionContext());
-                byte[] actual = new byte[new FileInfo(LoremIpsumFilePath).Length];
+                byte[] actual = new byte[new FileInfo(TestsHelper.LoremIpsumFilePath).Length];
                 using (var vaultFs = new FileStream(vaultPath, FileMode.Open, FileAccess.Read))
                 {
                     vaultFs.Position = offsetLorem;
                     vaultFs.Read(actual);
                 }
 
-                Assert.True(new byte[new FileInfo(LoremIpsumFilePath).Length].SequenceEqual(actual));
+                Assert.True(new byte[new FileInfo(TestsHelper.LoremIpsumFilePath).Length].SequenceEqual(actual));
             }
             finally
             {
@@ -294,20 +202,16 @@ namespace VaultCrypt.Tests.Workflow
             }
         }
 
-        [Fact]
-        async Task RunVaultZeroesDataWhenDeletingNotLast()
+        [Theory]
+        [MemberData(nameof(TestsHelper.VaultFileCombinations), MemberType = typeof(TestsHelper))]
+        internal async Task VaultTrimmedRemovesZeroedData(Func<NormalizedPath> vaultMethod, TestsHelper.VaultInformation _)
         {
-            await VaultZeroesDataWhenDeletingNotLast(CreateEmptyVault(changeSession: true));
-            await VaultZeroesDataWhenDeletingNotLast(CopyEmptyVaultV0(changeSession: true));
-            await VaultZeroesDataWhenDeletingNotLast(CopyFilledVaultV0(changeSession: true));
-        }
-
-        async Task VaultTrimmedRemovesZeroedData(NormalizedPath vaultPath)
-        {
+            NormalizedPath vaultPath = vaultMethod();
+            ChangeSession(vaultPath, TestsHelper.TestDataVaultPassword);
             try
             {
-                long offsetLorem = await EncryptFile(LoremIpsumFilePath);
-                long offsetPattern = await EncryptFile(PatternFilePath);
+                long offsetLorem = await EncryptFile(TestsHelper.LoremIpsumFilePath);
+                long offsetPattern = await EncryptFile(TestsHelper.PatternFilePath);
 
                 await _vaultService.DeleteFileFromVault(offsetLorem, new ProgressionContext());
 
@@ -319,7 +223,7 @@ namespace VaultCrypt.Tests.Workflow
                     var actualPattern = await DecryptFile(_vaultSession.ENCRYPTED_FILES.Last().Key);
                     try
                     {
-                        Assert.True(File.ReadAllBytes(PatternFilePath).SequenceEqual(File.ReadAllBytes(actualPattern)));
+                        Assert.True(File.ReadAllBytes(TestsHelper.PatternFilePath).SequenceEqual(File.ReadAllBytes(actualPattern)));
                     }
                     finally
                     {
@@ -337,20 +241,16 @@ namespace VaultCrypt.Tests.Workflow
             }
         }
 
-        [Fact]
-        async Task RunVaultTrimmedRemovesZeroedData()
+        [Theory]
+        [MemberData(nameof(TestsHelper.VaultFileCombinations), MemberType = typeof(TestsHelper))]
+        internal async Task VaultTrimmedEncryptsAndDecryptsCorrectly(Func<NormalizedPath> vaultMethod, TestsHelper.VaultInformation _)
         {
-            await VaultTrimmedRemovesZeroedData(CreateEmptyVault(changeSession: true));
-            await VaultTrimmedRemovesZeroedData(CopyEmptyVaultV0(changeSession: true));
-            await VaultTrimmedRemovesZeroedData(CopyFilledVaultV0(changeSession: true));
-        }
-
-        async Task VaultTrimmedEncryptsAndDecryptsCorrectly(NormalizedPath vaultPath)
-        {
+            NormalizedPath vaultPath = vaultMethod();
+            ChangeSession(vaultPath, TestsHelper.TestDataVaultPassword);
             try
             {
-                long offsetLorem = await EncryptFile(LoremIpsumFilePath);
-                long offsetPattern = await EncryptFile(PatternFilePath);
+                long offsetLorem = await EncryptFile(TestsHelper.LoremIpsumFilePath);
+                long offsetPattern = await EncryptFile(TestsHelper.PatternFilePath);
 
                 await _vaultService.DeleteFileFromVault(offsetPattern, new ProgressionContext());
 
@@ -359,13 +259,13 @@ namespace VaultCrypt.Tests.Workflow
                 {
                     //Since deleted file is at the end, trimming does "nothing", It copies the existing header and files but generates new metadata with new IV
                     Assert.Equal(new FileInfo(trimmedVault).Length, new FileInfo(vaultPath).Length);
-                    await EncryptFile(PatternFilePath);
+                    await EncryptFile(TestsHelper.PatternFilePath);
                     NormalizedPath actualLorem = await DecryptFile(offsetLorem);
                     NormalizedPath actualPattern = await DecryptFile(offsetPattern);
                     try
                     {
-                        Assert.True(File.ReadAllBytes(LoremIpsumFilePath).SequenceEqual(File.ReadAllBytes(actualLorem)));
-                        Assert.True(File.ReadAllBytes(PatternFilePath).SequenceEqual(File.ReadAllBytes(actualPattern)));
+                        Assert.True(File.ReadAllBytes(TestsHelper.LoremIpsumFilePath).SequenceEqual(File.ReadAllBytes(actualLorem)));
+                        Assert.True(File.ReadAllBytes(TestsHelper.PatternFilePath).SequenceEqual(File.ReadAllBytes(actualPattern)));
                     }
                     finally
                     {
@@ -382,14 +282,6 @@ namespace VaultCrypt.Tests.Workflow
             {
                 File.Delete(vaultPath);
             }
-        }
-
-        [Fact]
-        async Task RunVaultTrimmedEncryptsAndDecryptsCorrectly()
-        {
-            await VaultTrimmedEncryptsAndDecryptsCorrectly(CreateEmptyVault(changeSession: true));
-            await VaultTrimmedEncryptsAndDecryptsCorrectly(CopyEmptyVaultV0(changeSession: true));
-            await VaultTrimmedEncryptsAndDecryptsCorrectly(CopyFilledVaultV0(changeSession: true));
         }
     }
 }

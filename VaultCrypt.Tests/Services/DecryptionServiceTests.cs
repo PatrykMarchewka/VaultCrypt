@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Security.Cryptography;
@@ -7,80 +7,72 @@ using System.Threading.Tasks;
 
 namespace VaultCrypt.Tests.Services
 {
-    public class DecryptionServiceTests : IDisposable
+    public class DecryptionServiceTests
     {
-        private readonly VaultCrypt.Services.DecryptionService _service;
-        private readonly VaultCrypt.Services.FileService _fileService;
-        private readonly VaultCrypt.Services.EncryptionOptionsService _encryptionOptionsService;
-        private readonly VaultSession _session;
-        private readonly VaultCrypt.Services.SystemService _systemService;
+        private VaultCrypt.Services.DecryptionService _service;
+        private readonly VaultCrypt.Services.FileService _fileService = new VaultCrypt.Services.FileService();
+        private VaultCrypt.Services.EncryptionOptionsService _encryptionOptionsService;
+        private VaultSession _session = TestsHelper.EmptySession;
+        private VaultCrypt.Services.SystemService _systemService;
 
         public DecryptionServiceTests()
         {
-            _fileService = new VaultCrypt.Services.FileService();
-            _session = TestsHelper.CreateFilledSessionInstanceWithReader();
             _encryptionOptionsService = new VaultCrypt.Services.EncryptionOptionsService(_session);
             _systemService = new VaultCrypt.Services.SystemService(_session);
             _service = new VaultCrypt.Services.DecryptionService(_fileService, _encryptionOptionsService, _session, _systemService);
         }
 
-        public void Dispose()
+        private void ReplaceSession(IVaultSession newSession)
         {
-            _session.KEY.Dispose();
+            _session = (VaultSession)newSession;
+            _encryptionOptionsService = new VaultCrypt.Services.EncryptionOptionsService(_session);
+            _systemService = new VaultCrypt.Services.SystemService(_session);
+            _service = new VaultCrypt.Services.DecryptionService(_fileService, _encryptionOptionsService, _session, _systemService);
         }
 
 
 
-        [Fact]
-        async Task DecryptCorrectlyDecryptsData()
+        [Theory]
+        [MemberData(nameof(TestsHelper.FilledVaultFileCombinations), MemberType = typeof(TestsHelper))]
+        internal async Task DecryptCorrectlyDecryptsData(Func<NormalizedPath> vaultMethod, TestsHelper.VaultInformation vaultInformation)
         {
-            byte[][] expectedFiles = new byte[10][];
-            NormalizedPath[] filePaths = new NormalizedPath[10];
-            for (int i = 0; i < expectedFiles.Length; i++)
+            var vault = vaultMethod();
+            ReplaceSession(vaultInformation.VaultSession);
+            NormalizedPath decrypted = TestsHelper.CreateTemporaryFile(0);
+            try
             {
-                expectedFiles[i] = RandomNumberGenerator.GetBytes(1000);
+                //First encrypted file should be LoremIpsum
+                await _service.Decrypt(_session.ENCRYPTED_FILES.First().Key, decrypted, new ProgressionContext());
+                byte[] expected = File.ReadAllBytes(TestsHelper.LoremIpsumFilePath);
+                byte[] actual = File.ReadAllBytes(decrypted);
+                Assert.True(expected.SequenceEqual(actual));
             }
-
-            (NormalizedPath, EncryptionOptions.FileEncryptionOptions[]) vault = TestsHelper.CreateVaultFileWithEncryptedFileList(expectedFiles, _session);
-
-            for (int i = 0; i < expectedFiles.Length; i++)
+            finally
             {
-                using (FileStream vaultFS = new FileStream(vault.Item1, FileMode.Open, FileAccess.Read))
-                {
-                    long offset = TestsHelper.GetOffsetKVPFromVaultAtPosition(i, vaultFS, _session).Key;
-                    filePaths[i] = TestsHelper.CreateTemporaryFile(0);
-                    await _service.Decrypt(offset, filePaths[i], new ProgressionContext());
-                }
+                File.Delete(vault);
+                File.Delete(decrypted);
             }
+        }
 
-            for (int i = 0; i < expectedFiles.Length; i++)
-            {
-                try
-                {
-                    byte[] actual = File.ReadAllBytes(filePaths[i]!);
-                    Assert.True(expectedFiles[i].SequenceEqual(actual));
-                }
-                finally
-                {
-                    File.Delete(filePaths[i]!);
-                }
-            }
-            File.Delete(vault.Item1);
+        [Theory]
+        [InlineData(long.MinValue)]
+        [InlineData(4096 - 1)] //V0 Metadata offsets size
+        internal void DecryptThrowsForInvalidOffset(long metadataOffset)
+        {
+            Assert.ThrowsAsync<ArgumentOutOfRangeException>(async () => await _service.Decrypt(metadataOffset, NormalizedPath.From("VALID"), new ProgressionContext()));
+        }
+
+        [Theory]
+        [MemberData(nameof(TestsHelper.InvalidPaths), MemberType = typeof(TestsHelper))]
+        internal void DecryptThrowsForInvalidFilePath(NormalizedPath filePath, Type expectedException)
+        {
+            Assert.ThrowsAsync(expectedException, async () => await _service.Decrypt(long.MaxValue, filePath, new ProgressionContext()));
         }
 
         [Fact]
-        void DecryptThrowsForNullValues()
+        internal void DecryptThrowsForInvalidContext()
         {
-            Assert.ThrowsAsync<ArgumentNullException>(async () => await _service.Decrypt(long.MaxValue, null!, new ProgressionContext()));
             Assert.ThrowsAsync<ArgumentNullException>(async () => await _service.Decrypt(long.MaxValue, NormalizedPath.From("VALID"), null!));
-        }
-
-        [Fact]
-        void DecryptThrowsForInvalidValues()
-        {
-            Assert.ThrowsAsync<ArgumentOutOfRangeException>(async () => await _service.Decrypt(0, NormalizedPath.From("VALID"), new ProgressionContext()));
-            Assert.ThrowsAsync<ArgumentException>(async () => await _service.Decrypt(long.MaxValue, NormalizedPath.From(""), new ProgressionContext()));
-            Assert.ThrowsAsync<ArgumentException>(async () => await _service.Decrypt(long.MaxValue, NormalizedPath.From("   "), new ProgressionContext()));
         }
     }
 }

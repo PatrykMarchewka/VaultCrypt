@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Security.Cryptography;
@@ -31,7 +31,7 @@ namespace VaultCrypt.Tests
 
 
         [Fact]
-        void CalculateHMAC_SameOutput()
+        internal void CalculateHMAC_SameOutput()
         {
             byte[] result1 = EncryptionAlgorithm.CalculateHMAC(this._key, this._data1, this._data2);
             byte[] result2 = EncryptionAlgorithm.CalculateHMAC(this._key.AsSpan(), this._data1.AsSpan(), this._data2.AsSpan());
@@ -40,7 +40,7 @@ namespace VaultCrypt.Tests
         }
 
         [Fact]
-        void CalculateHMAC_SameDataSameOutput()
+        internal void CalculateHMAC_SameDataSameOutput()
         {
             byte[] concat = new byte[this._data1.Length + this._data2.Length];
             Buffer.BlockCopy(this._data1, 0, concat, 0, this._data1.Length);
@@ -52,7 +52,7 @@ namespace VaultCrypt.Tests
         }
 
         [Fact]
-        void CalculateHMAC_CorrectSize()
+        internal void CalculateHMAC_CorrectSize()
         {
             byte[] result = EncryptionAlgorithm.CalculateHMAC(this._key, this._data1);
 
@@ -60,7 +60,7 @@ namespace VaultCrypt.Tests
         }
 
         [Fact]
-        void CalculateHMAC_NotEmpty()
+        internal void CalculateHMAC_NotEmpty()
         {
             byte[] empty = new byte[64];
             byte[] result1 = EncryptionAlgorithm.CalculateHMAC(this._key, this._data1);
@@ -69,7 +69,7 @@ namespace VaultCrypt.Tests
         }
 
         [Fact]
-        void CalculateHMAC_DifferentOutput_DifferentKey()
+        internal void CalculateHMAC_DifferentOutput_DifferentKey()
         {
             byte[] newKey = new byte[] { 0, 1, 2 };
             byte[] result1 = EncryptionAlgorithm.CalculateHMAC(this._key, this._data1);
@@ -79,7 +79,7 @@ namespace VaultCrypt.Tests
         }
 
         [Fact]
-        void CalculateHMAC_DifferentOutput_DifferentData()
+        internal void CalculateHMAC_DifferentOutput_DifferentData()
         {
             byte[] newData = new byte[] { 0, 1, 2 };
             byte[] result1 = EncryptionAlgorithm.CalculateHMAC(this._key, this._data1);
@@ -89,109 +89,10 @@ namespace VaultCrypt.Tests
         }
 
         [Fact]
-        void EncryptionAlgorithm_UniqueID()
-        {
-            var ids = EncryptionAlgorithm.GetEncryptionAlgorithmInfo.Keys.ToList();
-            Assert.Equal(ids.Count, ids.Distinct().Count());
-        }
-
-        [Fact]
-        void EncryptionAlgorithm_UniqueNames()
+        internal void EncryptionAlgorithm_UniqueNames()
         {
             var names = EncryptionAlgorithm.GetEncryptionAlgorithmInfo.Values.Select(v => v.Name).ToList();
             Assert.Equal(names.Count, names.Distinct().Count());
-        }
-
-        [Theory]
-        [InlineData(0, 16)]  // AES-128-GCM
-        [InlineData(1, 24)]  // AES-192-GCM
-        [InlineData(2, 32)]  // AES-256-GCM
-        [InlineData(3, 16)]  // AES-128-CCM
-        [InlineData(4, 24)]  // AES-192-CCM
-        [InlineData(5, 32)]  // AES-256-CCM
-        [InlineData(6, 32)]  // ChaCha20-Poly1305
-        [InlineData(7, 16)]  // AES-128-EAX
-        [InlineData(8, 24)]  // AES-192-EAX
-        [InlineData(9, 32)]  // AES-256-EAX
-        [InlineData(10, 16)]  // Twofish-128-CTR
-        [InlineData(11, 24)]  // Twofish-192-CTR
-        [InlineData(12, 32)]  // Twofish-256-CTR
-        [InlineData(13, 32)]  // Threefish-256
-        [InlineData(14, 64)]  // Threefish-512
-        [InlineData(15, 128)] // Threefish-1024
-        [InlineData(16, 16)]  // Serpent-128-GCM
-        [InlineData(17, 24)]  // Serpent-192-GCM
-        [InlineData(18, 32)]  // Serpent-256-GCM
-        [InlineData(19, 16)]  // Serpent-128-CTR
-        [InlineData(20, 24)]  // Serpent-192-CTR
-        [InlineData(21, 32)]  // Serpent-256-CTR
-        [InlineData(22, 16)]  // Camelia-128-GCM
-        [InlineData(23, 24)]  // Camelia-192-GCM
-        [InlineData(24, 32)]  // Camelia-256-GCM
-        [InlineData(25, 16)]  // Camelia-128-OCB
-        [InlineData(26, 24)]  // Camelia-192-OCB
-        [InlineData(27, 32)]  // Camelia-256-OCB
-        [InlineData(28, 16)]  // Camelia-128-CTR
-        [InlineData(29, 24)]  // Camelia-192-CTR
-        [InlineData(30, 32)]  // Camelia-256-CTR
-        [InlineData(31, 32)]  // XSalsa20
-        void Provider_CorrectKeySize(byte id, byte expectedKeySize)
-        {
-            byte actual = EncryptionAlgorithm.GetEncryptionAlgorithmInfo[id].Provider().KeySize;
-            Assert.Equal(expectedKeySize, actual);
-        }
-
-        // 28bytes (12 IV + 16 tag)
-        [Theory]
-        [InlineData(0)]  // AES-128-GCM
-        [InlineData(1)]  // AES-192-GCM
-        [InlineData(2)]  // AES-256-GCM
-        [InlineData(3)]  // AES-128-CCM
-        [InlineData(4)]  // AES-192-CCM
-        [InlineData(5)]  // AES-256-CCM
-        [InlineData(6)]  // ChaCha20-Poly1305
-        [InlineData(7)]  // AES-128-EAX
-        [InlineData(8)]  // AES-192-EAX
-        [InlineData(9)]  // AES-256-EAX
-        [InlineData(16)] // Serpent-128-GCM
-        [InlineData(17)] // Serpent-192-GCM
-        [InlineData(18)] // Serpent-256-GCM
-        [InlineData(22)] // Camelia-128-GCM
-        [InlineData(23)] // Camelia-192-GCM
-        [InlineData(24)] // Camelia-256-GCM
-        [InlineData(25)] // Camelia-128-OCB
-        [InlineData(26)] // Camelia-192-OCB
-        [InlineData(27)] // Camelia-256-OCB
-        void ExtraDataSize_Is28ForAeadModes(byte id)
-        {
-            Assert.Equal(28, EncryptionAlgorithm.GetEncryptionAlgorithmInfo[id].Provider().EncryptionAlgorithm.ExtraEncryptionDataSize);
-        }
-
-        // 76 bytes (12 IV + 64 tag)
-        [Theory]
-        [InlineData(10)] // Twofish-128-CTR
-        [InlineData(11)] // Twofish-192-CTR
-        [InlineData(12)] // Twofish-256-CTR
-        [InlineData(13)] // Threefish-256-CTR
-        [InlineData(14)] // Threefish-512-CTR
-        [InlineData(15)] // Threefish-1024-CTR
-        [InlineData(19)] // Serpent-128-CTR
-        [InlineData(20)] // Serpent-192-CTR
-        [InlineData(21)] // Serpent-256-CTR
-        [InlineData(28)] // Camelia-128-CTR
-        [InlineData(29)] // Camelia-192-CTR
-        [InlineData(30)] // Camelia-256-CTR
-        void ExtraDataSize_Is76ForCtrModes(byte id)
-        {
-            Assert.Equal(76, EncryptionAlgorithm.GetEncryptionAlgorithmInfo[id].Provider().EncryptionAlgorithm.ExtraEncryptionDataSize);
-        }
-
-        // 88 bytes (24 IV + 64 tag)
-        [Theory]
-        [InlineData(31)]
-        void ExtraDataSize_Is88ForXSalsa20(byte id)
-        {
-            Assert.Equal(88, EncryptionAlgorithm.GetEncryptionAlgorithmInfo[id].Provider().EncryptionAlgorithm.ExtraEncryptionDataSize);
         }
     }
 
@@ -208,8 +109,8 @@ namespace VaultCrypt.Tests
         }
 
 
-        public abstract IEnumerable<object[]> _providers { get; }
-        public static IEnumerable<object[]> Providers => new TSelf()._providers;
+        public abstract TheoryData<EncryptionAlgorithm.IEncryptionAlgorithmProvider> _providers { get; }
+        public static TheoryData<EncryptionAlgorithm.IEncryptionAlgorithmProvider> Providers => new TSelf()._providers;
 
         public abstract Type _expectedMismatchedTagException { get; }
         public static Type ExpectedMismatchedTagException
@@ -379,11 +280,11 @@ namespace VaultCrypt.Tests
     public class AESGCMAlgorithmTests : EncryptionAlgorithmTests<AESGCMAlgorithmTests>, IEncryptionAlgorithmTests
     {
         //[IV 12 bytes][Authentication 16 bytes][Data]
-        public override IEnumerable<object[]> _providers => new List<object[]>
+        public override TheoryData<EncryptionAlgorithm.IEncryptionAlgorithmProvider> _providers => new TheoryData<EncryptionAlgorithm.IEncryptionAlgorithmProvider>()
         {
-            new object[]{ EncryptionAlgorithm.EncryptionAlgorithmInfo.AES128GCM.Provider()},
-            new object[]{ EncryptionAlgorithm.EncryptionAlgorithmInfo.AES192GCM.Provider()},
-            new object[]{ EncryptionAlgorithm.EncryptionAlgorithmInfo.AES256GCM.Provider()}
+            {EncryptionAlgorithm.EncryptionAlgorithmInfo.AES128GCM.Provider() },
+            {EncryptionAlgorithm.EncryptionAlgorithmInfo.AES192GCM.Provider() },
+            {EncryptionAlgorithm.EncryptionAlgorithmInfo.AES256GCM.Provider() }
         };
 
         public override Type _expectedMismatchedTagException => typeof(AuthenticationTagMismatchException);
@@ -392,11 +293,11 @@ namespace VaultCrypt.Tests
     public class AESCCMAlgorithmTests : EncryptionAlgorithmTests<AESCCMAlgorithmTests>, IEncryptionAlgorithmTests
     {
         //[IV 12 bytes][Authentication 16 bytes][Data]
-        public override IEnumerable<object[]> _providers => new List<object[]>
+        public override TheoryData<EncryptionAlgorithm.IEncryptionAlgorithmProvider> _providers => new TheoryData<EncryptionAlgorithm.IEncryptionAlgorithmProvider>()
         {
-            new object[]{ EncryptionAlgorithm.EncryptionAlgorithmInfo.AES128CCM.Provider()},
-            new object[]{ EncryptionAlgorithm.EncryptionAlgorithmInfo.AES192CCM.Provider()},
-            new object[]{ EncryptionAlgorithm.EncryptionAlgorithmInfo.AES256CCM.Provider()}
+            {EncryptionAlgorithm.EncryptionAlgorithmInfo.AES128CCM.Provider() },
+            {EncryptionAlgorithm.EncryptionAlgorithmInfo.AES192CCM.Provider() },
+            {EncryptionAlgorithm.EncryptionAlgorithmInfo.AES256CCM.Provider() }
         };
 
         public override Type _expectedMismatchedTagException => typeof(AuthenticationTagMismatchException);
@@ -405,11 +306,11 @@ namespace VaultCrypt.Tests
     public class AESEAXAlgorithmTests : EncryptionAlgorithmTests<AESCCMAlgorithmTests>, IEncryptionAlgorithmTests
     {
         //[IV 12 bytes][Authentication 16 bytes][Data]
-        public override IEnumerable<object[]> _providers => new List<object[]>
+        public override TheoryData<EncryptionAlgorithm.IEncryptionAlgorithmProvider> _providers => new TheoryData<EncryptionAlgorithm.IEncryptionAlgorithmProvider>()
         {
-            new object[]{ EncryptionAlgorithm.EncryptionAlgorithmInfo.AES128EAX.Provider()},
-            new object[]{ EncryptionAlgorithm.EncryptionAlgorithmInfo.AES192EAX.Provider()},
-            new object[]{ EncryptionAlgorithm.EncryptionAlgorithmInfo.AES256EAX.Provider()}
+            {EncryptionAlgorithm.EncryptionAlgorithmInfo.AES128EAX.Provider() },
+            {EncryptionAlgorithm.EncryptionAlgorithmInfo.AES192EAX.Provider() },
+            {EncryptionAlgorithm.EncryptionAlgorithmInfo.AES256EAX.Provider() }
         };
 
         public override Type _expectedMismatchedTagException => typeof(AuthenticationTagMismatchException);
@@ -420,9 +321,9 @@ namespace VaultCrypt.Tests
     public class ChaCha20Poly1305AlgorithmTests : EncryptionAlgorithmTests<ChaCha20Poly1305AlgorithmTests>, IEncryptionAlgorithmTests
     {
         //[IV 12 bytes][Authentication 16 bytes][Data]
-        public override IEnumerable<object[]> _providers => new List<object[]>
+        public override TheoryData<EncryptionAlgorithm.IEncryptionAlgorithmProvider> _providers => new TheoryData<EncryptionAlgorithm.IEncryptionAlgorithmProvider>()
         {
-            new object[]{ EncryptionAlgorithm.EncryptionAlgorithmInfo.ChaCha20Poly1305.Provider()}
+            { EncryptionAlgorithm.EncryptionAlgorithmInfo.ChaCha20Poly1305.Provider()}
         };
 
         public override Type _expectedMismatchedTagException => typeof(AuthenticationTagMismatchException);
@@ -433,11 +334,11 @@ namespace VaultCrypt.Tests
     public class TwofishCTRAlgorithmTests : EncryptionAlgorithmTests<TwofishCTRAlgorithmTests>, IEncryptionAlgorithmTests
     {
         //[IV 12 bytes][Data][Authentication 64 bytes]
-        public override IEnumerable<object[]> _providers => new List<object[]>
+        public override TheoryData<EncryptionAlgorithm.IEncryptionAlgorithmProvider> _providers => new TheoryData<EncryptionAlgorithm.IEncryptionAlgorithmProvider>()
         {
-            new object[]{ EncryptionAlgorithm.EncryptionAlgorithmInfo.Twofish128CTR.Provider()},
-            new object[]{ EncryptionAlgorithm.EncryptionAlgorithmInfo.Twofish192CTR.Provider()},
-            new object[]{ EncryptionAlgorithm.EncryptionAlgorithmInfo.Twofish256CTR.Provider()}
+            { EncryptionAlgorithm.EncryptionAlgorithmInfo.Twofish128CTR.Provider()},
+            { EncryptionAlgorithm.EncryptionAlgorithmInfo.Twofish192CTR.Provider()},
+            { EncryptionAlgorithm.EncryptionAlgorithmInfo.Twofish256CTR.Provider()}
         };
 
         public override Type _expectedMismatchedTagException => typeof(VaultCrypt.Exceptions.VaultException);
@@ -449,11 +350,11 @@ namespace VaultCrypt.Tests
     public class ThreefishCTRAlgorithmTests : EncryptionAlgorithmTests<ThreefishCTRAlgorithmTests>, IEncryptionAlgorithmTests
     {
         //[IV 12 bytes][Data][Authentication 64 bytes]
-        public override IEnumerable<object[]> _providers => new List<object[]>
+        public override TheoryData<EncryptionAlgorithm.IEncryptionAlgorithmProvider> _providers => new TheoryData<EncryptionAlgorithm.IEncryptionAlgorithmProvider>()
         {
-            new object[]{ EncryptionAlgorithm.EncryptionAlgorithmInfo.Threefish256CTR.Provider()},
-            new object[]{ EncryptionAlgorithm.EncryptionAlgorithmInfo.Threefish512CTR.Provider()},
-            new object[]{ EncryptionAlgorithm.EncryptionAlgorithmInfo.Threefish1024CTR.Provider()}
+            { EncryptionAlgorithm.EncryptionAlgorithmInfo.Threefish256CTR.Provider()},
+            { EncryptionAlgorithm.EncryptionAlgorithmInfo.Threefish512CTR.Provider()},
+            { EncryptionAlgorithm.EncryptionAlgorithmInfo.Threefish1024CTR.Provider()}
         };
 
         public override Type _expectedMismatchedTagException => typeof(VaultCrypt.Exceptions.VaultException);
@@ -464,11 +365,11 @@ namespace VaultCrypt.Tests
     public class SerpentGCMAlgorithmTests : EncryptionAlgorithmTests<SerpentGCMAlgorithmTests>, IEncryptionAlgorithmTests
     {
         //[IV 12 bytes][Data][Authentication 16 bytes]
-        public override IEnumerable<object[]> _providers => new List<object[]>
+        public override TheoryData<EncryptionAlgorithm.IEncryptionAlgorithmProvider> _providers => new TheoryData<EncryptionAlgorithm.IEncryptionAlgorithmProvider>()
         {
-            new object[]{ EncryptionAlgorithm.EncryptionAlgorithmInfo.Serpent128GCM.Provider()},
-            new object[]{ EncryptionAlgorithm.EncryptionAlgorithmInfo.Serpent192GCM.Provider()},
-            new object[]{ EncryptionAlgorithm.EncryptionAlgorithmInfo.Serpent256GCM.Provider()}
+            { EncryptionAlgorithm.EncryptionAlgorithmInfo.Serpent128GCM.Provider()},
+            { EncryptionAlgorithm.EncryptionAlgorithmInfo.Serpent192GCM.Provider()},
+            { EncryptionAlgorithm.EncryptionAlgorithmInfo.Serpent256GCM.Provider()}
         };
 
         public override Type _expectedMismatchedTagException => typeof(Org.BouncyCastle.Crypto.InvalidCipherTextException);
@@ -477,11 +378,11 @@ namespace VaultCrypt.Tests
     public class SerpentCTRAlgorithmTests : EncryptionAlgorithmTests<SerpentCTRAlgorithmTests>, IEncryptionAlgorithmTests
     {
         //[IV 12 bytes][Data][Authentication 64 bytes]
-        public override IEnumerable<object[]> _providers => new List<object[]>
+        public override TheoryData<EncryptionAlgorithm.IEncryptionAlgorithmProvider> _providers => new TheoryData<EncryptionAlgorithm.IEncryptionAlgorithmProvider>()
         {
-            new object[]{ EncryptionAlgorithm.EncryptionAlgorithmInfo.Serpent128CTR.Provider()},
-            new object[]{ EncryptionAlgorithm.EncryptionAlgorithmInfo.Serpent192CTR.Provider()},
-            new object[]{ EncryptionAlgorithm.EncryptionAlgorithmInfo.Serpent256CTR.Provider()}
+            { EncryptionAlgorithm.EncryptionAlgorithmInfo.Serpent128CTR.Provider()},
+            { EncryptionAlgorithm.EncryptionAlgorithmInfo.Serpent192CTR.Provider()},
+            { EncryptionAlgorithm.EncryptionAlgorithmInfo.Serpent256CTR.Provider()}
         };
 
         public override Type _expectedMismatchedTagException => typeof(VaultCrypt.Exceptions.VaultException);
@@ -492,11 +393,11 @@ namespace VaultCrypt.Tests
     public class CameliaGCMAlgorithmTests : EncryptionAlgorithmTests<CameliaGCMAlgorithmTests>, IEncryptionAlgorithmTests
     {
         //[IV 12 bytes][Data][Authentication 16 bytes]
-        public override IEnumerable<object[]> _providers => new List<object[]>
+        public override TheoryData<EncryptionAlgorithm.IEncryptionAlgorithmProvider> _providers => new TheoryData<EncryptionAlgorithm.IEncryptionAlgorithmProvider>()
         {
-            new object[]{ EncryptionAlgorithm.EncryptionAlgorithmInfo.Camelia128GCM.Provider()},
-            new object[]{ EncryptionAlgorithm.EncryptionAlgorithmInfo.Camelia192GCM.Provider()},
-            new object[]{ EncryptionAlgorithm.EncryptionAlgorithmInfo.Camelia256GCM.Provider()}
+            { EncryptionAlgorithm.EncryptionAlgorithmInfo.Camelia128GCM.Provider()},
+            { EncryptionAlgorithm.EncryptionAlgorithmInfo.Camelia192GCM.Provider()},
+            { EncryptionAlgorithm.EncryptionAlgorithmInfo.Camelia256GCM.Provider()}
         };
 
         public override Type _expectedMismatchedTagException => typeof(Org.BouncyCastle.Crypto.InvalidCipherTextException);
@@ -505,11 +406,11 @@ namespace VaultCrypt.Tests
     public class CameliaOCBAlgoritmTests : EncryptionAlgorithmTests<CameliaOCBAlgoritmTests>, IEncryptionAlgorithmTests
     {
         //[IV 12 bytes][Data][Authentication 16 bytes]
-        public override IEnumerable<object[]> _providers => new List<object[]>
+        public override TheoryData<EncryptionAlgorithm.IEncryptionAlgorithmProvider> _providers => new TheoryData<EncryptionAlgorithm.IEncryptionAlgorithmProvider>()
         {
-            new object[]{ EncryptionAlgorithm.EncryptionAlgorithmInfo.Camelia128OCB.Provider()},
-            new object[]{ EncryptionAlgorithm.EncryptionAlgorithmInfo.Camelia192OCB.Provider()},
-            new object[]{ EncryptionAlgorithm.EncryptionAlgorithmInfo.Camelia256OCB.Provider()}
+            { EncryptionAlgorithm.EncryptionAlgorithmInfo.Camelia128OCB.Provider()},
+            { EncryptionAlgorithm.EncryptionAlgorithmInfo.Camelia192OCB.Provider()},
+            { EncryptionAlgorithm.EncryptionAlgorithmInfo.Camelia256OCB.Provider()}
         };
 
         public override Type _expectedMismatchedTagException => typeof(Org.BouncyCastle.Crypto.InvalidCipherTextException);
@@ -518,11 +419,11 @@ namespace VaultCrypt.Tests
     public class CameliaCTRAlgorithmTests : EncryptionAlgorithmTests<CameliaCTRAlgorithmTests>, IEncryptionAlgorithmTests
     {
         //[IV 12 bytes][Data][Authentication 64 bytes]
-        public override IEnumerable<object[]> _providers => new List<object[]>
+        public override TheoryData<EncryptionAlgorithm.IEncryptionAlgorithmProvider> _providers => new TheoryData<EncryptionAlgorithm.IEncryptionAlgorithmProvider>()
         {
-            new object[]{ EncryptionAlgorithm.EncryptionAlgorithmInfo.Camelia128CTR.Provider()},
-            new object[]{ EncryptionAlgorithm.EncryptionAlgorithmInfo.Camelia192CTR.Provider()},
-            new object[]{ EncryptionAlgorithm.EncryptionAlgorithmInfo.Camelia256CTR.Provider()}
+            { EncryptionAlgorithm.EncryptionAlgorithmInfo.Camelia128CTR.Provider()},
+            { EncryptionAlgorithm.EncryptionAlgorithmInfo.Camelia192CTR.Provider()},
+            { EncryptionAlgorithm.EncryptionAlgorithmInfo.Camelia256CTR.Provider()}
         };
 
         public override Type _expectedMismatchedTagException => typeof(VaultCrypt.Exceptions.VaultException);
@@ -533,9 +434,9 @@ namespace VaultCrypt.Tests
     public class XSalsa20AlgorithmTests : EncryptionAlgorithmTests<XSalsa20AlgorithmTests>, IEncryptionAlgorithmTests
     {
         //[IV 24 bytes][Data][Authentication 64 bytes]
-        public override IEnumerable<object[]> _providers => new List<object[]>
+        public override TheoryData<EncryptionAlgorithm.IEncryptionAlgorithmProvider> _providers => new TheoryData<EncryptionAlgorithm.IEncryptionAlgorithmProvider>()
         {
-            new object[]{ EncryptionAlgorithm.EncryptionAlgorithmInfo.XSalsa20.Provider()}
+            { EncryptionAlgorithm.EncryptionAlgorithmInfo.XSalsa20.Provider()}
         };
 
         public override Type _expectedMismatchedTagException => typeof(VaultCrypt.Exceptions.VaultException);

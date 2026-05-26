@@ -18,7 +18,7 @@ namespace VaultCrypt.Tests
         }
 
         [Fact]
-        void ProgressionContextInitializesCorrectly()
+        internal void ProgressionContextInitializesCorrectly()
         {
             Assert.Equal(0UL, _progressionContext.Completed);
             Assert.Equal(1UL, _progressionContext.Total);
@@ -27,7 +27,7 @@ namespace VaultCrypt.Tests
         }
 
         [Fact]
-        void IncrementIncreasesCompletedValue()
+        internal void IncrementIncreasesCompletedValue()
         {
             _progressionContext.SetTotal(ulong.MaxValue);
             _progressionContext.Increment();
@@ -39,7 +39,7 @@ namespace VaultCrypt.Tests
         }
 
         [Fact]
-        void IncrementCallsProgressReport()
+        internal void IncrementCallsProgressReport()
         {
             //Event block to either return given item or wait desired time
             var eventBlock = new BlockingCollection<object>();
@@ -53,30 +53,26 @@ namespace VaultCrypt.Tests
             Assert.Equal(1, progressReported);
         }
 
-        [Fact]
-        void IncrementThrowsOnZeroValue()
+        [Theory]
+        [InlineData(0)]
+        [InlineData(ulong.MaxValue)]
+        internal void IncrementThrowsOnInvalidAmount(ulong amount)
         {
-            Assert.Throws<ArgumentOutOfRangeException>(() => _progressionContext.Increment(0));
-        }
-
-        [Fact]
-        void IncrementThrowsOnCompletedGreaterThanTotal()
-        {
-            Assert.Throws<ArgumentOutOfRangeException>(() => _progressionContext.Increment(int.MaxValue));
+            Assert.Throws<ArgumentOutOfRangeException>(() => _progressionContext.Increment(amount));
         }
 
         [Theory]
         [InlineData(1)]
         [InlineData(2)]
         [InlineData(ulong.MaxValue)]
-        void SetTotalChangesValue(ulong total)
+        internal void SetTotalChangesValue(ulong total)
         {
             _progressionContext.SetTotal(total);
             Assert.Equal(total, _progressionContext.Total);
         }
 
         [Fact]
-        void SetTotalCallsProgressReport()
+        internal void SetTotalCallsProgressReport()
         {
             //Event block to either return given item or wait desired time
             var eventBlock = new BlockingCollection<object>();
@@ -91,7 +87,7 @@ namespace VaultCrypt.Tests
         }
 
         [Fact]
-        void SetTotalThrowsOnTotalLessThanCompleted()
+        internal void SetTotalThrowsOnTotalLessThanCompleted()
         {
             int total = 100;
             _progressionContext.SetTotal(total);
@@ -99,23 +95,24 @@ namespace VaultCrypt.Tests
             Assert.Throws<ArgumentOutOfRangeException>(() => _progressionContext.SetTotal(total - 1));
         }
 
-        [Fact]
-        void SetTotalThrowsOnZeroTotal()
+        [Theory]
+        [InlineData(ulong.MinValue)]
+        [InlineData(0)]
+        internal void SetTotalThrowsOnInvalidTotal(ulong total)
         {
-            Assert.Throws<ArgumentOutOfRangeException>(() => _progressionContext.SetTotal(0));
+            Assert.Throws<ArgumentOutOfRangeException>(() => _progressionContext.SetTotal(total));
         }
 
         [Theory]
-        [InlineData(-1)]
-        [InlineData(-2)]
         [InlineData(int.MinValue)]
-        void SetTotalThrowsOnNegativeTotal(int total)
+        [InlineData(-1)]
+        internal void SetTotalThrowsOnInvalidTotalInt(int total)
         {
             Assert.Throws<ArgumentOutOfRangeException>(() => _progressionContext.SetTotal(total));
         }
 
         [Fact]
-        void ForceFinishSetsCompletedToTotal()
+        internal void ForceFinishSetsCompletedToTotal()
         {
             ulong value = 1000;
             _progressionContext.SetTotal(value);
@@ -127,7 +124,7 @@ namespace VaultCrypt.Tests
         }
 
         [Fact]
-        void ForceFinishCallsProgressReport()
+        internal void ForceFinishCallsProgressReport()
         {
             //Event block to either return given item or wait desired time
             var eventBlock = new BlockingCollection<object>();
@@ -142,7 +139,7 @@ namespace VaultCrypt.Tests
         }
 
         [Fact]
-        void ReportPermStatusCallsProgressReport()
+        internal void ReportPermStatusCallsProgressReport()
         {
             //Event block to either return given item or wait desired time
             var eventBlock = new BlockingCollection<object>();
@@ -156,37 +153,30 @@ namespace VaultCrypt.Tests
             Assert.Equal(1, progressReported);
         }
 
-        [Fact]
-        void ReportPermStatusThrowsOnNullMessage()
+        [Theory]
+        [InlineData(default(ProgressFailure.ProgressPermFailure))]
+        internal void ReportPermStatusThrowsOnInvalidFailure(ProgressFailure.ProgressPermFailure failure)
         {
-            Assert.Throws<ArgumentNullException>(() => _progressionContext.ReportPermStatus((ProgressFailure.ProgressPermFailure)1, null!));
+            Assert.Throws<ArgumentException>(() => _progressionContext.ReportPermStatus(failure, "message"));
         }
 
         [Theory]
-        [InlineData("")]
-        [InlineData("   ")]
-        void ReportPermStatusThrowsOnInvalidMessage(string message)
+        [MemberData(nameof(TestsHelper.InvalidStrings), MemberType = typeof(TestsHelper))]
+        internal void ReportPermStatusThrowsOnInvalidMessage(string message, Type exceptionType)
         {
-            Assert.Throws<ArgumentException>(() => _progressionContext.ReportPermStatus((ProgressFailure.ProgressPermFailure)1, message));
+            Assert.Throws(exceptionType, () => _progressionContext.ReportPermStatus((ProgressFailure.ProgressPermFailure)1, message));
         }
 
         [Theory]
         [InlineData(-1)]
         [InlineData(int.MinValue)]
-        void ReportPermStatusThrowsOnNegativeNumber(int number)
+        internal void ReportPermStatusThrowsOnInvalidNumber(int number)
         {
             Assert.Throws<ArgumentOutOfRangeException>(() => _progressionContext.ReportPermStatus((ProgressFailure.ProgressPermFailure)1, number));
         }
 
-        [Theory]
-        [InlineData(default(ProgressFailure.ProgressPermFailure))]
-        void ReportPermStatusThrowsOnInvalidFailure(ProgressFailure.ProgressPermFailure failure)
-        {
-            Assert.Throws<ArgumentException>(() => _progressionContext.ReportPermStatus(failure, "message"));
-        }
-
         [Fact]
-        void ReportTempStatusCallsProgressReport()
+        internal void ReportTempStatusCallsProgressReport()
         {
             //Event block to either return given item or wait desired time
             var eventBlock = new BlockingCollection<object>();
@@ -202,13 +192,13 @@ namespace VaultCrypt.Tests
 
         [Theory]
         [InlineData(default(ProgressFailure.ProgressTempFailure))]
-        void ReportTempStatusThrowsOnInvalidFailure(ProgressFailure.ProgressTempFailure failure)
+        internal void ReportTempStatusThrowsOnInvalidFailure(ProgressFailure.ProgressTempFailure failure)
         {
             Assert.Throws<ArgumentException>(() => _progressionContext.ReportTempStatus(failure));
         }
 
         [Fact]
-        void CancelUpdatesToken()
+        internal void CancelUpdatesToken()
         {
             _progressionContext.Cancel();
             Assert.True(_progressionContext.CancellationToken.IsCancellationRequested);
@@ -218,7 +208,7 @@ namespace VaultCrypt.Tests
     public class ProgressFailureTests()
     {
         [Fact]
-        void GetMessageReturnsCorrectPermFailureString()
+        internal void GetMessageReturnsCorrectPermFailureString()
         {
             string expected = "Failed to decrypt chunk";
             string actual = ProgressFailure.GetMessage(ProgressFailure.ProgressPermFailure.ChunkDecryptFailed);
@@ -226,7 +216,7 @@ namespace VaultCrypt.Tests
         }
 
         [Fact]
-        void GetMessageReturnsCorrectDefaultPermFailureString()
+        internal void GetMessageReturnsCorrectDefaultPermFailureString()
         {
             string expected = string.Empty;
             string actual = ProgressFailure.GetMessage(default(ProgressFailure.ProgressPermFailure));
@@ -234,7 +224,7 @@ namespace VaultCrypt.Tests
         }
 
         [Fact]
-        void GetMessageReturnsCorrectFallbackPermFailureString()
+        internal void GetMessageReturnsCorrectFallbackPermFailureString()
         {
             string expected = "Unknown error!";
             string actual = ProgressFailure.GetMessage((ProgressFailure.ProgressPermFailure)int.MaxValue);
@@ -242,7 +232,7 @@ namespace VaultCrypt.Tests
         }
 
         [Fact]
-        void GetMessageReturnsCorrectTempFailureString()
+        internal void GetMessageReturnsCorrectTempFailureString()
         {
             string expected = "Failed to read required information from stream";
             string actual = ProgressFailure.GetMessage(ProgressFailure.ProgressTempFailure.ReadingFromStreamFailed);
@@ -250,7 +240,7 @@ namespace VaultCrypt.Tests
         }
 
         [Fact]
-        void GetMessageReturnsCorrectDefaultTempFailureString()
+        internal void GetMessageReturnsCorrectDefaultTempFailureString()
         {
             string expected = string.Empty;
             string actual = ProgressFailure.GetMessage(default(ProgressFailure.ProgressTempFailure));
@@ -258,11 +248,32 @@ namespace VaultCrypt.Tests
         }
 
         [Fact]
-        void GetMessageReturnsCorrectFallbackTempFailureString()
+        internal void GetMessageReturnsCorrectFallbackTempFailureString()
         {
             string expected = "Unknown error!";
             string actual = ProgressFailure.GetMessage((ProgressFailure.ProgressPermFailure)int.MaxValue);
             Assert.Equal(expected, actual);
+        }
+    }
+
+    public class ProgressRepotedTests
+    {
+        [Fact]
+        internal void ConstructorAssignsValuesCorrectly()
+        {
+            var progressReport = new ProgressReported("first", "second");
+
+            Assert.Equal("first", progressReport.Message);
+            Assert.Equal("second", progressReport.TempMessage);
+        }
+
+        [Fact]
+        internal void ConstructorAssignsValuesCorrectlyDefault()
+        {
+            var progressReport = new ProgressReported();
+
+            Assert.Null(progressReport.Message);
+            Assert.Null(progressReport.TempMessage);
         }
     }
 }

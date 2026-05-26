@@ -10,22 +10,17 @@ using VaultCrypt.ViewModels;
 
 namespace VaultCrypt.Tests.ViewModels
 {
-    public class OpenVaultViewModelTests : IDisposable
+    public class OpenVaultViewModelTests
     {
         private VaultCrypt.ViewModels.OpenVaultViewModel _viewModel;
         private readonly FakeFileDialogService fakeFileDialogService = new();
         private readonly FakeVaultService fakeVaultService = new();
         private readonly FakeDecryptionService fakeDecryptionService = new();
-        private readonly FakeVaultSession fakeVaultSession = FakeVaultSession.EmptyMockSession();
+        private readonly FakeVaultSession fakeVaultSession = FakeVaultSession.EmptyMockSession;
 
         public OpenVaultViewModelTests()
         {
             this._viewModel = new VaultCrypt.ViewModels.OpenVaultViewModel(fakeFileDialogService, fakeVaultService, fakeDecryptionService, fakeVaultSession);
-        }
-
-        public void Dispose()
-        {
-            fakeVaultSession.KEY.Dispose();
         }
 
         private void CreateVMWithFileDialogService(string? returnValue)
@@ -34,8 +29,31 @@ namespace VaultCrypt.Tests.ViewModels
             this._viewModel = new VaultCrypt.ViewModels.OpenVaultViewModel(fileDialogService, fakeVaultService, fakeDecryptionService, fakeVaultSession);
         }
 
+        private (SecureString password, NormalizedPath vaultPath) GetViewModelValues()
+        {
+            //Reflection in order to read private field, replace with something better when possible
+            //TODO: Use something less brittle than reflection
+            SecureString password = (SecureString)_viewModel.GetType().GetField("_password", System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.NonPublic)!.GetValue(_viewModel)!;
+            NormalizedPath vaultPath = (NormalizedPath)_viewModel.GetType().GetField("_vaultPath", System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.NonPublic)!.GetValue(_viewModel)!;
+
+            return (password, vaultPath);
+        }
+
+        private void SetViewModelValues(char newPasswordChar = 'c', string newVaultPath = "NewVaultPath")
+        {
+            //Reflection in order to modify private field, replace with something better when possible
+            //TODO: Use something less brittle than reflection
+            SecureString newPassword = new SecureString();
+            newPassword.AppendChar(newPasswordChar);
+            var reflectionPassword = typeof(VaultCrypt.ViewModels.OpenVaultViewModel).GetField("_password", System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance);
+            reflectionPassword!.SetValue(_viewModel, newPassword);
+            var reflectionVaultPath = typeof(VaultCrypt.ViewModels.OpenVaultViewModel).GetField("_vaultPath", System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance);
+            reflectionVaultPath!.SetValue(_viewModel, NormalizedPath.From(newVaultPath));
+        }
+
+
         [Fact]
-        void FilteredTextRaisesPropertyChanged()
+        internal void FilteredTextRaisesPropertyChanged()
         {
             string? changedProperty = null;
             _viewModel.PropertyChanged += (sender, args) => { changedProperty = args.PropertyName; };
@@ -46,7 +64,7 @@ namespace VaultCrypt.Tests.ViewModels
         }
 
         [Fact]
-        void FilteredTextDoesNotRaisePropertyChanged()
+        internal void FilteredTextDoesNotRaisePropertyChanged()
         {
             string text = "text";
             _viewModel.FilteredText = text;
@@ -58,7 +76,7 @@ namespace VaultCrypt.Tests.ViewModels
         }
 
         [Fact]
-        void FilteredTextChangesValues()
+        internal void FilteredTextChangesValues()
         {
             string expected = "changed";
             _viewModel.FilteredText = expected;
@@ -67,8 +85,9 @@ namespace VaultCrypt.Tests.ViewModels
         }
 
         [Fact]
-        void FilteredTextCallsFilterMethod_ReturnsEmpty()
+        internal void FilteredTextCallsFilterMethod_ReturnsEmpty()
         {
+            _viewModel.EncryptedFilesCollectionView.Filter = null;
             //Asserts that changing FilteredText calls Filter method by ensuring that the filtered text matches no hits  
             Assert.False(_viewModel.EncryptedFilesCollectionView.IsEmpty);
             string text = "IMPOSSIBLEITEMTHATWILLNEVERAPPEARINTESTS";
@@ -78,8 +97,9 @@ namespace VaultCrypt.Tests.ViewModels
         }
 
         [Fact]
-        void FilteredTextCallsFilterMethod_ReturnsFull()
+        internal void FilteredTextCallsFilterMethod_ReturnsFull()
         {
+            _viewModel.EncryptedFilesCollectionView.Filter = null;
             //Asserts that changing FilteredText calls Filter method by ensuring that the filtered text matches every hit
             Assert.False(_viewModel.EncryptedFilesCollectionView.IsEmpty);
             string text = "";
@@ -91,8 +111,9 @@ namespace VaultCrypt.Tests.ViewModels
         }
 
         [Fact]
-        void FilteredTextCallsFilterMethod_ReturnsSingle()
+        internal void FilteredTextCallsFilterMethod_ReturnsSingle()
         {
+            _viewModel.EncryptedFilesCollectionView.Filter = null;
             //Asserts that changing FilteredText calls Filter method by ensuring that the filtered text matches single hit
             Assert.False(_viewModel.EncryptedFilesCollectionView.IsEmpty);
             string text = "TEST";
@@ -105,7 +126,7 @@ namespace VaultCrypt.Tests.ViewModels
 
 
         [Fact]
-        void SelectedFileRaisesPropertyChanged()
+        internal void SelectedFileRaisesPropertyChanged()
         {
             string? changedProperty = null;
             _viewModel.PropertyChanged += (sender, args) => { changedProperty = args.PropertyName; };
@@ -116,7 +137,7 @@ namespace VaultCrypt.Tests.ViewModels
         }
 
         [Fact]
-        void SelectedFileDoesNotRaisePropertyChanged()
+        internal void SelectedFileDoesNotRaisePropertyChanged()
         {
             _viewModel.SelectedFile = null;
             int eventRaisedCount = 0;
@@ -127,7 +148,7 @@ namespace VaultCrypt.Tests.ViewModels
         }
 
         [Fact]
-        void SelectedFileChangesValue()
+        internal void SelectedFileChangesValue()
         {
             var kvp = new KeyValuePair<long, EncryptedFileInfo>(0, new EncryptedFileInfo("SelectedFileChangesValue test", 0));
             _viewModel.SelectedFile = kvp;
@@ -136,7 +157,7 @@ namespace VaultCrypt.Tests.ViewModels
         }
 
         [Fact]
-        void SelectedFileDecryptCommandCanExecuteChanges()
+        internal void SelectedFileDecryptCommandCanExecuteChanges()
         {
             int eventRaisedCount = 0;
             (_viewModel.DecryptFileCommand as RelayCommand)!.CanExecuteChanged += (sender, args) => { eventRaisedCount++; };
@@ -150,7 +171,7 @@ namespace VaultCrypt.Tests.ViewModels
         }
 
         [Fact]
-        void SelectedFileDeleteCommandCanExecuteChanges()
+        internal void SelectedFileDeleteCommandCanExecuteChanges()
         {
             int eventRaisedCount = 0;
             (_viewModel.DeleteFileCommand as RelayCommand)!.CanExecuteChanged += (sender, args) => { eventRaisedCount++; };
@@ -164,23 +185,65 @@ namespace VaultCrypt.Tests.ViewModels
         }
 
         [Fact]
-        void CreateSessionCallsMethod()
+        internal void CreateSessionCallsMethod()
         {
-            //Reflection in order to modify private field, replace with something better when possible
-            //CreateSession calls PasswordHelper.SecureStringToBytes() on password
-            //TODO: Use something less brittle than reflection
-            SecureString newPassword = new SecureString();
-            newPassword.AppendChar('c');
-            var reflectionPassword = typeof(OpenVaultViewModel).GetField("_password", System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance);
-            reflectionPassword!.SetValue(_viewModel, newPassword);
-            var reflectionVaultPath = typeof(OpenVaultViewModel).GetField("_vaultPath", System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance);
-            reflectionVaultPath!.SetValue(_viewModel, NormalizedPath.From("CreateSessionCallsMethodTest"));
+            SetViewModelValues();
             _viewModel.CreateSession();
             Assert.True(fakeVaultService.CreateSessionFromFileWasCalled);
         }
 
         [Fact]
-        void AddNewFileRaisesNavigationRequest()
+        internal void CreateSessionSetsVaultName()
+        {
+            string vaultPath = "CreateSessionSetsVaultPathTest";
+            SetViewModelValues(newVaultPath: vaultPath);
+            _viewModel.CreateSession();
+            Assert.Equal(vaultPath, _viewModel.VaultName);
+        }
+
+        [Fact]
+        internal void RefreshCollectionCallsMethod()
+        {
+            //RefreshCollection opens FileStream to _session.VAULTPATH
+            var vaultFilePath = TestsHelper.CreateTemporaryFile(0);
+            fakeVaultSession.VAULTPATH = vaultFilePath;
+            try
+            {
+                _viewModel.RefreshCollection();
+                Assert.True(fakeVaultService.RefreshEncryptedFilesListWasCalled);
+            }
+            finally
+            {
+                File.Delete(vaultFilePath);
+            }
+        }
+
+        [Fact]
+        internal void GoBackDisposesClass()
+        {
+            SetViewModelValues();
+
+            _viewModel.GoBack();
+            (SecureString, NormalizedPath) actualValues = GetViewModelValues();
+            Assert.True(actualValues.Item1.Length == 0);
+            Assert.Null(actualValues.Item2);
+            Assert.Null(_viewModel.SelectedFile);
+        }
+
+        [Fact]
+        internal void GoBackRaisesNavigationRequest()
+        {
+            SetViewModelValues();
+
+            int eventRaisedCount = 0;
+            _viewModel.NavigationRequested += (request) => { eventRaisedCount++; };
+            _viewModel.GoBack();
+
+            Assert.Equal(1, eventRaisedCount);
+        }
+
+        [Fact]
+        internal void AddNewFileRaisesNavigationRequest()
         {
             CreateVMWithFileDialogService("return");
             int eventRaisedCount = 0;
@@ -190,7 +253,7 @@ namespace VaultCrypt.Tests.ViewModels
         }
 
         [Fact]
-        void AddNewFileDoesNotRaiseNavigationRequest()
+        internal void AddNewFileDoesNotRaiseNavigationRequest()
         {
             int eventRaisedCount = 0;
             _viewModel.NavigationRequested += (request) => { eventRaisedCount++; };
@@ -199,7 +262,7 @@ namespace VaultCrypt.Tests.ViewModels
         }
 
         [Fact]
-        async void DecryptFileRaisesNavigationRequest()
+        internal async void DecryptFileRaisesNavigationRequest()
         {
             CreateVMWithFileDialogService("return");
             _viewModel.SelectedFile = new KeyValuePair<long, EncryptedFileInfo>(0, new EncryptedFileInfo(null, 0, null));
@@ -211,7 +274,7 @@ namespace VaultCrypt.Tests.ViewModels
         }
 
         [Fact]
-        async void DecryptFileDoesNotRaiseNavigationRequest()
+        internal async void DecryptFileDoesNotRaiseNavigationRequest()
         {
             _viewModel.SelectedFile = new KeyValuePair<long, EncryptedFileInfo>(0, new EncryptedFileInfo(null, 0, null));
 
@@ -222,7 +285,7 @@ namespace VaultCrypt.Tests.ViewModels
         }
 
         [Fact]
-        async void DeleteFileRaisesNavigationRequest()
+        internal async void DeleteFileRaisesNavigationRequest()
         {
             _viewModel.SelectedFile = new KeyValuePair<long, EncryptedFileInfo>(0, new EncryptedFileInfo(null, 0, null));
 
@@ -232,7 +295,7 @@ namespace VaultCrypt.Tests.ViewModels
         }
 
         [Fact]
-        async void DeleteFileCallsMethod()
+        internal async void DeleteFileCallsMethod()
         {
             _viewModel.SelectedFile = new KeyValuePair<long, EncryptedFileInfo>(0, new EncryptedFileInfo(null, 0, null));
 
@@ -241,7 +304,7 @@ namespace VaultCrypt.Tests.ViewModels
         }
 
         [Fact]
-        async void TrimRaisesNavigationRequest()
+        internal async void TrimRaisesNavigationRequest()
         {
             int eventRaisedCount = 0;
             _viewModel.NavigationRequested += (request) => { eventRaisedCount++; };
@@ -249,28 +312,38 @@ namespace VaultCrypt.Tests.ViewModels
         }
 
         [Fact]
-        async void TrimCallsMethod()
+        internal async void TrimCallsMethod()
         {
             await _viewModel.Trim();
             Assert.True(fakeVaultService.TrimVaultWasCalled);
         }
 
         [Fact]
-        void NavigationRequestedRaised()
+        internal void OnNavigatedToSetsValues()
         {
-            //Reflection in order to modify private field, replace with something better when possible
-            //GoBack command calls Dispose which calls .Clear() on password
-            //TODO: Use something less brittle than reflection
-            SecureString newPassword = new SecureString();
-            newPassword.AppendChar('c');
-            var reflection = typeof(OpenVaultViewModel).GetField("_password", System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance);
-            reflection!.SetValue(_viewModel, newPassword);
+            SecureString expectedSecureString = new SecureString();
+            expectedSecureString.AppendChar('a');
+            NormalizedPath expectedPath = NormalizedPath.From("OnNavigatedToSetsValuesTest");
+            object expected = new { Password = expectedSecureString, VaultPath = expectedPath };
 
-            int eventRaisedCount = 0;
-            _viewModel.NavigationRequested += (request) => { eventRaisedCount++; };
-            _viewModel.GoBackCommand.Execute(null);
+            _viewModel.OnNavigatedTo(expected);
+            (SecureString password, NormalizedPath vaultPath) actual = GetViewModelValues();
 
-            Assert.Equal(1, eventRaisedCount);
+            Assert.Equal(expectedSecureString, actual.password);
+            Assert.Equal(expectedPath, actual.vaultPath);
+        }
+
+        [Fact]
+        internal void OnNavigatedToCallsCreateSession()
+        {
+            SecureString expectedSecureString = new SecureString();
+            expectedSecureString.AppendChar('a');
+            NormalizedPath expectedPath = NormalizedPath.From("OnNavigatedToCallsCreateSessionTest");
+            object expected = new { Password = expectedSecureString, VaultPath = expectedPath };
+            _viewModel.OnNavigatedTo(expected);
+
+            //Because viewmodel is not spoofed there is no clear way to prove that CreateSession was called so we're asserting that CreateSession changed _viewmodel.VaultName
+            Assert.Equal(expectedPath, _viewModel.VaultName);
         }
     }
 }

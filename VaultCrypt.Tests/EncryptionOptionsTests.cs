@@ -28,7 +28,7 @@ namespace VaultCrypt.Tests
         }
 
         [Fact]
-        void DifferentConstructorsReturnSameData()
+        internal void DifferentConstructorsReturnSameData()
         {
             string fileName = "string";
             using (SecureBuffer.SecureLargeBuffer fileNameBuffer = new SecureBuffer.SecureLargeBuffer(Encoding.UTF8.GetByteCount(fileName)))
@@ -43,33 +43,33 @@ namespace VaultCrypt.Tests
         }
 
         [Fact]
-        void GetFileNameReturnsCorrectString()
+        internal void GetFileNameReturnsCorrectString()
         {
             string expected = "EncryptionOptionsTestNoChunk";
             Assert.Equal(expected, _fileEncryptionOptions.GetFileName());
         }
 
         [Fact]
-        void EncryptionOptionsThrowForIncorrectChunkedFlag()
+        internal void EncryptionOptionsThrowForIncorrectChunkedFlag()
         {
             Assert.Throws<ArgumentException>(() => new EncryptionOptions.FileEncryptionOptions(0, "fileName", 11, 1, true, null));
         }
 
         [Fact]
-        void EncryptionOptionsDeserializeThrowsForEmptyData()
+        internal void EncryptionOptionsDeserializeThrowsForEmptyData()
         {
             Assert.Throws<ArgumentException>(() => EncryptionOptions.FileEncryptionOptionsReader.Deserialize(new ReadOnlySpan<byte>()));
         }
 
         [Fact]
-        void EncryptionOptionsDeserializeThrowsForWrongVersion()
+        internal void EncryptionOptionsDeserializeThrowsForWrongVersion()
         {
             Assert.Throws<VaultCrypt.Exceptions.VaultException>(() => EncryptionOptions.FileEncryptionOptionsReader.Deserialize(new byte[1] { byte.MaxValue }));
 
         }
 
         [Fact]
-        void EncryptionOptionsSerializeAndDeserializeCorrectlyNoChunk()
+        internal void EncryptionOptionsSerializeAndDeserializeCorrectlyNoChunk()
         {
             using (SecureBuffer.SecureLargeBuffer serialized = EncryptionOptions.FileEncryptionOptions.SerializeFileEncryptionOptions(_fileEncryptionOptions))
             {
@@ -80,7 +80,7 @@ namespace VaultCrypt.Tests
         }
 
         [Fact]
-        void EncryptionOptionsSerializeAndDeserializeCorrectlyWithChunk()
+        internal void EncryptionOptionsSerializeAndDeserializeCorrectlyWithChunk()
         {
             CreateEncryptionOptionsWithChunkInformation();
 
@@ -93,7 +93,7 @@ namespace VaultCrypt.Tests
         }
 
         [Fact]
-        void EncryptionOptionsDisposesProperlyNoChunk()
+        internal void EncryptionOptionsDisposesProperlyNoChunk()
         {
             _fileEncryptionOptions.Dispose();
 
@@ -106,7 +106,7 @@ namespace VaultCrypt.Tests
 
         }
         [Fact]
-        void EncryptionOptionsDisposesProperlyWithChunk()
+        internal void EncryptionOptionsDisposesProperlyWithChunk()
         {
             CreateEncryptionOptionsWithChunkInformation();
             EncryptionOptions.ChunkInformation copy = _fileEncryptionOptions.ChunkInformation!;
@@ -127,7 +127,7 @@ namespace VaultCrypt.Tests
         }
 
         [Fact]
-        void EncryptionOptionsThrowsForTooLongFileName()
+        internal void EncryptionOptionsThrowsForTooLongFileName()
         {
             using (SecureBuffer.SecureLargeBuffer buffer = new SecureBuffer.SecureLargeBuffer(ushort.MaxValue + 1))
             {
@@ -136,20 +136,35 @@ namespace VaultCrypt.Tests
         }
 
         [Fact]
-        void EncryptionOptionsThrowsForTooLongFileNameSecondConstructor()
+        internal void EncryptionOptionsThrowsForTooLongFileNameSecondConstructor()
         {
             string longName = new string('a', ushort.MaxValue + 1);
             Assert.Throws<OverflowException>(() => new EncryptionOptions.FileEncryptionOptions(0, longName, 0, 0, false, null));
         }
 
         [Fact]
-        void EncryptionOptionsEqualsReturnsFalseForNull()
+        internal void EncryptionOptionsEqualsReturnsTrueForItself()
+        {
+            Assert.True(_fileEncryptionOptions.Equals(_fileEncryptionOptions));
+        }
+
+        [Fact]
+        internal void EncryptionOptionsEqualsReturnsFalseForNull()
         {
             Assert.False(_fileEncryptionOptions.Equals(null));
         }
 
         [Fact]
-        void EncryptionOptionsEqualsReturnsFalseForDifferentName()
+        internal void EncryptionOptionsEqualsReturnsFalseForDifferentVersion()
+        {
+            using var first = new EncryptionOptions.FileEncryptionOptions(0, "DifferentValue", 11, 1, true, new EncryptionOptions.ChunkInformation(1, 2, 3));
+            using var second = new EncryptionOptions.FileEncryptionOptions(1, "DifferentValue", 11, 1, true, new EncryptionOptions.ChunkInformation(1, 2, 3));
+
+            Assert.False(first.Equals(second));
+        }
+
+        [Fact]
+        internal void EncryptionOptionsEqualsReturnsFalseForDifferentName()
         {
             using var first = new EncryptionOptions.FileEncryptionOptions(0, "Name", 11, 1, true, new EncryptionOptions.ChunkInformation(1, 2, 3));
             using var second = new EncryptionOptions.FileEncryptionOptions(0, "name", 11, 1, true, new EncryptionOptions.ChunkInformation(1, 2, 3));
@@ -158,7 +173,25 @@ namespace VaultCrypt.Tests
         }
 
         [Fact]
-        void EncryptionOptionsEqualsReturnsFalseForDifferentChunkInformation()
+        internal void EncryptionOptionsEqualsReturnsFalseForDifferentFileSize()
+        {
+            using var first = new EncryptionOptions.FileEncryptionOptions(0, "DifferentValue", 11, 1, true, new EncryptionOptions.ChunkInformation(1, 2, 3));
+            using var second = new EncryptionOptions.FileEncryptionOptions(0, "DifferentValue", 12, 1, true, new EncryptionOptions.ChunkInformation(1, 2, 3));
+
+            Assert.False(first.Equals(second));
+        }
+
+        [Fact]
+        internal void EncryptionOptionsEqualsReturnsFalseForDifferentAlgorithm()
+        {
+            using var first = new EncryptionOptions.FileEncryptionOptions(0, "DifferentValue", 11, 1, true, new EncryptionOptions.ChunkInformation(1, 2, 3));
+            using var second = new EncryptionOptions.FileEncryptionOptions(0, "DifferentValue", 11, 2, true, new EncryptionOptions.ChunkInformation(1, 2, 3));
+
+            Assert.False(first.Equals(second));
+        }
+
+        [Fact]
+        internal void EncryptionOptionsEqualsReturnsFalseForDifferentChunkInformation()
         {
             using var first = new EncryptionOptions.FileEncryptionOptions(0, "DifferentValue", 11, 1, true, new EncryptionOptions.ChunkInformation(1, 2, 3));
             using var second = new EncryptionOptions.FileEncryptionOptions(0, "DifferentValue", 11, 1, true, new EncryptionOptions.ChunkInformation(2, 2, 3));
@@ -167,7 +200,7 @@ namespace VaultCrypt.Tests
         }
 
         [Fact]
-        void EncryptionOptionsEqualsReturnsTrueForSameValuesDifferentReference()
+        internal void EncryptionOptionsEqualsReturnsTrueForSameValuesDifferentReference()
         {
             using var first = new EncryptionOptions.FileEncryptionOptions(0, "SameValue", 11, 1, true, new EncryptionOptions.ChunkInformation(1, 2, 3));
             using var second = new EncryptionOptions.FileEncryptionOptions(0, "SameValue", 11, 1, true, new EncryptionOptions.ChunkInformation(1, 2, 3));
@@ -177,7 +210,7 @@ namespace VaultCrypt.Tests
         }
 
         [Fact]
-        void EncryptionOptionsGetHashCodeReturnsSameHashForSameValuesDifferentReference()
+        internal void EncryptionOptionsGetHashCodeReturnsSameHashForSameValuesDifferentReference()
         {
             using var first = new EncryptionOptions.FileEncryptionOptions(0, "SameValue", 11, 1, true, new EncryptionOptions.ChunkInformation(1, 2, 3));
             using var second = new EncryptionOptions.FileEncryptionOptions(0, "SameValue", 11, 1, true, new EncryptionOptions.ChunkInformation(1, 2, 3));
@@ -186,22 +219,13 @@ namespace VaultCrypt.Tests
         }
 
         [Fact]
-        void EncryptionOptionsGetHashCodeReturnsDifferentHashForDifferentValues()
-        {
-            using var first = new EncryptionOptions.FileEncryptionOptions(0, "DifferentValue", 11, 1, true, new EncryptionOptions.ChunkInformation(1, 2, 3));
-            using var second = new EncryptionOptions.FileEncryptionOptions(0, "DifferentValue", 11, 1, true, new EncryptionOptions.ChunkInformation(2, 2, 3));
-
-            Assert.NotEqual(first.GetHashCode(), second.GetHashCode());
-        }
-
-        [Fact]
-        void EncryptionOptionsReaderThrowsForEmptyData()
+        internal void EncryptionOptionsReaderThrowsForEmptyData()
         {
             Assert.Throws<ArgumentException>(() => EncryptionOptions.FileEncryptionOptionsReader.Deserialize(new ReadOnlySpan<byte>()));
         }
 
         [Fact]
-        void EncryptionOptionsReaderThrowsForWrongVersion()
+        internal void EncryptionOptionsReaderThrowsForWrongVersion()
         {
             Assert.Throws<VaultCrypt.Exceptions.VaultException>(() => EncryptionOptions.FileEncryptionOptionsReader.Deserialize(new byte[1] { byte.MaxValue }));
         }

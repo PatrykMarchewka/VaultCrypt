@@ -1,4 +1,4 @@
-﻿using Microsoft.VisualBasic;
+using Microsoft.VisualBasic;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -11,7 +11,7 @@ namespace VaultCrypt.Tests.ViewModels
 {
     public class PasswordInputViewModelTests
     {
-        private VaultCrypt.ViewModels.PasswordInputViewModel _viewModel;
+        private readonly VaultCrypt.ViewModels.PasswordInputViewModel _viewModel;
 
         public PasswordInputViewModelTests()
         {
@@ -19,7 +19,7 @@ namespace VaultCrypt.Tests.ViewModels
         }
 
         [Fact]
-        void PasswordRaisesPropertyChanged()
+        internal void PasswordRaisesPropertyChanged()
         {
             string? changedProperty = null;
             _viewModel.PropertyChanged += (sender, args) => { changedProperty = args.PropertyName; };
@@ -30,7 +30,7 @@ namespace VaultCrypt.Tests.ViewModels
         }
 
         [Fact]
-        void PasswordDoesNotRaisePropertyChanged()
+        internal void PasswordDoesNotRaisePropertyChanged()
         {
             SecureString password = new SecureString();
             password.AppendChar('a');
@@ -43,7 +43,7 @@ namespace VaultCrypt.Tests.ViewModels
         }
 
         [Fact]
-        void PasswordChangesValues()
+        internal void PasswordChangesValues()
         {
             SecureString expected = new SecureString();
             expected.AppendChar('b');
@@ -53,7 +53,7 @@ namespace VaultCrypt.Tests.ViewModels
         }
 
         [Fact]
-        void OpenVaultRaisesNavigationRequest()
+        internal void OpenVaultRaisesNavigationRequest()
         {
             SecureString password = new SecureString();
             password.AppendChar('c');
@@ -66,7 +66,7 @@ namespace VaultCrypt.Tests.ViewModels
         }
 
         [Fact]
-        void OpenVaultDoesNotRaiseNavigationRequestAndThrows()
+        internal void OpenVaultDoesNotRaiseNavigationRequestAndThrows()
         {
             int eventRaisedCount = 0;
             _viewModel.NavigationRequested += (request) => { eventRaisedCount++; };
@@ -75,7 +75,21 @@ namespace VaultCrypt.Tests.ViewModels
         }
 
         [Fact]
-        void NavigationRequestedRaised()
+        internal void OnNavigatedToSetsValues()
+        {
+            NormalizedPath expected = NormalizedPath.From("OnNavigatedToTest");
+
+            _viewModel.OnNavigatedTo(expected);
+
+            //Reflection because _viewmodel._vaultPath is private
+            //TODO: Replace reflection with something better
+            NormalizedPath actual = (NormalizedPath)_viewModel.GetType().GetField("_vaultPath", System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance)!.GetValue(_viewModel)!;
+
+            Assert.Equal(expected, actual);
+        }
+
+        [Fact]
+        internal void NavigationRequestedRaised()
         {
             int eventRaisedCount = 0;
             _viewModel.NavigationRequested += (request) => { eventRaisedCount++; };

@@ -9,38 +9,62 @@ namespace VaultCrypt.Tests
 {
     public class ValidationHelperTests
     {
+        [Fact]
+        internal void NotEmptyStringDoesNotThrowForValidInput()
+        {
+            ValidationHelper.NotEmptyString("input", "");
+        }
+
         [Theory]
         [InlineData(null)]
         [InlineData("")]
         [InlineData(" ")]
-        void NotEmptyStringThrowsForNullOrWhitespace(string input)
+        internal void NotEmptyStringThrowsInvalidInput(string input)
         {
             Assert.Throws<VaultCrypt.Exceptions.VaultUIException>(() => ValidationHelper.NotEmptyString(input, ""));
         }
 
         [Fact]
-        void NotEmptyStringDoesNotThrowForValidInput()
+        internal void NotEmptyStringUsesFallbackValue()
         {
-            ValidationHelper.NotEmptyString("input", "");
-        }
-        [Fact]
-        void NotEmptySecureStringThrowsForNull()
-        {
-            Assert.Throws<VaultCrypt.Exceptions.VaultUIException>(() => ValidationHelper.NotEmptySecureString(null, ""));
-        }
-        [Fact]
-        void NotEmptySecureStringThrowsForEmpty()
-        {
-            Assert.Throws<VaultCrypt.Exceptions.VaultUIException>(() => ValidationHelper.NotEmptySecureString(new SecureString(), ""));
+            try
+            {
+                ValidationHelper.NotEmptyString(null, "");
+            }
+            catch (Exception ex)
+            {
+                Assert.Contains("[Unknown field]", ex.Message);
+            }
         }
 
         [Fact]
-        void NotEmptySecureStringDoesNotThrowForValidInput()
+        internal void NotEmptySecureStringDoesNotThrowForValidInput()
         {
             SecureString input = new SecureString();
             input.AppendChar('a');
 
             ValidationHelper.NotEmptySecureString(input, "");
+        }
+
+        public static TheoryData<SecureString> InvalidSecureString = new TheoryData<SecureString> { null!, new SecureString() };
+        [Theory]
+        [MemberData(nameof(InvalidSecureString))]
+        internal void NotEmptySecureStringThrowsForInvalidInput(SecureString input)
+        {
+            Assert.Throws<VaultCrypt.Exceptions.VaultUIException>(() => ValidationHelper.NotEmptySecureString(input, ""));
+        }
+
+        [Fact]
+        internal void NotEmptySecureStringUsesFallbackValue()
+        {
+            try
+            {
+                ValidationHelper.NotEmptySecureString(null, "");
+            }
+            catch (Exception ex)
+            {
+                Assert.Contains("[Unknown field]", ex.Message);
+            }
         }
     }
 }

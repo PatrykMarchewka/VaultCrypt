@@ -11,7 +11,7 @@ namespace VaultCrypt.Tests.ViewModels
 {
     public class ProgressViewModelTests
     {
-        private VaultCrypt.ViewModels.ProgressViewModel _viewModel;
+        private readonly VaultCrypt.ViewModels.ProgressViewModel _viewModel;
 
         public ProgressViewModelTests()
         {
@@ -20,7 +20,7 @@ namespace VaultCrypt.Tests.ViewModels
         }
 
         [Fact]
-        void FilteredTextRaisesPropertyChanged()
+        internal void FilteredTextRaisesPropertyChanged()
         {
             string? changedProperty = null;
             _viewModel.PropertyChanged += (sender, args) => { changedProperty = args.PropertyName; };
@@ -31,7 +31,7 @@ namespace VaultCrypt.Tests.ViewModels
         }
 
         [Fact]
-        void FilteredTextDoesNotRaisePropertyChanged()
+        internal void FilteredTextDoesNotRaisePropertyChanged()
         {
             ProgressionContext context = new();
             _viewModel.Context = context;
@@ -43,7 +43,7 @@ namespace VaultCrypt.Tests.ViewModels
         }
 
         [Fact]
-        void FilteredTextChangesValues()
+        internal void FilteredTextChangesValues()
         {
             ProgressionContext expected = new();
             _viewModel.Context = expected;
@@ -52,51 +52,36 @@ namespace VaultCrypt.Tests.ViewModels
         }
 
         [Fact]
-        void FinishCommandCanExecuteChanges()
+        internal void FinishCommandCanExecuteChanges()
         {
-            //Event block to either return given item or wait desired time
-            var eventBlock = new BlockingCollection<object>();
-
-            int eventRaisedCount = 0;
-            (_viewModel.FinishCommand as RelayCommand)!.CanExecuteChanged += (sender, args) => { Interlocked.Increment(ref eventRaisedCount); eventBlock.Add(new object()); };
-            _viewModel.Context.SetTotal(1);
-            eventBlock.TryTake(out _, 1000);
-            Assert.Equal(1, eventRaisedCount);
+            Assert.False(_viewModel.FinishCommand.CanExecute(null));
             _viewModel.Context.Increment();
-            eventBlock.TryTake(out _, 1000);
-            Assert.Equal(2, eventRaisedCount);
             Assert.True(_viewModel.FinishCommand.CanExecute(null));
-
-            _viewModel.Context.SetTotal(2);
-            eventBlock.TryTake(out _, 1000);
-            Assert.Equal(3, eventRaisedCount);
+            _viewModel.Context.SetTotal(100);
             Assert.False(_viewModel.FinishCommand.CanExecute(null));
         }
 
         [Fact]
-        void CancelCommandCanExecuteChanges()
+        internal void FinishRaisesNavigationRequest()
         {
-            //Event block to either return given item or wait desired time
-            var eventBlock = new BlockingCollection<object>();
-
             int eventRaisedCount = 0;
-            (_viewModel.CancelCommand as RelayCommand)!.CanExecuteChanged += (sender, args) => { Interlocked.Increment(ref eventRaisedCount); eventBlock.Add(new object());  };
-            _viewModel.Context.SetTotal(1);
-            eventBlock.TryTake(out _, 1000);
+            _viewModel.NavigationRequested += (request) => { eventRaisedCount++; };
+            _viewModel.Finish();
             Assert.Equal(1, eventRaisedCount);
-            _viewModel.Context.Increment();
-            eventBlock.TryTake(out _, 1000);
-            Assert.Equal(2, eventRaisedCount);
-            Assert.False(_viewModel.CancelCommand.CanExecute(null));
+        }
 
-            _viewModel.Context.SetTotal(2);
-            eventBlock.TryTake(out _, 1000);
-            Assert.Equal(3, eventRaisedCount);
+        [Fact]
+        internal void CancelCommandCanExecuteChanges()
+        {
+            Assert.True(_viewModel.CancelCommand.CanExecute(null));
+            _viewModel.Context.Increment();
+            Assert.False(_viewModel.CancelCommand.CanExecute(null));
+            _viewModel.Context.SetTotal(100);
             Assert.True(_viewModel.CancelCommand.CanExecute(null));
         }
 
         [Fact]
-        void FinishRaisesNavigationRequest()
+        internal void CancelRaisesNavigationRequest()
         {
             int eventRaisedCount = 0;
             _viewModel.NavigationRequested += (request) => { eventRaisedCount++; };
@@ -105,16 +90,7 @@ namespace VaultCrypt.Tests.ViewModels
         }
 
         [Fact]
-        void CancelRaisesNavigationRequest()
-        {
-            int eventRaisedCount = 0;
-            _viewModel.NavigationRequested += (request) => { eventRaisedCount++; };
-            _viewModel.Finish();
-            Assert.Equal(1, eventRaisedCount);
-        }
-
-        [Fact]
-        void CancelRequestsCancellation()
+        internal void CancelRequestsCancellation()
         {
             _viewModel.Context = new();
             _viewModel.Cancel();
@@ -122,7 +98,47 @@ namespace VaultCrypt.Tests.ViewModels
         }
 
         [Fact]
-        void NavigationRequestedRaised()
+        internal void CanExecuteChangesOnContextUpdate()
+        {
+            //Event block to either return given item or wait desired time
+            var eventBlock = new BlockingCollection<object>();
+
+            int finishEventRaisedCount = 0;
+            int cancelEventRaisedCount = 0;
+            (_viewModel.FinishCommand as RelayCommand)!.CanExecuteChanged += (sender, args) => { Interlocked.Increment(ref finishEventRaisedCount); eventBlock.Add(new object()); };
+            (_viewModel.CancelCommand as RelayCommand)!.CanExecuteChanged += (sender, args) => { Interlocked.Increment(ref cancelEventRaisedCount); eventBlock.Add(new object()); };
+            _viewModel.Context.SetTotal(1);
+            eventBlock.TryTake(out _, 1000);
+            eventBlock.TryTake(out _, 1000);
+            Assert.Equal(1, finishEventRaisedCount);
+            Assert.Equal(1, cancelEventRaisedCount);
+
+            _viewModel.Context.Increment();
+            eventBlock.TryTake(out _, 1000);
+            eventBlock.TryTake(out _, 1000);
+            Assert.Equal(2, finishEventRaisedCount);
+            Assert.Equal(2, cancelEventRaisedCount);
+
+            _viewModel.Context.SetTotal(2);
+            eventBlock.TryTake(out _, 1000);
+            eventBlock.TryTake(out _, 1000);
+
+            Assert.Equal(3, finishEventRaisedCount);
+            Assert.Equal(3, cancelEventRaisedCount);
+        }
+
+        [Fact]
+        internal void OnNavigatedToSetsValues()
+        {
+            ProgressionContext context = new ProgressionContext();
+            _viewModel.OnNavigatedTo(context);
+
+            Assert.Equal(context, _viewModel.Context);
+            Assert.Empty(_viewModel.PermMessages);
+        }
+
+        [Fact]
+        internal void NavigationRequestedRaised()
         {
             int eventRaisedCount = 0;
             _viewModel.NavigationRequested += (request) => { eventRaisedCount++; };

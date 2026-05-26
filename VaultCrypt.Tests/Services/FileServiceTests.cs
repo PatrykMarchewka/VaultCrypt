@@ -5,7 +5,6 @@ using System.Linq;
 using System.Security.Cryptography;
 using System.Text;
 using System.Threading.Tasks;
-using VaultCrypt.Exceptions;
 
 namespace VaultCrypt.Tests.Services
 {
@@ -15,7 +14,7 @@ namespace VaultCrypt.Tests.Services
         private readonly VaultCrypt.Services.FileService _service = new VaultCrypt.Services.FileService();
 
         [Fact]
-        void WriteReadyChunkWritesToStream()
+        internal void WriteReadyChunkWritesToStream()
         {
             SecureBuffer.SecureLargeBuffer buffer = new SecureBuffer.SecureLargeBuffer(100);
             SecureBuffer.SecureLargeBuffer copy = new SecureBuffer.SecureLargeBuffer(100);
@@ -42,24 +41,34 @@ namespace VaultCrypt.Tests.Services
             
         }
 
+        ulong nextToWrite = 0; //Passed to tests as ref value
+
         [Fact]
-        void WriteReadyChunkThrowsForNullValues()
+        internal void WriteReadyChunkThrowsForInvalidResults()
         {
-            ulong nextToWrite = 0;
             Assert.Throws<ArgumentNullException>(() => _service.WriteReadyChunk(null!, ref nextToWrite, 0, new MemoryStream(), new object()));
+        }
+
+        [Fact]
+        internal void WriteReadyChunkThrowsForInvalidStream()
+        {
             Assert.Throws<ArgumentNullException>(() => _service.WriteReadyChunk(new(), ref nextToWrite, 0, null!, new object()));
+        }
+
+        [Fact]
+        internal void WriteReadyChunkThrowsForInvalidLock()
+        {
             Assert.Throws<ArgumentNullException>(() => _service.WriteReadyChunk(new(), ref nextToWrite, 0, new MemoryStream(), null!));
         }
 
         [Fact]
-        void WriteReadyChunkThrowsForMissingChunk()
+        internal void WriteReadyChunkThrowsForMissingChunk()
         {
-            ulong nextToWrite = 0;
-            Assert.Throws<VaultException>(() => _service.WriteReadyChunk(new ConcurrentDictionary<ulong, SecureBuffer.SecureLargeBuffer>(), ref nextToWrite, 0, new MemoryStream(), new object()));
+            Assert.Throws<VaultCrypt.Exceptions.VaultException>(() => _service.WriteReadyChunk(new(), ref nextToWrite, 0, new MemoryStream(), new object()));
         }
 
         [Fact]
-        void ZeroOutPartOfFileZeroesStream()
+        internal void ZeroOutPartOfFileZeroesStream()
         {
             var stream = new MemoryStream();
             var empty = new byte[32];
@@ -80,25 +89,28 @@ namespace VaultCrypt.Tests.Services
         }
 
         [Fact]
-        void ZeroOutPartOfFileThrowsForNullValues()
+        internal void ZeroOutPartOfFileThrowsForInvalidStream()
         {
             Assert.Throws<ArgumentNullException>(() => _service.ZeroOutPartOfFile(null!, 1, 2));
         }
 
-        [Fact]
-        void ZeroOutPartOfFileThrowsForNegativeValues()
+        [Theory]
+        [InlineData(long.MinValue)]
+        [InlineData(-1)]
+        internal void ZeroOutPartOfFileThrowsForInvalidOffset(long offset)
         {
-            Assert.Throws<ArgumentOutOfRangeException>(() => _service.ZeroOutPartOfFile(new MemoryStream(), -1, 2));
+            Assert.Throws<ArgumentOutOfRangeException>(() => _service.ZeroOutPartOfFile(new MemoryStream(), offset, 2));
+        }
+
+        [Theory]
+        [InlineData(0)]
+        internal void ZeroOutPartOfFileThrowsForInvalidLength(ulong length)
+        {
+            Assert.Throws<ArgumentOutOfRangeException>(() => _service.ZeroOutPartOfFile(new MemoryStream(), 1, length));
         }
 
         [Fact]
-        void ZeroOutPartOfFileThrowsForZeroValues()
-        {
-            Assert.Throws<ArgumentOutOfRangeException>(() => _service.ZeroOutPartOfFile(new MemoryStream(), 1, 0));
-        }
-
-        [Fact]
-        void CopyPartOfFileCopiesStream()
+        internal void CopyPartOfFileCopiesStream()
         {
             var stream1 = new MemoryStream();
             var stream2 = new MemoryStream();
@@ -121,23 +133,38 @@ namespace VaultCrypt.Tests.Services
         }
 
         [Fact]
-        void CopyPartOfFileThrowsForNullValues()
+        internal void CopyPartOfFileThrowsForInvalidSourceStream()
         {
             Assert.Throws<ArgumentNullException>(() => _service.CopyPartOfFile(null!, 1, 2, new MemoryStream(), 3));
+        }
+
+        [Theory]
+        [InlineData(long.MinValue)]
+        [InlineData(-1)]
+        internal void CopyPartOfFileThrowsForInvalidOffset(long offset)
+        {
+            Assert.Throws<ArgumentOutOfRangeException>(() => _service.CopyPartOfFile(new MemoryStream(), offset, 2, new MemoryStream(), 3));
+        }
+
+        [Theory]
+        [InlineData(0)]
+        internal void CopyPartOfFileThrowsForInvalidLength(ulong length)
+        {
+            Assert.Throws<ArgumentOutOfRangeException>(() => _service.CopyPartOfFile(new MemoryStream(), 1, 0, new MemoryStream(), 3));
+        }
+
+        [Fact]
+        internal void CopyPartOfFileThrowsForInvalidDestinationStream()
+        {
             Assert.Throws<ArgumentNullException>(() => _service.CopyPartOfFile(new MemoryStream(), 1, 2, null!, 3));
         }
 
-        [Fact]
-        void CopyPartOfFileThrowsForNegativeValues()
+        [Theory]
+        [InlineData(long.MinValue)]
+        [InlineData(-1)]
+        internal void CopyPartOfFileThrowsForInvalidDestinationOffset(long destinationOffset)
         {
-            Assert.Throws<ArgumentOutOfRangeException>(() => _service.CopyPartOfFile(new MemoryStream(), -1, 2, new MemoryStream(), 3));
-            Assert.Throws<ArgumentOutOfRangeException>(() => _service.CopyPartOfFile(new MemoryStream(), 1, 2, new MemoryStream(), -3));
-        }
-
-        [Fact]
-        void CopyPartOfFileThrowsForZeroValues()
-        {
-            Assert.Throws<ArgumentOutOfRangeException>(() => _service.CopyPartOfFile(new MemoryStream(), 1, 0, new MemoryStream(), 3));
+            Assert.Throws<ArgumentOutOfRangeException>(() => _service.CopyPartOfFile(new MemoryStream(), 1, 2, new MemoryStream(), destinationOffset));
         }
     }
 }

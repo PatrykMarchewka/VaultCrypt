@@ -12,13 +12,13 @@ namespace VaultCrypt.Tests
         string test = new string('a', 100);
 
         [Fact]
-        void NormalizedPathThrowsOnNull()
+        internal void NormalizedPathThrowsOnNull()
         {
             Assert.Throws<ArgumentNullException>(() => NormalizedPath.From(null!));
         }
 
         [Fact]  
-        void NormalizedPathDoesNotChangeShortPaths()
+        internal void NormalizedPathDoesNotChangeShortPaths()
         {
             var path = NormalizedPath.From(test);
 
@@ -26,7 +26,7 @@ namespace VaultCrypt.Tests
         }
 
         [Fact]
-        void NormalizedPathChangesLongPaths()
+        internal void NormalizedPathChangesLongPaths()
         {
             string test = new string('a', 300);
             var path = NormalizedPath.From(test);
@@ -37,7 +37,7 @@ namespace VaultCrypt.Tests
         [Theory]
         [InlineData(@"\\?\" + "aaa")]
         [InlineData(@"\\?\" + "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa")]
-        void NormalizedPathDoesNotAppendAlreadyAppendedPath(string appendedString)
+        internal void NormalizedPathDoesNotAppendAlreadyAppendedPath(string appendedString)
         {
             var path = NormalizedPath.From(appendedString);
 
@@ -45,7 +45,7 @@ namespace VaultCrypt.Tests
         }
 
         [Fact]
-        void NormalizedPathReturnsValueOnToString()
+        internal void NormalizedPathReturnsValueOnToString()
         {
             var path = NormalizedPath.From(test);
 
@@ -53,7 +53,7 @@ namespace VaultCrypt.Tests
         }
 
         [Fact]
-        void NormalizedPathConvertsToString()
+        internal void NormalizedPathConvertsToString()
         {
             var path = NormalizedPath.From(test);
 
@@ -63,7 +63,7 @@ namespace VaultCrypt.Tests
         }
 
         [Fact]
-        void NormalizedPathThrowsOnNullValue()
+        internal void NormalizedPathThrowsOnNullValue()
         {
             NormalizedPath path = null!;
 
