@@ -42,12 +42,20 @@ namespace VaultCrypt.Tests.Services
             _service.CreateVault(path, fileName, password, iterations);
             try
             {
+                //Asserting that new vault file has correct header
                 using (FileStream fs = new FileStream($"{path}\\{fileName}.vlt", FileMode.Open, FileAccess.Read))
                 {
                     Assert.Equal(_session.VAULT_READER.HeaderSize, fs.Length);
                     Assert.Equal(VaultSession.NewestVaultVersion, fs.ReadByte());
                     Assert.False(_session.VAULT_READER.ReadSalt(fs).AsSpan.SequenceEqual(new byte[_session.VAULT_READER.SaltSize])); //Asserting that salt is not empty (zeroed out value)
                     Assert.Equal(iterations, _session.VAULT_READER.ReadIterationsNumber(fs));
+                    long encryptedMetadataOffset = fs.Position;
+                    byte[] encrypted = new byte[_session.VAULT_READER.HeaderSize - encryptedMetadataOffset];
+                    fs.Read(encrypted);
+                    using (var decrypted = _session.VAULT_READER.ReadAndDecryptData(fs, encryptedMetadataOffset, encrypted.Length))
+                    {
+                        Assert.True(decrypted.AsSpan.SequenceEqual(new byte[sizeof(ushort) + _session.VAULT_READER.MetadataOffsetsSize]));
+                    }
                 }
             }
             finally
