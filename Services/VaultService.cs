@@ -232,9 +232,7 @@ namespace VaultCrypt.Services
         {
             ArgumentNullException.ThrowIfNull(context);
 
-            await RetryHelper.TryUntilSuccessAsync(
-                tryAction: () => _systemService.CheckFreeSpace(_session.VAULTPATH),
-                catchAction: () => context.ReportTempStatus(ProgressFailure.ProgressTempFailure.SystemCheckFailed));
+            _systemService.CheckFreeSpace(_session.VAULTPATH);
 
             FileStream vaultfs = null!;
             long oldVaultSize;
