@@ -77,7 +77,7 @@ namespace VaultCrypt.Tests.Workflow
 
         [Theory]
         [MemberData(nameof(TestsHelper.VaultFileCombinations), MemberType = typeof(TestsHelper))]
-        internal async Task VaultEncryptsAndDecryptsCorrectlyNotChunked(Func<NormalizedPath> vaultMethod, TestsHelper.VaultInformation info)
+        internal async Task VaultEncryptsAndDecryptsCorrectlyNotChunked(Func<NormalizedPath> vaultMethod, TestsHelper.VaultInformation _)
         {
             NormalizedPath vaultPath = vaultMethod();
             ChangeSession(vaultPath, TestsHelper.TestDataVaultPassword);
@@ -104,7 +104,7 @@ namespace VaultCrypt.Tests.Workflow
 
         [Theory]
         [MemberData(nameof(TestsHelper.VaultFileCombinations), MemberType = typeof(TestsHelper))]
-        internal async Task VaultEncryptsAndDecryptsCorrectlyChunked(Func<NormalizedPath> vaultMethod, TestsHelper.VaultInformation info)
+        internal async Task VaultEncryptsAndDecryptsCorrectlyChunked(Func<NormalizedPath> vaultMethod, TestsHelper.VaultInformation _)
         {
             NormalizedPath vaultPath = vaultMethod();
             ChangeSession(vaultPath, TestsHelper.TestDataVaultPassword);
@@ -129,7 +129,7 @@ namespace VaultCrypt.Tests.Workflow
 
         [Theory]
         [MemberData(nameof(TestsHelper.VaultFileCombinations), MemberType = typeof(TestsHelper))]
-        internal async Task VaultEncryptsAndDecryptsCorrectlyMixed(Func<NormalizedPath> vaultMethod, TestsHelper.VaultInformation info)
+        internal async Task VaultEncryptsAndDecryptsCorrectlyMixed(Func<NormalizedPath> vaultMethod, TestsHelper.VaultInformation _)
         {
             NormalizedPath vaultPath = vaultMethod();
             ChangeSession(vaultPath, TestsHelper.TestDataVaultPassword);
@@ -158,7 +158,7 @@ namespace VaultCrypt.Tests.Workflow
 
         [Theory]
         [MemberData(nameof(TestsHelper.VaultFileCombinations), MemberType = typeof(TestsHelper))]
-        internal async Task VaultLowersFileSizeWhenDeletingLast(Func<NormalizedPath> vaultMethod, TestsHelper.VaultInformation info)
+        internal async Task VaultLowersFileSizeWhenDeletingLast(Func<NormalizedPath> vaultMethod, TestsHelper.VaultInformation _)
         {
             NormalizedPath vaultPath = vaultMethod();
             ChangeSession(vaultPath, TestsHelper.TestDataVaultPassword);
@@ -178,7 +178,7 @@ namespace VaultCrypt.Tests.Workflow
 
         [Theory]
         [MemberData(nameof(TestsHelper.VaultFileCombinations), MemberType = typeof(TestsHelper))]
-        internal async Task VaultZeroesDataWhenDeletingNotLast(Func<NormalizedPath> vaultMethod, TestsHelper.VaultInformation info)
+        internal async Task VaultZeroesDataWhenDeletingNotLast(Func<NormalizedPath> vaultMethod, TestsHelper.VaultInformation _)
         {
             NormalizedPath vaultPath = vaultMethod();
             ChangeSession(vaultPath, TestsHelper.TestDataVaultPassword);
@@ -204,7 +204,7 @@ namespace VaultCrypt.Tests.Workflow
 
         [Theory]
         [MemberData(nameof(TestsHelper.VaultFileCombinations), MemberType = typeof(TestsHelper))]
-        internal async Task VaultTrimmedRemovesZeroedData(Func<NormalizedPath> vaultMethod, TestsHelper.VaultInformation info)
+        internal async Task VaultTrimmedRemovesZeroedData(Func<NormalizedPath> vaultMethod, TestsHelper.VaultInformation _)
         {
             NormalizedPath vaultPath = vaultMethod();
             ChangeSession(vaultPath, TestsHelper.TestDataVaultPassword);
@@ -243,7 +243,7 @@ namespace VaultCrypt.Tests.Workflow
 
         [Theory]
         [MemberData(nameof(TestsHelper.VaultFileCombinations), MemberType = typeof(TestsHelper))]
-        internal async Task VaultTrimmedEncryptsAndDecryptsCorrectly(Func<NormalizedPath> vaultMethod, TestsHelper.VaultInformation info)
+        internal async Task VaultTrimmedEncryptsAndDecryptsCorrectly(Func<NormalizedPath> vaultMethod, TestsHelper.VaultInformation _)
         {
             NormalizedPath vaultPath = vaultMethod();
             ChangeSession(vaultPath, TestsHelper.TestDataVaultPassword);
