@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.ComponentModel;
@@ -22,7 +22,6 @@ namespace VaultCrypt.ViewModels
                 if (_context == value) return;
                 _context = value;
                 _context.Progress = _progress;
-                CalculateCanExecute();
                 OnPropertyChanged(nameof(Context));
             }
         }
