@@ -85,7 +85,7 @@ namespace VaultCrypt.Tests
         [Fact]
         void TryUntilSuccessThrowsOnMaxRetriesReached()
         {
-            Assert.Throws<VaultCrypt.Exceptions.VaultException>(() => RetryHelper.TryUntilSuccess(tryAction: () => { throw new Exception(); }, maxRetries: 2));
+            Assert.Throws<VaultCrypt.Exceptions.VaultOperationException>(() => RetryHelper.TryUntilSuccess(tryAction: () => { throw new Exception(); }, maxRetries: 2));
         }
 
         [Theory]

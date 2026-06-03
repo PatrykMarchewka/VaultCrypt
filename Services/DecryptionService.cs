@@ -147,7 +147,7 @@ namespace VaultCrypt.Services
                     SecureBuffer.SecureLargeBuffer currentChunk = new SecureBuffer.SecureLargeBuffer(bytesRead);
                     buffer.AsSpan[..bytesRead].CopyTo(currentChunk.AsSpan);
 
-                    if (tasks.Any(task => task.IsFaulted)) throw new VaultException(VaultException.ErrorContext.Decrypt, VaultException.ErrorReason.TaskFaulted);
+                    if (tasks.Any(task => task.IsFaulted)) throw new VaultDecryptionException(VaultException.ErrorReason.TaskFaulted);
                     if (tasks.Count >= concurrentChunkCount)
                     {
                         await Task.WhenAny(tasks);

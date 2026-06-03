@@ -64,7 +64,7 @@ namespace VaultCrypt.Tests
         [Fact]
         internal void EncryptionOptionsDeserializeThrowsForWrongVersion()
         {
-            Assert.Throws<VaultCrypt.Exceptions.VaultException>(() => EncryptionOptions.FileEncryptionOptionsReader.Deserialize(new byte[1] { byte.MaxValue }));
+            Assert.Throws<VaultCrypt.Exceptions.VaultEncryptionOptionsOperationException>(() => EncryptionOptions.FileEncryptionOptionsReader.Deserialize(new byte[1] { byte.MaxValue }));
 
         }
 
@@ -227,7 +227,7 @@ namespace VaultCrypt.Tests
         [Fact]
         internal void EncryptionOptionsReaderThrowsForWrongVersion()
         {
-            Assert.Throws<VaultCrypt.Exceptions.VaultException>(() => EncryptionOptions.FileEncryptionOptionsReader.Deserialize(new byte[1] { byte.MaxValue }));
+            Assert.Throws<VaultCrypt.Exceptions.VaultEncryptionOptionsOperationException>(() => EncryptionOptions.FileEncryptionOptionsReader.Deserialize(new byte[1] { byte.MaxValue }));
         }
     }
 }

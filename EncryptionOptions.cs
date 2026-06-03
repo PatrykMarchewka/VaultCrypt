@@ -200,7 +200,7 @@ namespace VaultCrypt
                 {
                     0 => DeserializeV0(data),
                     1 => DeserializeV1(data),
-                    _ => throw new VaultException(VaultException.ErrorContext.EncryptionOptions, VaultException.ErrorReason.NoReader)
+                    _ => throw new VaultEncryptionOptionsOperationException(VaultException.ErrorReason.NoReader)
                 };
             }
 

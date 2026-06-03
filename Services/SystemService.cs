@@ -20,7 +20,7 @@ namespace VaultCrypt.Services
         /// <param name="filePath">Path of the file to check</param>
         /// <exception cref="ArgumentNullException">Thrown when <paramref name="filePath"/> is set to null</exception>
         /// <exception cref="ArgumentException">Thrown when <paramref name="filePath"/> is set to empty or whitespace only characters</exception>
-        /// <exception cref="VaultException">Thrown when there is not enough free space on drive</exception>
+        /// <exception cref="VaultSystemCheckException">Thrown when there is not enough free space on drive</exception>
         public void CheckFreeSpace(NormalizedPath filePath);
         /// <summary>
         /// Calculates number of chunks that can be encrypted and written to disk in parrarel at the same time based on processor threads and available RAM memory
@@ -49,7 +49,7 @@ namespace VaultCrypt.Services
             long availableBytes = new DriveInfo(Path.GetPathRoot(_session.VAULTPATH)!).AvailableFreeSpace;
             if (availableBytes < (GetTotalBytes(filePath) * 1.05))
             {
-                throw new VaultException(VaultException.ErrorContext.SystemCheck, VaultException.ErrorReason.NoFreeSpace);
+                throw new VaultSystemCheckException(VaultException.ErrorReason.NoFreeSpace);
             }
         }
 

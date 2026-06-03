@@ -21,7 +21,7 @@ namespace VaultCrypt.Services
         /// <param name="fileFS">Stream to write into</param>
         /// <param name="lockObject">Object acting as a lock to prevent multiple threads writing at the same time</param>
         /// <exception cref="ArgumentNullException">Thrown when <paramref name="results"/>, <paramref name="fileFS"/> or <paramref name="lockObject"/> is set to null</exception>
-        /// <exception cref="VaultException">Thrown when chunk is missing from the <paramref name="results"/> despite being indicated with <paramref name="currentIndex"/></exception>
+        /// <exception cref="VaultIOOperationException">Thrown when chunk is missing from the <paramref name="results"/> despite being indicated with <paramref name="currentIndex"/></exception>
         public void WriteReadyChunk(ConcurrentDictionary<ulong, SecureBuffer.SecureLargeBuffer> results, ref ulong nextToWrite, ulong currentIndex, Stream fileFS, object lockObject);
         /// <summary>
         /// Replaces <paramref name="length"/> of bytes at <paramref name="offset"/> inside <paramref name="stream"/> with zeroes
@@ -59,7 +59,7 @@ namespace VaultCrypt.Services
                     Monitor.Wait(lockObject);
                 }
                 SecureBuffer.SecureLargeBuffer ready = null!;
-                if (!results.TryRemove(nextToWrite, out ready!)) throw new VaultException(VaultException.ErrorContext.WriteToFile, VaultException.ErrorReason.MissingChunk);
+                if (!results.TryRemove(nextToWrite, out ready!)) throw new VaultIOOperationException(VaultException.ErrorReason.MissingChunk);
                 try
                 {
                     fileFS.Write(ready.AsSpan);

@@ -6,36 +6,13 @@ using System.Threading.Tasks;
 
 namespace VaultCrypt.Exceptions
 {
-    public class VaultException : Exception
+    public abstract class VaultException : Exception
     {
-        public ErrorContext ExceptionContext { get; }
         public ErrorReason ExceptionReason { get; }
 
-        public VaultException(ErrorContext context, ErrorReason reason, Exception? innerException = null) : base($"{GetContext(context)}: {GetReason(reason)}", innerException) {
-            ExceptionContext = context;
+        protected VaultException(string context, ErrorReason reason, Exception? innerException = null) : base($"{context}: {GetReason(reason)}", innerException) {
             ExceptionReason = reason;
         }
-
-        public enum ErrorContext
-        {
-            Encrypt,
-            Decrypt,
-            EncryptionOptions,
-            SystemCheck,
-            VaultSession,
-            WriteToFile
-        }
-
-        public static string GetContext(ErrorContext context) => context switch
-        {
-            ErrorContext.Encrypt => "Encryption failed",
-            ErrorContext.Decrypt => "Decryption failed",
-            ErrorContext.EncryptionOptions => "Encryption options operation failed",
-            ErrorContext.SystemCheck => "System check failed",
-            ErrorContext.VaultSession => "Vault operation failed",
-            ErrorContext.WriteToFile => "Writing to file failed",
-            _ => "Unknown error context"
-        };
 
         public enum ErrorReason
         {
@@ -68,5 +45,35 @@ namespace VaultCrypt.Exceptions
             ErrorReason.MaxRetriesReached => "Reached maximum amount of retries",
             _ => "Unknown error reason"
         };
+    }
+
+    public class VaultEncryptionException : VaultException
+    {
+        public VaultEncryptionException(ErrorReason reason, Exception? innerException = null) : base("Encryption failed", reason, innerException) { }
+    }
+
+    public class VaultDecryptionException : VaultException
+    {
+        public VaultDecryptionException(ErrorReason reason, Exception? innerException = null) : base("Decryption failed", reason, innerException) { }
+    }
+
+    public class VaultEncryptionOptionsOperationException : VaultException
+    {
+        public VaultEncryptionOptionsOperationException(ErrorReason reason, Exception? innerException = null) : base("Encryption options operation failed", reason, innerException) { }
+    }
+
+    public class VaultSystemCheckException : VaultException
+    {
+        public VaultSystemCheckException(ErrorReason reason, Exception? innerException = null) : base("System check failed", reason, innerException) { }
+    }
+
+    public class VaultOperationException : VaultException
+    {
+        public VaultOperationException(ErrorReason reason, Exception? innerException = null) : base("Vault operation failed", reason, innerException) { }
+    }
+
+    public class VaultIOOperationException : VaultException
+    {
+        public VaultIOOperationException(ErrorReason reason, Exception? innerException = null) : base("Writing to file failed", reason, innerException) { }
     }
 }

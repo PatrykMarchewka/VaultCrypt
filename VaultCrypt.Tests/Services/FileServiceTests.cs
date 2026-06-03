@@ -64,7 +64,7 @@ namespace VaultCrypt.Tests.Services
         [Fact]
         internal void WriteReadyChunkThrowsForMissingChunk()
         {
-            Assert.Throws<VaultCrypt.Exceptions.VaultException>(() => _service.WriteReadyChunk(new(), ref nextToWrite, 0, new MemoryStream(), new object()));
+            Assert.Throws<VaultCrypt.Exceptions.VaultIOOperationException>(() => _service.WriteReadyChunk(new(), ref nextToWrite, 0, new MemoryStream(), new object()));
         }
 
         [Fact]

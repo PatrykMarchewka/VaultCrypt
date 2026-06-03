@@ -86,7 +86,7 @@ namespace VaultCrypt.Tests
         [Fact]
         internal void GetVaultReaderThrowsForNonExistentReader()
         {
-            Assert.Throws<VaultCrypt.Exceptions.VaultException>(() => _registry.GetVaultReader(byte.MaxValue));
+            Assert.Throws<VaultCrypt.Exceptions.VaultOperationException>(() => _registry.GetVaultReader(byte.MaxValue));
         }
     }
 

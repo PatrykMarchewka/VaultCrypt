@@ -341,7 +341,7 @@ namespace VaultCrypt.Tests
             { EncryptionAlgorithm.EncryptionAlgorithmInfo.Twofish256CTR.Provider()}
         };
 
-        public override Type _expectedMismatchedTagException => typeof(VaultCrypt.Exceptions.VaultException);
+        public override Type _expectedMismatchedTagException => typeof(VaultCrypt.Exceptions.VaultDecryptionException);
 
     }
     #endregion
@@ -357,7 +357,7 @@ namespace VaultCrypt.Tests
             { EncryptionAlgorithm.EncryptionAlgorithmInfo.Threefish1024CTR.Provider()}
         };
 
-        public override Type _expectedMismatchedTagException => typeof(VaultCrypt.Exceptions.VaultException);
+        public override Type _expectedMismatchedTagException => typeof(VaultCrypt.Exceptions.VaultDecryptionException);
     }
     #endregion
 
@@ -385,7 +385,7 @@ namespace VaultCrypt.Tests
             { EncryptionAlgorithm.EncryptionAlgorithmInfo.Serpent256CTR.Provider()}
         };
 
-        public override Type _expectedMismatchedTagException => typeof(VaultCrypt.Exceptions.VaultException);
+        public override Type _expectedMismatchedTagException => typeof(VaultCrypt.Exceptions.VaultDecryptionException);
     }
     #endregion
 
@@ -426,7 +426,7 @@ namespace VaultCrypt.Tests
             { EncryptionAlgorithm.EncryptionAlgorithmInfo.Camelia256CTR.Provider()}
         };
 
-        public override Type _expectedMismatchedTagException => typeof(VaultCrypt.Exceptions.VaultException);
+        public override Type _expectedMismatchedTagException => typeof(VaultCrypt.Exceptions.VaultDecryptionException);
     }
     #endregion
 
@@ -439,7 +439,7 @@ namespace VaultCrypt.Tests
             { EncryptionAlgorithm.EncryptionAlgorithmInfo.XSalsa20.Provider()}
         };
 
-        public override Type _expectedMismatchedTagException => typeof(VaultCrypt.Exceptions.VaultException);
+        public override Type _expectedMismatchedTagException => typeof(VaultCrypt.Exceptions.VaultDecryptionException);
     }
     #endregion
 }

@@ -423,6 +423,8 @@ namespace VaultCrypt
                 }
             }
 
+            /// <inheritdoc/>
+            /// <exception cref="VaultDecryptionException">Thrown when calculated HMAC does not equal the expected HMAC</exception>
             public SecureBuffer.SecureLargeBuffer DecryptBytes(ReadOnlySpan<byte> data, ReadOnlySpan<byte> key)
             {
                 if (data.IsEmpty) throw new ArgumentException("Provided empty data", nameof(data));
@@ -437,7 +439,7 @@ namespace VaultCrypt
                 try
                 {
                     calculatedTag = CalculateHMAC(key, iv, encryptedData);
-                    if (!CryptographicOperations.FixedTimeEquals(tag, calculatedTag)) throw new VaultException(VaultException.ErrorContext.Decrypt, VaultException.ErrorReason.WrongHMAC);
+                    if (!CryptographicOperations.FixedTimeEquals(tag, calculatedTag)) throw new VaultDecryptionException(VaultException.ErrorReason.WrongHMAC);
                     var cipher = new KCtrBlockCipher(new TwofishEngine());
                     var parameters = new ParametersWithIV(new KeyParameter(key), iv);
                     cipher.Init(false, parameters);
@@ -506,6 +508,8 @@ namespace VaultCrypt
                 }
             }
 
+            /// <inheritdoc/>
+            /// <exception cref="VaultDecryptionException">Thrown when calculated HMAC does not equal the expected HMAC</exception>
             public SecureBuffer.SecureLargeBuffer DecryptBytes(ReadOnlySpan<byte> data, ReadOnlySpan<byte> key)
             {
                 if (data.IsEmpty) throw new ArgumentException("Provided empty data", nameof(data));
@@ -520,7 +524,7 @@ namespace VaultCrypt
                 try
                 {
                     calculatedTag = CalculateHMAC(key, iv, encryptedData);
-                    if (!CryptographicOperations.FixedTimeEquals(tag, calculatedTag)) throw new VaultException(VaultException.ErrorContext.Decrypt, VaultException.ErrorReason.WrongHMAC);
+                    if (!CryptographicOperations.FixedTimeEquals(tag, calculatedTag)) throw new VaultDecryptionException(VaultException.ErrorReason.WrongHMAC);
                     var cipher = new KCtrBlockCipher(new ThreefishEngine(blockSizeInBits));
                     var parameters = new ParametersWithIV(new KeyParameter(key), iv);
                     cipher.Init(false, parameters);
@@ -652,6 +656,8 @@ namespace VaultCrypt
                 }
             }
 
+            /// <inheritdoc/>
+            /// <exception cref="VaultDecryptionException">Thrown when calculated HMAC does not equal the expected HMAC</exception>
             public SecureBuffer.SecureLargeBuffer DecryptBytes(ReadOnlySpan<byte> data, ReadOnlySpan<byte> key)
             {
                 if (data.IsEmpty) throw new ArgumentException("Provided empty data", nameof(data));
@@ -666,7 +672,7 @@ namespace VaultCrypt
                 try
                 {
                     calculatedTag = CalculateHMAC(key, iv, encryptedData);
-                    if (!CryptographicOperations.FixedTimeEquals(tag, calculatedTag)) throw new VaultException(VaultException.ErrorContext.Decrypt, VaultException.ErrorReason.WrongHMAC);
+                    if (!CryptographicOperations.FixedTimeEquals(tag, calculatedTag)) throw new VaultDecryptionException(VaultException.ErrorReason.WrongHMAC);
                     var cipher = new KCtrBlockCipher(new SerpentEngine());
                     var parameters = new ParametersWithIV(new KeyParameter(key), iv);
                     cipher.Init(false, parameters);
@@ -869,6 +875,8 @@ namespace VaultCrypt
                 }
             }
 
+            /// <inheritdoc/>
+            /// <exception cref="VaultDecryptionException">Thrown when calculated HMAC does not equal the expected HMAC</exception>
             public SecureBuffer.SecureLargeBuffer DecryptBytes(ReadOnlySpan<byte> data, ReadOnlySpan<byte> key)
             {
                 if (data.IsEmpty) throw new ArgumentException("Provided empty data", nameof(data));
@@ -883,7 +891,7 @@ namespace VaultCrypt
                 try
                 {
                     calculatedTag = CalculateHMAC(key, iv, encryptedData);
-                    if (!CryptographicOperations.FixedTimeEquals(tag, calculatedTag)) throw new VaultException(VaultException.ErrorContext.Decrypt, VaultException.ErrorReason.WrongHMAC);
+                    if (!CryptographicOperations.FixedTimeEquals(tag, calculatedTag)) throw new VaultDecryptionException(VaultException.ErrorReason.WrongHMAC);
                     var cipher = new KCtrBlockCipher(new CamelliaEngine());
                     var parameters = new ParametersWithIV(new KeyParameter(key), iv);
                     cipher.Init(false, parameters);
@@ -944,6 +952,8 @@ namespace VaultCrypt
                 }
             }
 
+            /// <inheritdoc/>
+            /// <exception cref="VaultDecryptionException">Thrown when calculated HMAC does not equal the expected HMAC</exception>
             public SecureBuffer.SecureLargeBuffer DecryptBytes(ReadOnlySpan<byte> data, ReadOnlySpan<byte> key)
             {
                 if (data.IsEmpty) throw new ArgumentException("Provided empty data", nameof(data));
@@ -958,7 +968,7 @@ namespace VaultCrypt
                 try
                 {
                     calculatedTag = CalculateHMAC(key, iv, encryptedData);
-                    if (!CryptographicOperations.FixedTimeEquals(tag, calculatedTag)) throw new VaultException(VaultException.ErrorContext.Decrypt, VaultException.ErrorReason.WrongHMAC);
+                    if (!CryptographicOperations.FixedTimeEquals(tag, calculatedTag)) throw new VaultDecryptionException(VaultException.ErrorReason.WrongHMAC);
                     var cipher = new XSalsa20Engine();
                     var parameters = new ParametersWithIV(new KeyParameter(key), iv);
                     cipher.Init(false, parameters);

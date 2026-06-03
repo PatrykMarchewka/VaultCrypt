@@ -22,7 +22,7 @@ namespace VaultCrypt
         /// <param name="shouldRetry">Predicate whether <paramref name="catchAction"/> is allowed to run and restart based on exception thrown by <paramref name="tryAction"/></param>
         /// <returns>Return value of <typeparamref name="T"/> from <paramref name="tryAction"/></returns>
         /// <exception cref="ArgumentOutOfRangeException">Thrown when <paramref name="maxRetries"/> is set to negative or zero value</exception>
-        /// <exception cref="VaultCrypt.Exceptions.VaultException">Thrown when <paramref name="tryAction"/> failed and threw <paramref name="maxRetries"/> times</exception>
+        /// <exception cref="VaultCrypt.Exceptions.VaultOperationException">Thrown when <paramref name="tryAction"/> failed and threw <paramref name="maxRetries"/> times</exception>
         /// <exception cref="Exception">Thrown when <paramref name="tryAction"/> threw exception and <paramref name="shouldRetry"/> returned <c>false</c></exception>
         /// <exception cref="UnreachableException">Should never be thrown, indicates error in logic</exception>
         public static async Task<T> TryUntilSuccessAsync<T>(Func<Task<T>> tryAction, Func<Task>? catchAction = null, int maxRetries = 100, Func<Exception, bool>? shouldRetry = null)
@@ -39,7 +39,7 @@ namespace VaultCrypt
                 }
                 catch (Exception ex)
                 {
-                    if (attempt == maxRetries) throw new VaultCrypt.Exceptions.VaultException(Exceptions.VaultException.ErrorContext.VaultSession, Exceptions.VaultException.ErrorReason.MaxRetriesReached, ex);
+                    if (attempt == maxRetries) throw new VaultCrypt.Exceptions.VaultOperationException(Exceptions.VaultException.ErrorReason.MaxRetriesReached, ex);
                     if (shouldRetry is not null && !shouldRetry(ex)) throw;
                     if (catchAction is not null)
                     {
@@ -79,7 +79,7 @@ namespace VaultCrypt
         /// <param name="shouldRetry">Predicate whether <paramref name="catchAction"/> is allowed to run and restart based on exception thrown by <paramref name="tryAction"/></param>
         /// <returns>Return value of <typeparamref name="T"/> from <paramref name="tryAction"/></returns>
         /// <exception cref="ArgumentOutOfRangeException">Thrown when <paramref name="maxRetries"/> is set to negative or zero value</exception>
-        /// <exception cref="VaultCrypt.Exceptions.VaultException">Thrown when <paramref name="tryAction"/> failed and threw <paramref name="maxRetries"/> times</exception>
+        /// <exception cref="VaultCrypt.Exceptions.VaultOperationException">Thrown when <paramref name="tryAction"/> failed and threw <paramref name="maxRetries"/> times</exception>
         /// <exception cref="Exception">Thrown when <paramref name="tryAction"/> threw exception and <paramref name="shouldRetry"/> returned <c>false</c></exception>
         /// <exception cref="UnreachableException">Should never be thrown, indicates error in logic</exception>
         public static T TryUntilSuccess<T>(Func<T> tryAction, Action? catchAction = null, int maxRetries = 100, Func<Exception, bool>? shouldRetry = null)
@@ -107,7 +107,7 @@ namespace VaultCrypt
                         {
                             if (attempt == maxRetries)
                             {
-                                exceptionInfo = ExceptionDispatchInfo.Capture(new VaultCrypt.Exceptions.VaultException(Exceptions.VaultException.ErrorContext.VaultSession, Exceptions.VaultException.ErrorReason.MaxRetriesReached, ex));
+                                exceptionInfo = ExceptionDispatchInfo.Capture(new VaultCrypt.Exceptions.VaultOperationException(Exceptions.VaultException.ErrorReason.MaxRetriesReached, ex));
                                 return;
                             }
                             if (shouldRetry is not null && !shouldRetry(ex))

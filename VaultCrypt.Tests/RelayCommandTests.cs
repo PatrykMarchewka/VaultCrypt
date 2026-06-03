@@ -33,9 +33,15 @@ namespace VaultCrypt.Tests
             Assert.True(called);
         }
 
-        public static TheoryData<Exception> testException = new TheoryData<Exception>() { new Exception(), new ArgumentOutOfRangeException(), new ArgumentNullException(), new ArgumentException(), new VaultCrypt.Exceptions.VaultException(VaultCrypt.Exceptions.VaultException.ErrorContext.VaultSession, VaultCrypt.Exceptions.VaultException.ErrorReason.Other) };
+        public static TheoryData<Exception> ExceptionTypes = new TheoryData<Exception>()
+        {
+            {new Exception("base class") },
+            {new ArgumentException("derived class") },
+            {new VaultCrypt.Exceptions.VaultOperationException(VaultCrypt.Exceptions.VaultException.ErrorReason.Other) }
+        };
+
         [Theory]
-        [MemberData(nameof(testException))]
+        [MemberData(nameof(ExceptionTypes))]
         internal void ExecuteCatchesExceptions(Exception ex)
         {
             Exception exception = null!;

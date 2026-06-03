@@ -143,7 +143,7 @@ namespace VaultCrypt
 
         public IVaultReader GetVaultReader(byte version)
         {
-            return _registry.TryGetValue(version, out var reader) ? reader.Value : throw new VaultException(VaultException.ErrorContext.VaultSession, VaultException.ErrorReason.NoReader);
+            return _registry.TryGetValue(version, out var reader) ? reader.Value : throw new VaultOperationException(VaultException.ErrorReason.NoReader);
         }
     }
 
@@ -217,6 +217,7 @@ namespace VaultCrypt
         /// <param name="newOffset">New offset to add</param>
         /// <exception cref="ArgumentNullException">Thrown when <paramref name="stream"/> is set to null</exception>
         /// <exception cref="ArgumentOutOfRangeException">Thrown when <paramref name="newOffset"/> is set to negative or zero value</exception>
+        /// <exception cref="VaultOperationException">Thrown when vault is full and can't add any new files</exception>
         public void AddAndSaveMetadataOffsets(Stream stream, long newOffset);
 
         /// <summary>
@@ -409,7 +410,7 @@ namespace VaultCrypt
                 oldOffsets = ReadMetadataOffsets(stream);
                 if (((oldOffsets.Length + 1) * 8) > MetadataOffsetsSize)
                 {
-                    throw new VaultException(VaultException.ErrorContext.VaultSession, VaultException.ErrorReason.FullVault);
+                    throw new VaultOperationException(VaultException.ErrorReason.FullVault);
                 }
                 newOffsets = new long[oldOffsets.Length + 1];
                 oldOffsets.AsSpan().CopyTo(newOffsets);

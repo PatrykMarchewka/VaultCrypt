@@ -135,7 +135,7 @@ namespace VaultCrypt.Tests.Services
             using SecureBuffer.SecureLargeBuffer tooBigFileName = new SecureBuffer.SecureLargeBuffer(_vaultSession.VAULT_READER.EncryptionOptionsSize + 1);
             using var options = new EncryptionOptions.FileEncryptionOptions(0, tooBigFileName, 1, EncryptionAlgorithm.GetEncryptionAlgorithmInfo.First().Value.ID, false, null);
 
-            Assert.Throws<VaultException>(() => _service.PadAndEncryptFileEncryptionOptions(options));
+            Assert.Throws<VaultEncryptionOptionsOperationException>(() => _service.PadAndEncryptFileEncryptionOptions(options));
         }
 
         [Fact]

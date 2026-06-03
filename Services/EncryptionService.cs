@@ -23,7 +23,7 @@ namespace VaultCrypt.Services
         /// <exception cref="ArgumentNullException">Thrown when <paramref name="algorithm"/>, <paramref name="filePath"/> or <paramref name="context"/> are set to null</exception>
         /// <exception cref="ArgumentOutOfRangeException">Thrown when <paramref name="chunkSizeInMB"/> value is set to zero</exception>
         /// <exception cref="ArgumentException">Thrown when <paramref name="filePath"/> is set to empty or whitespace only characters</exception>
-        /// <exception cref="VaultException">Thrown when trying to encrypt empty file</exception>
+        /// <exception cref="VaultEncryptionException">Thrown when trying to encrypt empty file</exception>
         public Task Encrypt(EncryptionAlgorithm.EncryptionAlgorithmInfo algorithm, ushort chunkSizeInMB, NormalizedPath filePath, ProgressionContext context);
     }
 
@@ -50,7 +50,7 @@ namespace VaultCrypt.Services
             long fileLength = await RetryHelper.TryUntilSuccessAsync(
                 tryAction: () => new FileInfo(filePath).Length,
                 catchAction: () => context.ReportTempStatus(ProgressFailure.ProgressTempFailure.ReadingFromStreamFailed));
-            if (fileLength == 0) throw new VaultException(VaultException.ErrorContext.Encrypt, VaultException.ErrorReason.EmptyFile);
+            if (fileLength == 0) throw new VaultEncryptionException(VaultException.ErrorReason.EmptyFile);
             ArgumentNullException.ThrowIfNull(context);
 
             _systemService.CheckFreeSpace(filePath);
@@ -81,7 +81,6 @@ namespace VaultCrypt.Services
                 using (SecureBuffer.SecureLargeBuffer paddedFileOptions = _encryptionOptionsService.PadAndEncryptFileEncryptionOptions(options))
                 {
                     //Seek to the end of file to make sure its saved at the end and not after metadata data
-                    //START HERE, why is this disposed???
                     await RetryHelper.TryUntilSuccessAsync(
                         tryAction: () => { vaultFS.Seek(0, SeekOrigin.End); vaultFS.Write(paddedFileOptions.AsSpan); },
                         catchAction: () => context.ReportTempStatus(ProgressFailure.ProgressTempFailure.WritingToFileFailed));
@@ -142,7 +141,7 @@ namespace VaultCrypt.Services
                     SecureBuffer.SecureLargeBuffer currentChunk = new SecureBuffer.SecureLargeBuffer(bytesRead);
                     buffer.AsSpan[..bytesRead].CopyTo(currentChunk.AsSpan);
 
-                    if (tasks.Any(task => task.IsFaulted)) throw new VaultException(VaultException.ErrorContext.Encrypt, VaultException.ErrorReason.TaskFaulted);
+                    if (tasks.Any(task => task.IsFaulted)) throw new VaultEncryptionException(VaultException.ErrorReason.TaskFaulted);
                     if (tasks.Count >= concurrentChunkCount)
                     {
                         await Task.WhenAny(tasks);
