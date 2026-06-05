@@ -85,15 +85,15 @@ namespace VaultCrypt
 
                 if (OperatingSystem.IsWindows())
                 {
-                    _pointer = VirtualAlloc(null, (nuint)_length, AllocationType.MEM_RESERVE | AllocationType.MEM_COMMIT, Protect.PAGE_READWRITE);
+                    _pointer = VirtualAlloc(null, (nuint)_length, WindowsMemoryAllocationType.MEM_RESERVE | WindowsMemoryAllocationType.MEM_COMMIT, WindowsMemoryProtection.PAGE_READWRITE);
                 }
                 else if(OperatingSystem.IsMacOS())
                 {
-                    _pointer = mmap(null, (nuint)_length, Protection.PROT_READ | Protection.PROT_WRITE, Flags.MAP_PRIVATE | Flags.MAP_ANONYMOUS_MAC);
+                    _pointer = mmap(null, (nuint)_length, PosixMemoryProtection.PROT_READ | PosixMemoryProtection.PROT_WRITE, PosixMemoryMappingFlags.MAP_PRIVATE | PosixMemoryMappingFlags.MAP_ANONYMOUS_MAC);
                 }
                 else if (OperatingSystem.IsLinux())
                 {
-                    _pointer = mmap(null, (nuint)_length, Protection.PROT_READ | Protection.PROT_WRITE, Flags.MAP_PRIVATE | Flags.MAP_ANONYMOUS_LINUX);
+                    _pointer = mmap(null, (nuint)_length, PosixMemoryProtection.PROT_READ | PosixMemoryProtection.PROT_WRITE, PosixMemoryMappingFlags.MAP_PRIVATE | PosixMemoryMappingFlags.MAP_ANONYMOUS_LINUX);
                 }
                 else
                 {
@@ -167,7 +167,7 @@ namespace VaultCrypt
                          * As required per Microsoft documentation: https://learn.microsoft.com/en-us/windows/win32/api/memoryapi/nf-memoryapi-virtualfree
                          * "If you specify this value, dwSize must be 0 (zero), and lpAddress must point to the base address returned by the VirtualAlloc function when the region is reserved. The function fails if either of these conditions is not met."
                          */
-                        VirtualFree(lpAddress: _pointer, dwSize: 0, FreeType.MEM_RELEASE);
+                        VirtualFree(lpAddress: _pointer, dwSize: 0, WindowsMemoryFreeType.MEM_RELEASE);
                     }
                     else if(OperatingSystem.IsMacOS() || OperatingSystem.IsLinux())
                     {
@@ -203,10 +203,10 @@ namespace VaultCrypt
             // Taken from https://learn.microsoft.com/en-us/windows/win32/api/memoryapi/nf-memoryapi-virtualalloc
             [SupportedOSPlatform("windows")]
             [DllImport("kernel32.dll", SetLastError = true)]
-            private static extern void* VirtualAlloc(void* lpAddress, nuint dwSize, AllocationType flAllocationType, Protect flProtect);
+            private static extern void* VirtualAlloc(void* lpAddress, nuint dwSize, WindowsMemoryAllocationType flAllocationType, WindowsMemoryProtection flProtect);
 
             [Flags]
-            enum AllocationType : uint
+            enum WindowsMemoryAllocationType : uint
             {
                 MEM_COMMIT = 0x00001000, //Allocates physical memory, requires pointer to be reserved
                 MEM_RESERVE = 0x00002000, //Reserves the pointer for allocation
@@ -214,7 +214,7 @@ namespace VaultCrypt
 
             //Taken from https://learn.microsoft.com/en-us/windows/win32/Memory/memory-protection-constants
             [Flags]
-            enum Protect : uint
+            enum WindowsMemoryProtection : uint
             {
                 PAGE_READWRITE = 0x04, //Read and write privileges
             }
@@ -222,9 +222,9 @@ namespace VaultCrypt
             //Taken from https://learn.microsoft.com/en-us/windows/win32/api/memoryapi/nf-memoryapi-virtualfree
             [SupportedOSPlatform("windows")]
             [DllImport("kernel32.dll", SetLastError = true)]
-            private static extern bool VirtualFree(void* lpAddress, nuint dwSize, FreeType dwFreeType);
+            private static extern bool VirtualFree(void* lpAddress, nuint dwSize, WindowsMemoryFreeType dwFreeType);
 
-            enum FreeType : uint
+            enum WindowsMemoryFreeType : uint
             {
                 MEM_RELEASE = 0x00008000 //Frees the memory completely, removing the reservation. Requires dwSize to be 0! 
             }
@@ -253,11 +253,11 @@ namespace VaultCrypt
             //Taken from https://www.man7.org/linux/man-pages/man2/mmap.2.html
             [SupportedOSPlatform("linux"), SupportedOSPlatform("macos")]
             [DllImport("libc", SetLastError = true)]
-            private static extern void* mmap(void* addr, nuint len, Protection protection, Flags flags, int fd = -1, int offset = 0);
+            private static extern void* mmap(void* addr, nuint len, PosixMemoryProtection protection, PosixMemoryMappingFlags flags, int fd = -1, int offset = 0);
 
             //Taken from https://github.com/torvalds/linux/blob/master/include/uapi/asm-generic/mman-common.h
             [Flags]
-            enum Protection : int
+            enum PosixMemoryProtection : int
             {
                 PROT_READ = 0x1, //Read privileges
                 PROT_WRITE = 0x2 //Write privileges
@@ -265,7 +265,7 @@ namespace VaultCrypt
 
             //Mac flag taken from https://github.com/apple/darwin-xnu/blob/main/bsd/sys/mman.h
             [Flags]
-            enum Flags : int
+            enum PosixMemoryMappingFlags : int
             {
                 MAP_PRIVATE = 0x2, //Private mapping not visible to other processes
                 MAP_ANONYMOUS_LINUX = 0x20, //Zero initialized page, not backed by a file. Linux only
