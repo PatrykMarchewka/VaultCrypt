@@ -188,14 +188,22 @@ namespace VaultCrypt
             public void Dispose()
             {
                 if (Interlocked.Exchange(ref _disposed, 1) != 0) return;
-                GC.SuppressFinalize(this);
                 ReleaseMemory();
+                GC.SuppressFinalize(this);
             }
 
             ~SecureKeyBuffer()
             {
                 if (Interlocked.Exchange(ref _disposed, 1) != 0) return;
-                ReleaseMemory();
+                try
+                {
+                    ReleaseMemory();
+                }
+                catch
+                {
+                    //Swallowing every exception to prevent destructor from throwing
+                }
+                
             }
 
             // P/Invoke
