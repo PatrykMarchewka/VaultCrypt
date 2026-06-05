@@ -74,6 +74,7 @@ namespace VaultCrypt
             /// <param name="length">Size in bytes of requested memory region</param>
             /// <exception cref="ArgumentOutOfRangeException">Thrown when <paramref name="length"/> is set to negative value or zero</exception>
             /// <exception cref="PlatformNotSupportedException">Thrown when the OS is not Windows, Mac or Linux</exception>
+            /// <exception cref="SecurityException">Thrown when memory fails to get locked</exception>
             public SecureKeyBuffer(int length)
             {
                 ArgumentOutOfRangeException.ThrowIfNegativeOrZero(length);
@@ -113,11 +114,8 @@ namespace VaultCrypt
                 }
             }
 
-            /// <summary>
-            /// Locks memory in RAM
-            /// </summary>
-            /// <exception cref="SecurityException">Thrown when memory fails to be locked</exception>
-            /// <exception cref="PlatformNotSupportedException">Thrown when the OS is not Windows, Mac or Linux</exception>
+            //Locks memory in RAM
+            //Locked memory cannot be written to a disk as virtual memory eg. page file on Windows, swap space on Linux or swap file on Mac
             private void LockMemory()
             {
                 if (OperatingSystem.IsWindows())
@@ -134,11 +132,8 @@ namespace VaultCrypt
                 }
             }
 
-            /// <summary>
-            /// Unlocks locked memory
-            /// </summary>
-            /// <exception cref="SecurityException">Thrown when memory fails to be unlocked</exception>
-            /// <exception cref="PlatformNotSupportedException">Thrown when the OS is not Windows, Mac or Linux</exception>
+            //Unlocks previously locked memory
+            //In situation of trying to unlock memory that was not locked it throws SecurityException on Windows, however on Linux/Mac works returns success 
             private void UnlockMemory()
             {
                 if (OperatingSystem.IsWindows())
@@ -155,6 +150,7 @@ namespace VaultCrypt
                 }
             }
 
+            //Releases the memory making it available to other processes, memory is released regardless of its lock status
             private void ReleaseMemory()
             {
                 if (_pointer is null) return;
@@ -188,6 +184,7 @@ namespace VaultCrypt
             /// <summary>
             /// Safely releases memory by zeroing it, unlocking and finally freeing
             /// </summary>
+            /// <exception cref="PlatformNotSupportedException">Thrown when OS is not Windows, Mac or Linux</exception>
             public void Dispose()
             {
                 if (Interlocked.Exchange(ref _disposed, 1) != 0) return;
@@ -298,6 +295,7 @@ namespace VaultCrypt
             {
                 get
                 {
+                    //Volatile read to ensure that Main and GC threads dont overlap and read wrong value
                     ObjectDisposedException.ThrowIf(Volatile.Read(ref _disposed) == 1, nameof(SecureLargeBuffer));
                     return _length;
                 }
@@ -340,9 +338,7 @@ namespace VaultCrypt
                 _pointer = NativeMemory.AllocZeroed((nuint)length);
             }
 
-            /// <summary>
-            /// Zeroes and frees the memory
-            /// </summary>
+            //Zeroes the memory and frees
             private void ReleaseMemory()
             {
                 if (_pointer is null) return;
@@ -358,15 +354,19 @@ namespace VaultCrypt
                 }
             }
 
+            /// <summary>
+            /// Safely releases memory by zeroing it and then freeing
+            /// </summary>
             public void Dispose()
             {
-                //Atomic write to ensure that Main and GC threads dont overlap and read wrong value
+                //Atomic read/write to ensure that Main and GC threads dont overlap and read wrong value
                 if (Interlocked.Exchange(ref _disposed, 1) != 0) return;
                 ReleaseMemory();
                 GC.SuppressFinalize(this);
             }
             ~SecureLargeBuffer()
             {
+                //Atomic read/write to ensure that Main and GC threads dont overlap and read wrong value
                 if (Interlocked.Exchange(ref _disposed, 1) != 0) return;
                 ReleaseMemory();
             }
