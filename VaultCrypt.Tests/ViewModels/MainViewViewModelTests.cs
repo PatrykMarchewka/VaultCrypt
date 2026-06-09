@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
@@ -19,6 +19,12 @@ namespace VaultCrypt.Tests.ViewModels
         private void CreateVMWithFileDialogService(string? returnValue)
         {
             this._viewModel = new VaultCrypt.ViewModels.MainViewViewModel(new FakeFileDialogService() { ReturnValue = returnValue });
+        }
+
+        [Fact]
+        internal void ConstructorThrowsOnInvalidParameters()
+        {
+            Assert.Throws<ArgumentNullException>(() => new VaultCrypt.ViewModels.MainViewViewModel(null!));
         }
 
         [Fact]

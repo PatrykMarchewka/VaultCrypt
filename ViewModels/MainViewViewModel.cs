@@ -18,6 +18,8 @@ namespace VaultCrypt.ViewModels
 
         public MainViewViewModel(IFileDialogService fileDialogService)
         {
+            ArgumentNullException.ThrowIfNull(fileDialogService);
+
             this._fileDialogService = fileDialogService;
             CreateVaultCommand = new RelayCommand(_ => NavigationRequested?.Invoke(new NavigateToCreateVaultRequest()));
             OpenVaultCommand = new RelayCommand(_ => SelectVaultFile());

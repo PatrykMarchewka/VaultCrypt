@@ -1,13 +1,10 @@
 using System;
 using System.Collections.Generic;
 using System.ComponentModel;
-using System.Diagnostics;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
-using System.Windows;
 using System.Windows.Input;
-using VaultCrypt.Exceptions;
 using VaultCrypt.Services;
 
 namespace VaultCrypt.ViewModels
@@ -16,7 +13,7 @@ namespace VaultCrypt.ViewModels
     {
         private readonly IEncryptionService _encryptionService;
 
-        private NormalizedPath filePath = null!;
+        private NormalizedPath _filePath = null!;
         public IReadOnlyList<ChunkSizePreset> ChunkSizePresets { get; } = [
             new(Name: "1MB", SizeInMB: 1),
             new(Name: "2MB", SizeInMB: 2),
@@ -62,11 +59,13 @@ namespace VaultCrypt.ViewModels
         public ICommand EncryptCommand { get; }
         public EncryptFileViewModel(IEncryptionService encryptionService)
         {
+            ArgumentNullException.ThrowIfNull(encryptionService);
+
             this._encryptionService = encryptionService;
             SelectedPreset = ChunkSizePresets[0];
             SelectedAlgorithm = EncryptionAlgorithm.GetEncryptionAlgorithmInfo.First().Value;
             GoBackCommand = new RelayCommand(_ => NavigationRequested?.Invoke(new NavigateToMainRequest()));
-            EncryptCommand = new RelayCommand(async _ => await Encrypt(filePath), null);
+            EncryptCommand = new RelayCommand(async _ => await Encrypt(_filePath), null);
         }
 
         public async Task Encrypt(NormalizedPath filePath)
@@ -82,7 +81,7 @@ namespace VaultCrypt.ViewModels
             if (parameters is not NormalizedPath path) throw new ArgumentException("Couldnt cast from object to NormalizedPath");
             ArgumentException.ThrowIfNullOrWhiteSpace(path);
 
-            this.filePath = path;   
+            this._filePath = path;   
         }
 
 

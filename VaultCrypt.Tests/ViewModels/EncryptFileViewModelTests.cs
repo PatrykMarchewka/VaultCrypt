@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
@@ -15,6 +15,12 @@ namespace VaultCrypt.Tests.ViewModels
         public EncryptFileViewModelTests()
         {
             this._viewModel = new VaultCrypt.ViewModels.EncryptFileViewModel(fakeEncryptionService);
+        }
+
+        [Fact]
+        internal void ConstructorThrowsForInvalidParameters()
+        {
+            Assert.Throws<ArgumentNullException>(() => new VaultCrypt.ViewModels.EncryptFileViewModel(null!));
         }
 
         public static TheoryData<int, string, int> ChunkSizePresets = new TheoryData<int, string, int>()
@@ -150,9 +156,9 @@ namespace VaultCrypt.Tests.ViewModels
             NormalizedPath expected = NormalizedPath.From("OnNavigatedToTest");
             _viewModel.OnNavigatedTo(expected);
 
-            //Reflection because _viewmodel.filePath is private
+            //Reflection because _viewmodel._filePath is private
             //TODO: Replace reflection with something better
-            NormalizedPath actual = (NormalizedPath)_viewModel.GetType().GetField("filePath", System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance)!.GetValue(_viewModel)!;
+            NormalizedPath actual = (NormalizedPath)_viewModel.GetType().GetField("_filePath", System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance)!.GetValue(_viewModel)!;
             Assert.Equal(expected, actual);
         }
 

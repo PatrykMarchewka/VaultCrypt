@@ -11,6 +11,12 @@ namespace VaultCrypt.Tests.ViewModels
         private readonly VaultCrypt.ViewModels.ExceptionThrownViewModel _viewModel = new();
 
         [Fact]
+        internal void ConstructorThrowsForInvalidParameters()
+        {
+            Assert.Throws<ArgumentNullException>(() => new VaultCrypt.ViewModels.ExceptionThrownViewModel(null!, new Exception()));
+        }
+
+        [Fact]
         internal void ExceptionMessageRaisesPropertyChanged()
         {
             string? changedProperty = null;

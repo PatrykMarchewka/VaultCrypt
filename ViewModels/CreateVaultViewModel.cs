@@ -2,11 +2,8 @@ using System;
 using System.Collections.Generic;
 using System.ComponentModel;
 using System.Linq;
-using System.Security;
-using System.Security.Cryptography;
 using System.Text;
 using System.Threading.Tasks;
-using System.Windows;
 using System.Windows.Input;
 using VaultCrypt.Services;
 
@@ -69,6 +66,9 @@ namespace VaultCrypt.ViewModels
 
         public CreateVaultViewModel(IFileDialogService fileDialogService, IVaultService vaultService)
         {
+            ArgumentNullException.ThrowIfNull(fileDialogService);
+            ArgumentNullException.ThrowIfNull(vaultService);
+
             this._fileDialogService = fileDialogService;
             this._vaultService = vaultService;
             SelectedPreset = IterationPresets[0];
@@ -122,9 +122,4 @@ namespace VaultCrypt.ViewModels
     }
 
     public record IterationPreset(string Name, int Iterations);
-
-
-
-
-
 }

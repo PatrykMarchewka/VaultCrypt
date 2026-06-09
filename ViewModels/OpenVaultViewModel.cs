@@ -1,11 +1,8 @@
 using System;
 using System.Collections.Generic;
-using System.Collections.ObjectModel;
 using System.ComponentModel;
 using System.IO;
 using System.Linq;
-using System.Security;
-using System.Security.Cryptography;
 using System.Text;
 using System.Threading.Tasks;
 using System.Windows.Data;
@@ -65,6 +62,11 @@ namespace VaultCrypt.ViewModels
 
         public OpenVaultViewModel(IFileDialogService fileDialogService, IVaultService vaultService, IDecryptionService decryptionService, IVaultSession session)
         {
+            ArgumentNullException.ThrowIfNull(fileDialogService);
+            ArgumentNullException.ThrowIfNull(vaultService);
+            ArgumentNullException.ThrowIfNull(decryptionService);
+            ArgumentNullException.ThrowIfNull(session);
+
             this._fileDialogService = fileDialogService;
             this._vaultService = vaultService;
             this._decryptionService = decryptionService;

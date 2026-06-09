@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.ComponentModel;
 using System.Linq;
@@ -37,6 +37,8 @@ namespace VaultCrypt.ViewModels
 
         private void Initialize(Action action, Exception? ex)
         {
+            ArgumentNullException.ThrowIfNull(action);
+
             OnNavigatedTo(ex);
             OKCommand = new RelayCommand(_ => action());
         }

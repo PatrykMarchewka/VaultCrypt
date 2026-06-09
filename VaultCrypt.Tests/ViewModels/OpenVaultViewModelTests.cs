@@ -1,12 +1,10 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
-using System.Security;
 using System.Text;
 using System.Threading.Tasks;
 using VaultCrypt.Services;
 using VaultCrypt.Tests.Services;
-using VaultCrypt.ViewModels;
 
 namespace VaultCrypt.Tests.ViewModels
 {
@@ -52,6 +50,20 @@ namespace VaultCrypt.Tests.ViewModels
             reflectionVaultPath!.SetValue(_viewModel, NormalizedPath.From(newVaultPath));
         }
 
+        public static TheoryData<IFileDialogService, IVaultService, IDecryptionService, IVaultSession> InvalidConstructorParameters = new TheoryData<IFileDialogService, IVaultService, IDecryptionService, IVaultSession>()
+        {
+            {null!, new FakeVaultService(), new FakeDecryptionService(), FakeVaultSession.EmptyMockSession},
+            {new FakeFileDialogService(), null!, new FakeDecryptionService(), FakeVaultSession.EmptyMockSession},
+            {new FakeFileDialogService(), new FakeVaultService(), null!, FakeVaultSession.EmptyMockSession},
+            {new FakeFileDialogService(), new FakeVaultService(), new FakeDecryptionService(), null!}
+        };
+
+        [Theory]
+        [MemberData(nameof(InvalidConstructorParameters))]
+        internal void ConstructorThrowsOnInvalidParameters(IFileDialogService fileDialogService, IVaultService vaultService, IDecryptionService decryptionService, IVaultSession session)
+        {
+            Assert.Throws<ArgumentNullException>(() => new VaultCrypt.ViewModels.OpenVaultViewModel(fileDialogService, vaultService, decryptionService, session));
+        }
 
         [Fact]
         internal void FilteredTextRaisesPropertyChanged()

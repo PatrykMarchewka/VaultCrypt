@@ -1,7 +1,6 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
-using System.Security;
 using System.Text;
 using System.Threading.Tasks;
 using VaultCrypt.Services;
@@ -36,6 +35,19 @@ namespace VaultCrypt.Tests.ViewModels
             return SetPasswordBuffer(keyBuffer);
         }
 
+
+        public static TheoryData<IFileDialogService, IVaultService> InvalidParameters = new TheoryData<IFileDialogService, IVaultService>()
+        {
+            {null!, new FakeVaultService() },
+            {new FakeFileDialogService(), null! }
+        };
+
+        [Theory]
+        [MemberData(nameof(InvalidParameters))]
+        internal void ConstructorThrowsForInvalidParameters(IFileDialogService fileDialogService, IVaultService vaultService)
+        {
+            Assert.Throws<ArgumentNullException>(() => new VaultCrypt.ViewModels.CreateVaultViewModel(fileDialogService, vaultService));
+        }
 
         [Fact]
         internal void VaultFolderRaisesPropertyChanged()
