@@ -1,4 +1,3 @@
-using Microsoft.VisualBasic;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -69,6 +68,21 @@ namespace VaultCrypt.Tests.ViewModels
             NormalizedPath actual = (NormalizedPath)_viewModel.GetType().GetField("_vaultPath", System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance)!.GetValue(_viewModel)!;
 
             Assert.Equal(expected, actual);
+        }
+
+        public static TheoryData<object?, Type> InvalidParameters = new TheoryData<object?, Type>()
+        {
+            {null, typeof(ArgumentNullException) },
+            {new(), typeof(ArgumentException) },
+            {NormalizedPath.From(""), typeof(ArgumentException) },
+            {NormalizedPath.From("  "), typeof(ArgumentException) }
+        };
+
+        [Theory]
+        [MemberData(nameof(InvalidParameters))]
+        internal void OnNavigatedToThrowsForInvalidParameters(object? parameters, Type expectedException)
+        {
+            Assert.Throws(expectedException, () => _viewModel.OnNavigatedTo(parameters!));
         }
 
         [Fact]

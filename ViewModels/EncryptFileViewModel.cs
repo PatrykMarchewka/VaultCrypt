@@ -76,9 +76,13 @@ namespace VaultCrypt.ViewModels
             await _encryptionService.Encrypt(SelectedAlgorithm, SelectedPreset.SizeInMB, filePath, context);
         }
 
-        public void OnNavigatedTo(object? parameters)
+        public void OnNavigatedTo(object parameters)
         {
-            this.filePath = (NormalizedPath)parameters!;   
+            ArgumentNullException.ThrowIfNull(parameters);
+            if (parameters is not NormalizedPath path) throw new ArgumentException("Couldnt cast from object to NormalizedPath");
+            ArgumentException.ThrowIfNullOrWhiteSpace(path);
+
+            this.filePath = path;   
         }
 
 

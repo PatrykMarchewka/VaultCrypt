@@ -5,7 +5,6 @@ using System.Linq;
 using System.Security;
 using System.Text;
 using System.Threading.Tasks;
-using VaultCrypt.ViewModels;
 
 namespace VaultCrypt.Tests.ViewModels
 {
@@ -135,6 +134,19 @@ namespace VaultCrypt.Tests.ViewModels
 
             Assert.Equal(context, _viewModel.Context);
             Assert.Empty(_viewModel.PermMessages);
+        }
+
+        public static TheoryData<object?, Type> InvalidParameters = new TheoryData<object?, Type>()
+        {
+            {null, typeof(ArgumentNullException) },
+            {new(), typeof(ArgumentException) }
+        };
+
+        [Theory]
+        [MemberData(nameof(InvalidParameters))]
+        internal void OnNavigatedToThrowsForInvalidParameters(object? parameters, Type expectedException)
+        {
+            Assert.Throws(expectedException, () => _viewModel.OnNavigatedTo(parameters!));
         }
 
         [Fact]

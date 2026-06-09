@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
@@ -71,6 +71,20 @@ namespace VaultCrypt.Tests.ViewModels
             _viewModel.OnNavigatedTo(exception);
 
             Assert.Equal(_viewModel.ExceptionMessage, exception?.Message ?? "Unknown error!");
+        }
+
+        public static TheoryData<object?, Type> InvalidParameters = new TheoryData<object?, Type>()
+        {
+            {new(), typeof(ArgumentException) },
+            {new Exception(""), typeof(ArgumentException) },
+            {new Exception("    "), typeof(ArgumentException) }
+        };
+
+        [Theory]
+        [MemberData(nameof(InvalidParameters))]
+        internal void OnChangedToThrowsForInvalidParameters(object? parameters, Type expectedException)
+        {
+            Assert.Throws(expectedException, () => _viewModel.OnNavigatedTo(parameters));
         }
     }
 }

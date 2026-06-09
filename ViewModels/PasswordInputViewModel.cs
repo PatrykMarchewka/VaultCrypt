@@ -31,10 +31,13 @@ namespace VaultCrypt.ViewModels
             NavigationRequested.Invoke(new NavigateToOpenVaultRequest(_passwordBuffer!, _vaultPath));
         }
 
-
-        public void OnNavigatedTo(object? parameters)
+        public void OnNavigatedTo(object parameters)
         {
-            this._vaultPath = (NormalizedPath)parameters!;
+            ArgumentNullException.ThrowIfNull(parameters);
+            if (parameters is not NormalizedPath path) throw new ArgumentException("Couldnt cast from object to NormalizedPath");
+            ArgumentException.ThrowIfNullOrWhiteSpace(path);
+
+            this._vaultPath = path;
         }
 
 

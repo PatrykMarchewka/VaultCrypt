@@ -43,7 +43,15 @@ namespace VaultCrypt.ViewModels
 
         public void OnNavigatedTo(object? parameters)
         {
-            this.ExceptionMessage = (parameters as Exception)?.Message ?? "Unknown error!";
+            if(parameters is null)
+            {
+                this.ExceptionMessage = "Unknown error!";
+                return;
+            }
+            if (parameters is not Exception ex) throw new ArgumentException("Couldnt cast from object to Exception");
+            ArgumentException.ThrowIfNullOrWhiteSpace(ex.Message);
+
+            this.ExceptionMessage = ex.Message;
         }
 
         private void OnPropertyChanged(string name) { PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(name)); }

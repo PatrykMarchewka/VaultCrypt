@@ -350,5 +350,23 @@ namespace VaultCrypt.Tests.ViewModels
             //Because viewmodel is not spoofed there is no clear way to prove that CreateSession was called so we're asserting that CreateSession changed _viewmodel.VaultName
             Assert.Equal(expectedPath, _viewModel.VaultName);
         }
+
+        public static TheoryData<object?, Type> InvalidParameters = new TheoryData<object?, Type>()
+        {
+            {null,  typeof(ArgumentNullException)},
+            {new(), typeof(ArgumentException) },
+            {((ISecureBuffer?)null, NormalizedPath.From("OK")), typeof(ArgumentException) },
+            {((ISecureBuffer)new FakeSecureBuffer(empty: true), NormalizedPath.From("OK")), typeof(ArgumentException) },
+            {((ISecureBuffer)new FakeSecureBuffer(empty: false), (NormalizedPath?)null), typeof(ArgumentException) },
+            {((ISecureBuffer)new FakeSecureBuffer(empty: false), NormalizedPath.From("")), typeof(ArgumentException) },
+            {((ISecureBuffer)new FakeSecureBuffer(empty: false), NormalizedPath.From("   ")), typeof(ArgumentException) }
+        };
+
+        [Theory]
+        [MemberData(nameof(InvalidParameters))]
+        internal void OnNavigatedToThrowsForInvalidParameters(object? parameters, Type expectedException)
+        {
+            Assert.Throws(expectedException, () => _viewModel.OnNavigatedTo(parameters!));
+        }
     }
 }

@@ -138,13 +138,17 @@ namespace VaultCrypt.ViewModels
             EncryptedFilesCollectionView.Refresh();
         }
 
-        public void OnNavigatedTo(object? parameters)
+        public void OnNavigatedTo(object parameters)
         {
-            if (parameters is { } p)
-            {
-                this._passwordBuffer = (ISecureBuffer)p.GetType().GetProperty("Password")!.GetValue(p)!;
-                this._vaultPath = (NormalizedPath)p.GetType().GetProperty("VaultPath")!.GetValue(p)!;
-            }
+            ArgumentNullException.ThrowIfNull(parameters);
+            if (parameters is not (ISecureBuffer, NormalizedPath)) throw new ArgumentException("Couldnt cast from object to (ISecureBuffer, NormalizedPath)");
+            (ISecureBuffer, NormalizedPath)data = ((ISecureBuffer, NormalizedPath))parameters;
+            ArgumentNullException.ThrowIfNull(data.Item1);
+            if (data.Item1.AsSpan.IsEmpty) throw new ArgumentException("Provided empty password");
+            ArgumentException.ThrowIfNullOrWhiteSpace(data.Item2);
+
+            this._passwordBuffer = data.Item1;
+            this._vaultPath = data.Item2;
             CreateSession();
         }
 

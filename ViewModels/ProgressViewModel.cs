@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.ComponentModel;
@@ -85,10 +85,13 @@ namespace VaultCrypt.ViewModels
             ((RelayCommand)CancelCommand).RaiseCanExecuteChanged();
         }
 
-        public void OnNavigatedTo(object? parameters)
+        public void OnNavigatedTo(object parameters)
         {
+            ArgumentNullException.ThrowIfNull(parameters);
+            if (parameters is not ProgressionContext progressionContext) throw new ArgumentException("Couldnt cast from object to ProgressionContext");
+
             PermMessages.Clear();
-            Context = (ProgressionContext)parameters!;
+            Context = progressionContext;
         }
 
         private void OnPropertyChanged(string name) { PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(name)); }
