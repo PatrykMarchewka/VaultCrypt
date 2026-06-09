@@ -24,7 +24,7 @@ namespace VaultCrypt
         public override void Request(INavigationService nav) => nav.NavigateToCreateVault();
     }
 
-    public sealed record NavigateToOpenVaultRequest(SecureString password, NormalizedPath vaultPath) : NavigationRequest
+    public sealed record NavigateToOpenVaultRequest(ISecureBuffer password, NormalizedPath vaultPath) : NavigationRequest
     {
         public override void Request(INavigationService nav) => nav.NavigateToOpenVault(password, vaultPath);
     }

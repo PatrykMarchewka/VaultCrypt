@@ -14,17 +14,7 @@ namespace VaultCrypt.ViewModels
     public class PasswordInputViewModel : INotifyPropertyChanged, INavigatedViewModel, INavigatingViewModel
     {
         private NormalizedPath _vaultPath = null!;
-        private SecureString _password = null!;
-        public SecureString Password
-        {
-            get => _password;
-            set
-            {
-                if (_password == value) return;
-                _password = value;
-                OnPropertyChanged(nameof(Password));
-            }
-        }
+        private ISecureBuffer? _passwordBuffer;
 
         public ICommand GoBackCommand { get; }
         public ICommand OpenVaultCommand { get; }
@@ -36,15 +26,30 @@ namespace VaultCrypt.ViewModels
 
         public void OpenVault()
         {
-            ValidationHelper.NotEmptySecureString(Password, "Password");
+            ValidationHelper.NotEmptySecureBuffer(_passwordBuffer, "Password");
 
-            NavigationRequested.Invoke(new NavigateToOpenVaultRequest(Password, _vaultPath));
-            this.Password.Clear();
+            NavigationRequested.Invoke(new NavigateToOpenVaultRequest(_passwordBuffer!, _vaultPath));
         }
+
 
         public void OnNavigatedTo(object? parameters)
         {
             this._vaultPath = (NormalizedPath)parameters!;
+        }
+
+
+        /// <summary>
+        /// Disposes previous password buffer and creates new one from provided <paramref name="password"/>
+        /// </summary>
+        /// <param name="password">Password to use</param>
+        /// <exception cref="ArgumentNullException">Thrown when <paramref name="password"/> is set to null</exception>
+        /// <exception cref="ArgumentException">Thrown when <paramref name="password"/> is set to empty or whitespace only characters</exception>
+        public void RecievePasswordString(string password)
+        {
+            ArgumentNullException.ThrowIfNullOrWhiteSpace(password);
+
+            _passwordBuffer?.Dispose();
+            _passwordBuffer = PasswordHelper.StringToSecureBuffer(password);
         }
 
         private void OnPropertyChanged(string name) { PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(name)); }

@@ -63,7 +63,31 @@ namespace VaultCrypt
             }
         }
 
+        /// <summary>
+        /// Converts string to <see cref="ISecureBuffer"/>
+        /// </summary>
+        /// <param name="stringToConvert">String to convert</param>
+        /// <returns><see cref="ISecureBuffer"/> containing <paramref name="stringToConvert"/> in unmanaged memory type</returns>
+        /// <exception cref="PlatformNotSupportedException">Thrown when the OS is not Windows, Linux or Mac</exception>
+        public static ISecureBuffer StringToSecureBuffer(string stringToConvert)
+        {
+            if (OperatingSystem.IsWindows()) return StringToSecureKeyBuffer(stringToConvert);
+            if (OperatingSystem.IsLinux()) return StringToSecureKeyBuffer(stringToConvert);
+            if (OperatingSystem.IsMacOS()) return StringToSecureKeyBuffer(stringToConvert);
 
+            throw new PlatformNotSupportedException();
+        }
 
+        //Converts string to SecureKeyBuffer
+        private static SecureBuffer.SecureKeyBuffer StringToSecureKeyBuffer(string stringToConvert)
+        {
+            ArgumentNullException.ThrowIfNullOrWhiteSpace(stringToConvert);
+
+            byte[] passwordBytes = Encoding.Unicode.GetBytes(stringToConvert); //C# uses Unicode (utf16) by default for strings
+            SecureBuffer.SecureKeyBuffer buffer = new SecureBuffer.SecureKeyBuffer(passwordBytes.Length);
+            passwordBytes.CopyTo(buffer.AsSpan);
+            CryptographicOperations.ZeroMemory(passwordBytes);
+            return buffer;
+        }
     }
 }

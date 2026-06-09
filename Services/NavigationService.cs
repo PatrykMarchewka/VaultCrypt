@@ -33,7 +33,7 @@ namespace VaultCrypt.Services
         /// </summary>
         /// <param name="password">Password to try open vault with</param>
         /// <param name="vaultPath">Path to the vault file</param>
-        public void NavigateToOpenVault(SecureString password, NormalizedPath vaultPath);
+        public void NavigateToOpenVault(ISecureBuffer password, NormalizedPath vaultPath);
         /// <summary>
         /// Naivates to <see cref="ViewModels.PasswordInputViewModel"/>
         /// </summary>
@@ -108,7 +108,7 @@ namespace VaultCrypt.Services
             Navigate(ViewModelState.CreateVault);
         }
 
-        public void NavigateToOpenVault(SecureString password, NormalizedPath vaultPath)
+        public void NavigateToOpenVault(ISecureBuffer password, NormalizedPath vaultPath)
         {
             Navigate(ViewModelState.OpenVault, new { Password = password, VaultPath = vaultPath });
         }

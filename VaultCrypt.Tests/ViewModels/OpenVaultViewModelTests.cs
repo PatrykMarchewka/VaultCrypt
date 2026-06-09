@@ -29,24 +29,25 @@ namespace VaultCrypt.Tests.ViewModels
             this._viewModel = new VaultCrypt.ViewModels.OpenVaultViewModel(fileDialogService, fakeVaultService, fakeDecryptionService, fakeVaultSession);
         }
 
-        private (SecureString password, NormalizedPath vaultPath) GetViewModelValues()
+        private (ISecureBuffer password, NormalizedPath vaultPath) GetViewModelValues()
         {
             //Reflection in order to read private field, replace with something better when possible
             //TODO: Use something less brittle than reflection
-            SecureString password = (SecureString)_viewModel.GetType().GetField("_password", System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.NonPublic)!.GetValue(_viewModel)!;
+            ISecureBuffer password = (ISecureBuffer)_viewModel.GetType().GetField("_passwordBuffer", System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.NonPublic)!.GetValue(_viewModel)!;
             NormalizedPath vaultPath = (NormalizedPath)_viewModel.GetType().GetField("_vaultPath", System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.NonPublic)!.GetValue(_viewModel)!;
 
             return (password, vaultPath);
         }
 
-        private void SetViewModelValues(char newPasswordChar = 'c', string newVaultPath = "NewVaultPath")
+
+
+        private void SetViewModelValues(ISecureBuffer? buffer = null, string newVaultPath = "NewVaultPath")
         {
             //Reflection in order to modify private field, replace with something better when possible
             //TODO: Use something less brittle than reflection
-            SecureString newPassword = new SecureString();
-            newPassword.AppendChar(newPasswordChar);
-            var reflectionPassword = typeof(VaultCrypt.ViewModels.OpenVaultViewModel).GetField("_password", System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance);
-            reflectionPassword!.SetValue(_viewModel, newPassword);
+            buffer ??= new SecureBuffer.SecureKeyBuffer(1);
+            var reflectionPassword = typeof(VaultCrypt.ViewModels.OpenVaultViewModel).GetField("_passwordBuffer", System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance);
+            reflectionPassword!.SetValue(_viewModel, buffer);
             var reflectionVaultPath = typeof(VaultCrypt.ViewModels.OpenVaultViewModel).GetField("_vaultPath", System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance);
             reflectionVaultPath!.SetValue(_viewModel, NormalizedPath.From(newVaultPath));
         }
@@ -224,8 +225,8 @@ namespace VaultCrypt.Tests.ViewModels
             SetViewModelValues();
 
             _viewModel.GoBack();
-            (SecureString, NormalizedPath) actualValues = GetViewModelValues();
-            Assert.True(actualValues.Item1.Length == 0);
+            (ISecureBuffer, NormalizedPath) actualValues = GetViewModelValues();
+            Assert.Throws<ObjectDisposedException>(() => actualValues.Item1.Length);
             Assert.Null(actualValues.Item2);
             Assert.Null(_viewModel.SelectedFile);
         }
@@ -321,25 +322,29 @@ namespace VaultCrypt.Tests.ViewModels
         [Fact]
         internal void OnNavigatedToSetsValues()
         {
-            SecureString expectedSecureString = new SecureString();
-            expectedSecureString.AppendChar('a');
             NormalizedPath expectedPath = NormalizedPath.From("OnNavigatedToSetsValuesTest");
-            object expected = new { Password = expectedSecureString, VaultPath = expectedPath };
+            SecureBuffer.SecureKeyBuffer expectedBuffer = new SecureBuffer.SecureKeyBuffer(1);
+            try
+            {
+                (ISecureBuffer, NormalizedPath) expected = (expectedBuffer, expectedPath);
 
-            _viewModel.OnNavigatedTo(expected);
-            (SecureString password, NormalizedPath vaultPath) actual = GetViewModelValues();
+                _viewModel.OnNavigatedTo(expected);
+                (ISecureBuffer password, NormalizedPath vaultPath) actual = GetViewModelValues();
 
-            Assert.Equal(expectedSecureString, actual.password);
-            Assert.Equal(expectedPath, actual.vaultPath);
+                Assert.Equal(expectedPath, actual.vaultPath);
+                Assert.True(expectedBuffer.AsSpan.SequenceEqual(actual.password.AsSpan));
+            }
+            finally
+            {
+                expectedBuffer.Dispose();
+            }
         }
 
         [Fact]
         internal void OnNavigatedToCallsCreateSession()
         {
-            SecureString expectedSecureString = new SecureString();
-            expectedSecureString.AppendChar('a');
             NormalizedPath expectedPath = NormalizedPath.From("OnNavigatedToCallsCreateSessionTest");
-            object expected = new { Password = expectedSecureString, VaultPath = expectedPath };
+            (ISecureBuffer, NormalizedPath) expected = (new FakeSecureBuffer(empty: false), expectedPath);
             _viewModel.OnNavigatedTo(expected);
 
             //Because viewmodel is not spoofed there is no clear way to prove that CreateSession was called so we're asserting that CreateSession changed _viewmodel.VaultName

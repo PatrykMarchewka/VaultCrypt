@@ -21,7 +21,7 @@ namespace VaultCrypt.ViewModels
         private readonly IDecryptionService _decryptionService;
         private readonly IVaultSession _session;
 
-        private SecureString _password = null!;
+        private ISecureBuffer _passwordBuffer = null!;
         private NormalizedPath _vaultPath = null!;
         public ICollectionView EncryptedFilesCollectionView { get; private set; } = null!;
 
@@ -81,17 +81,7 @@ namespace VaultCrypt.ViewModels
 
         public void CreateSession()
         {
-            byte[] password = null!;
-            try
-            {
-                password = PasswordHelper.SecureStringToBytes(_password);
-                this._password.Clear();
-                _vaultService.CreateSessionFromFile(password, _vaultPath);
-            }
-            finally
-            {
-                if (password is not null) CryptographicOperations.ZeroMemory(password);
-            }
+            _vaultService.CreateSessionFromFile(_passwordBuffer.AsSpan, _vaultPath);
             this.VaultName = Path.GetFileName(_vaultPath);
         }
 
@@ -152,7 +142,7 @@ namespace VaultCrypt.ViewModels
         {
             if (parameters is { } p)
             {
-                this._password = (SecureString)p.GetType().GetProperty("Password")!.GetValue(p)!;
+                this._passwordBuffer = (ISecureBuffer)p.GetType().GetProperty("Password")!.GetValue(p)!;
                 this._vaultPath = (NormalizedPath)p.GetType().GetProperty("VaultPath")!.GetValue(p)!;
             }
             CreateSession();
@@ -160,7 +150,7 @@ namespace VaultCrypt.ViewModels
 
         public void Dispose()
         {
-            this._password.Clear();
+            this._passwordBuffer.Dispose();
             this._vaultPath = null!;
             this.SelectedFile = null;
         }

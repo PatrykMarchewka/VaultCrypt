@@ -30,7 +30,7 @@ namespace VaultCrypt.Views
         {
             if (DataContext is PasswordInputViewModel vm)
             {
-                vm.Password = ((PasswordBox)sender).SecurePassword;
+                vm.RecievePasswordString(((PasswordBox)sender).Password);
             }
         }
     }

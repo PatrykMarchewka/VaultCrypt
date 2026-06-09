@@ -39,17 +39,7 @@ namespace VaultCrypt.ViewModels
                 OnPropertyChanged(nameof(VaultName));
             }
         }
-        private SecureString _password = null!;
-        public SecureString Password
-        {
-            get => _password;
-            set
-            {
-                if (_password == value) return;
-                _password = value;
-                OnPropertyChanged(nameof(Password));
-            }
-        }
+        private ISecureBuffer? _passwordBuffer;
 
 
 
@@ -102,21 +92,27 @@ namespace VaultCrypt.ViewModels
         {
             ValidationHelper.NotEmptyString(VaultFolder, "Vault folder");
             ValidationHelper.NotEmptyString(VaultName, "Vault name");
-            ValidationHelper.NotEmptySecureString(Password, "Vault password");
+            ValidationHelper.NotEmptySecureBuffer(_passwordBuffer, "Vault password");
 
             NormalizedPath folderPath = NormalizedPath.From(VaultFolder);
             NormalizedPath vaultPath = NormalizedPath.From($"{folderPath}\\{VaultName}.vlt");
-            byte[] passwordBytes = null!;
-            try
-            {
-                passwordBytes = PasswordHelper.SecureStringToBytes(Password);
-                _vaultService.CreateVault(folderPath, VaultName, passwordBytes, SelectedPreset.Iterations);
-            }
-            finally
-            {
-                if (passwordBytes is not null) CryptographicOperations.ZeroMemory(passwordBytes);
-            }
+
+            _vaultService.CreateVault(folderPath, VaultName, _passwordBuffer!.AsSpan, SelectedPreset.Iterations);
             NavigationRequested?.Invoke(new NavigateToPasswordInputRequest(vaultPath));
+        }
+
+        /// <summary>
+        /// Disposes previous password buffer and creates new one from provided <paramref name="password"/>
+        /// </summary>
+        /// <param name="password">Password to use</param>
+        /// <exception cref="ArgumentNullException">Thrown when <paramref name="password"/> is set to null</exception>
+        /// <exception cref="ArgumentException">Thrown when <paramref name="password"/> is set to empty or whitespace only characters</exception>
+        public void RecievePasswordString(string password)
+        {
+            ArgumentNullException.ThrowIfNullOrWhiteSpace(password);
+
+            _passwordBuffer?.Dispose();
+            _passwordBuffer = PasswordHelper.StringToSecureBuffer(password);
         }
 
 

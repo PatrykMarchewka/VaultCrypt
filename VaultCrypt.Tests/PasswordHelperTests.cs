@@ -85,5 +85,29 @@ namespace VaultCrypt.Tests
 
             Assert.Equal(hello, bytesToString);
         }
+
+        [Fact]
+        internal void StringToSecureBufferReturnsCorrectString()
+        {
+            string expected = "Password";
+            ISecureBuffer? buffer = null;
+            try
+            {
+                buffer = PasswordHelper.StringToSecureBuffer(expected);
+                string actual = Encoding.Unicode.GetString(buffer.AsSpan);
+                Assert.Equal(expected, actual);
+            }
+            finally
+            {
+                buffer?.Dispose();
+            }
+        }
+
+        [Theory]
+        [MemberData(nameof(TestsHelper.InvalidStrings), MemberType = typeof(TestsHelper))]
+        internal void StringToSecureBufferThrowsForInvalidStrings(string invalid, Type expectedException)
+        {
+            Assert.Throws(expectedException, () => PasswordHelper.StringToSecureBuffer(invalid));
+        }
     }
 }
