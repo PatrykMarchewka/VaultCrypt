@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.ComponentModel;
@@ -11,7 +11,7 @@ using VaultCrypt.Services;
 
 namespace VaultCrypt.ViewModels
 {
-    public class ProgressViewModel : INotifyPropertyChanged, INavigated, IViewModel, INavigatingViewModel
+    public class ProgressViewModel : INotifyPropertyChanged, INavigatedViewModel, INavigatingViewModel
     {
         private ProgressionContext _context = null!;
         public ProgressionContext Context

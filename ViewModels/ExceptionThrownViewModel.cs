@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.ComponentModel;
 using System.Linq;
@@ -9,7 +9,7 @@ using VaultCrypt.Services;
 
 namespace VaultCrypt.ViewModels
 {
-    public class ExceptionThrownViewModel : INotifyPropertyChanged, INavigated, IViewModel, INavigatingViewModel
+    public class ExceptionThrownViewModel : INotifyPropertyChanged, INavigatedViewModel, INavigatingViewModel
     {
         private string _exceptionMessage = null!;
         public string ExceptionMessage

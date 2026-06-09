@@ -11,7 +11,7 @@ using VaultCrypt.Services;
 
 namespace VaultCrypt.ViewModels
 {
-    public class PasswordInputViewModel : INotifyPropertyChanged, INavigated, IViewModel, INavigatingViewModel
+    public class PasswordInputViewModel : INotifyPropertyChanged, INavigatedViewModel, INavigatingViewModel
     {
         private NormalizedPath _vaultPath = null!;
         private SecureString _password = null!;

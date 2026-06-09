@@ -7,9 +7,9 @@ using System.Threading.Tasks;
 namespace VaultCrypt.ViewModels
 {
     /// <summary>
-    /// Represents viewmodel that can be navigated to and/or navigates to other viewmodels
+    /// Represents viewmodel that can navigate to other viewmodels
     /// </summary>
-    public interface INavigatingViewModel
+    public interface INavigatingViewModel : IViewModel
     {
         /// <summary>
         /// Event used to request navigation to another viewmodel

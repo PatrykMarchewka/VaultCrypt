@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
@@ -141,8 +141,11 @@ namespace VaultCrypt.Services
         public event Action<IViewModel> ChangeView = null!;
     }
 
-    interface INavigated
+    /// <summary>
+    /// Represents viewmodel that gets navigated to
+    /// </summary>
+    interface INavigatedViewModel : IViewModel
     {
-        public void OnNavigatedTo(object? parameters);
-    }    
+        public void OnNavigatedTo(object parameters);
+    }
 }

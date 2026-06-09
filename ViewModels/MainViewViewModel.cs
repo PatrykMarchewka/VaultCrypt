@@ -9,7 +9,7 @@ using VaultCrypt.Services;
 
 namespace VaultCrypt.ViewModels
 {
-    public class MainViewViewModel : INotifyPropertyChanged, IViewModel, INavigatingViewModel
+    public class MainViewViewModel : INotifyPropertyChanged, INavigatingViewModel
     {
         private readonly IFileDialogService _fileDialogService;
 

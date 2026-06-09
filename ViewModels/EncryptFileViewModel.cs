@@ -12,7 +12,7 @@ using VaultCrypt.Services;
 
 namespace VaultCrypt.ViewModels
 {
-    public class EncryptFileViewModel : INotifyPropertyChanged, INavigated, IViewModel, INavigatingViewModel
+    public class EncryptFileViewModel : INotifyPropertyChanged, INavigatedViewModel, INavigatingViewModel
     {
         private readonly IEncryptionService _encryptionService;
 
