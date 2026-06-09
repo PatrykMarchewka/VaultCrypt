@@ -136,6 +136,8 @@ namespace VaultCrypt.ViewModels
 
         public void Filter(string text)
         {
+            ArgumentNullException.ThrowIfNull(text);
+
             EncryptedFilesCollectionView.Filter = file => { var kvp = (KeyValuePair<long, EncryptedFileInfo>)file; return kvp.Value.FileName.Contains(text, StringComparison.OrdinalIgnoreCase); };
             EncryptedFilesCollectionView.Refresh();
         }

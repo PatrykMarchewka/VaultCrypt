@@ -332,6 +332,43 @@ namespace VaultCrypt.Tests.ViewModels
         }
 
         [Fact]
+        internal void FilterFiltersCollection_ReturnsEmpty()
+        {
+            string text = "IMPOSSIBLEITEMTHATWILLNEVERAPPEARINTESTS";
+            _viewModel.Filter(text);
+
+            Assert.True(_viewModel.EncryptedFilesCollectionView.IsEmpty);
+        }
+
+        [Fact]
+        internal void FilterFiltersCollection_ReturnsSingle()
+        {
+            string text = "TEST";
+            _viewModel.FilteredText = text;
+
+            var filtered = fakeVaultSession.ENCRYPTED_FILES.Where(fileInfo => fileInfo.Value.FileName.Contains(text, StringComparison.OrdinalIgnoreCase));
+
+            Assert.Equal(_viewModel.EncryptedFilesCollectionView.Cast<object>().Count(), filtered.Count());
+        }
+
+        [Fact]
+        internal void FilterFiltersCollection_ReturnsFull()
+        {
+            string text = "";
+            _viewModel.FilteredText = text;
+
+            var filtered = fakeVaultSession.ENCRYPTED_FILES.Where(fileInfo => fileInfo.Value.FileName.Contains(text, StringComparison.OrdinalIgnoreCase));
+
+            Assert.Equal(_viewModel.EncryptedFilesCollectionView.Cast<object>().Count(), filtered.Count());
+        }
+
+        [Fact]
+        internal void FilterThrowsForInvalidText()
+        {
+            Assert.Throws<ArgumentNullException>(() => _viewModel.Filter(null!));
+        }
+
+        [Fact]
         internal void OnNavigatedToSetsValues()
         {
             NormalizedPath expectedPath = NormalizedPath.From("OnNavigatedToSetsValuesTest");
