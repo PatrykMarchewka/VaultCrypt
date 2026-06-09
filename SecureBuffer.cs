@@ -12,7 +12,7 @@ using System.Threading.Tasks;
 
 namespace VaultCrypt
 {
-    public interface ISecureBuffer
+    public interface ISecureBuffer : IDisposable
     {
         /// <summary>
         /// Gets full length of the buffer which may be padded depending on implementation
@@ -38,7 +38,7 @@ namespace VaultCrypt
         /// MacOS: 64-256KB <br/>
         /// For compatibility the buffer should not be created for memory over 32KB
         /// </summary>
-        public unsafe class SecureKeyBuffer : ISecureBuffer, IDisposable
+        public unsafe class SecureKeyBuffer : ISecureBuffer
         {
             private void* _pointer;
             private int _disposed; //0 = alive, 1 = disposed, any other value should be treated as an error. Required to be int to use with Interlocked for atomic operation
@@ -290,7 +290,7 @@ namespace VaultCrypt
         /// <summary>
         /// Class to securely manage memory that is outside GC control, intended for memory above 32KB
         /// </summary>
-        public unsafe class SecureLargeBuffer : ISecureBuffer, IDisposable
+        public unsafe class SecureLargeBuffer : ISecureBuffer
         {
             private void* _pointer;
             private int _disposed; //0 = alive, 1 = disposed, any other value should be treated as an error. Required to be int to use with Interlocked for atomic operation
