@@ -1,8 +1,6 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
-using System.Runtime.InteropServices;
-using System.Security;
 using System.Security.Cryptography;
 using System.Text;
 using System.Threading.Tasks;
@@ -35,32 +33,6 @@ namespace VaultCrypt
         {
             ArgumentOutOfRangeException.ThrowIfLessThan(destination.Length, KeySize);
             Rfc2898DeriveBytes.Pbkdf2(password, salt, destination[..KeySize], iterations, HashAlgorithmName.SHA512);
-        }
-
-        public static byte[] SecureStringToBytes(SecureString secureString)
-        {
-            //Null Pointer
-            IntPtr bstrPointer = IntPtr.Zero;
-            try
-            {
-                //Decrypt SecureString into BSTR in UTF16 encoding and is saved as pointer to first character
-                //BSTR = Binary string [4 byte length][UTF16 characters][null terminator (\0\0)]
-                bstrPointer = Marshal.SecureStringToBSTR(secureString);
-
-                //Read the length before the first character
-                int length = Marshal.ReadInt32(bstrPointer, -4);
-
-                byte[] utf16Bytes = new byte[length];
-                Marshal.Copy(bstrPointer, utf16Bytes, 0, length);
-                return utf16Bytes;
-            }
-            finally
-            {
-                if (bstrPointer != IntPtr.Zero)
-                {
-                    Marshal.ZeroFreeBSTR(bstrPointer);
-                }
-            }
         }
 
         /// <summary>

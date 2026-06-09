@@ -68,25 +68,6 @@ namespace VaultCrypt.Tests
         }
 
         [Fact]
-        internal void SecureStringToBytesReturnsCorrectString()
-        {
-            SecureString secureString = new SecureString();
-            secureString.AppendChar('h');
-            secureString.AppendChar('e');
-            secureString.AppendChar('l');
-            secureString.AppendChar('l');
-            secureString.AppendChar('o');
-
-            string hello = "hello";
-
-            var bytes = PasswordHelper.SecureStringToBytes(secureString);
-            //SecureString uses Unicode (UTF-16) encoding
-            string bytesToString = Encoding.Unicode.GetString(bytes);
-
-            Assert.Equal(hello, bytesToString);
-        }
-
-        [Fact]
         internal void StringToSecureBufferReturnsCorrectString()
         {
             string expected = "Password";
