@@ -68,15 +68,19 @@ namespace VaultCrypt.Tests.ViewModels
             Assert.Equal(1, eventRaisedCount);
         }
 
+        public static TheoryData<Exception?, string> OnNavigatedToValues = new TheoryData<Exception?, string>()
+        {
+            {new Exception("Expected value"), "Expected value" },
+            {null, "Unknown error!" }
+        };
 
-        public static TheoryData<Exception?> testException = new TheoryData<Exception?>() { new Exception(), null };
         [Theory]
-        [MemberData(nameof(testException))]
-        internal void OnNavigatedToChangesValue(Exception? exception)
+        [MemberData(nameof(OnNavigatedToValues))]
+        internal void OnNavigatedToChangesValue(Exception? exception, string expectedMessage)
         {
             _viewModel.OnNavigatedTo(exception);
 
-            Assert.Equal(_viewModel.ExceptionMessage, exception?.Message ?? "Unknown error!");
+            Assert.Equal(_viewModel.ExceptionMessage, expectedMessage);
         }
 
         public static TheoryData<object?, Type> InvalidParameters = new TheoryData<object?, Type>()
