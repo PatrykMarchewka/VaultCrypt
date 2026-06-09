@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Security;
@@ -136,8 +136,9 @@ namespace VaultCrypt.Tests
             [Fact]
             internal void SecureKeyBufferAllocatesCorrectSize()
             {
-                SecureBuffer.SecureKeyBuffer memory = new SecureBuffer.SecureKeyBuffer(length: 100);
-                Assert.Equal(memory.AsSpan.Length, memory.Length);
+                int expectedSize = 100;
+                SecureBuffer.SecureKeyBuffer memory = new SecureBuffer.SecureKeyBuffer(length: expectedSize);
+                Assert.Equal(expectedSize, memory.AsSpan.Length);
 
                 memory.Dispose();
             }
@@ -167,7 +168,7 @@ namespace VaultCrypt.Tests
             {
                 int randomLength = 100;
                 SecureBuffer.SecureKeyBuffer memory = new SecureBuffer.SecureKeyBuffer(randomLength);
-                Assert.True(memory.AsSpan.SequenceEqual(new byte[memory.Length]));
+                Assert.True(memory.AsSpan.IndexOfAnyExcept((byte)0) == -1);
 
                 memory.Dispose();
             }

@@ -45,6 +45,7 @@ namespace VaultCrypt
             //Locked memory cannot be written to disk as page file.
             private int _locked; //0 = unlocked, 1 = locked, any other value should be treated as an error. Required to be int to use with Interlocked for atomic operation
             private int _length; //Length of the buffer, padded to match multiple of page size
+            private int _availableLength; //Length of the requested memory, not padded
             /// <summary>
             /// Gets full length of the buffer which is padded to match multiple of page size
             /// </summary>
@@ -64,12 +65,13 @@ namespace VaultCrypt
                 {
                     //Volatile read to ensure that Main and GC threads dont overlap and read wrong value
                     ObjectDisposedException.ThrowIf(Volatile.Read(ref _disposed) == 1, nameof(SecureKeyBuffer));
-                    return new Span<byte>(_pointer, _length);
+                    return new Span<byte>(_pointer, _availableLength);
                 }
             }
 
             /// <summary>
-            /// Creates a secure page backed memory region that is zeroed and padded to match page size
+            /// Creates a secure page backed memory region that is zeroed and padded to match page size <br/>
+            /// Despite being paddded, the available memory to read/write is equal to requested <paramref name="length"/>
             /// </summary>
             /// <param name="length">Size in bytes of requested memory region</param>
             /// <exception cref="ArgumentOutOfRangeException">Thrown when <paramref name="length"/> is set to negative value or zero</exception>
@@ -79,8 +81,8 @@ namespace VaultCrypt
             {
                 ArgumentOutOfRangeException.ThrowIfNegativeOrZero(length);
 
+                _availableLength = length;
                 int pageSize = Environment.SystemPageSize;
-
                 _length = ((length + pageSize - 1) / pageSize) * pageSize;
 
                 if (OperatingSystem.IsWindows())
