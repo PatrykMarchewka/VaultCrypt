@@ -103,7 +103,7 @@ namespace VaultCrypt.Services
         {
             ArgumentNullException.ThrowIfNull(viewModel);
 
-            if (viewModel is INavigated nav && parameters != null)
+            if (viewModel is INavigatedViewModel nav && parameters != null)
             {
                 nav.OnNavigatedTo(parameters);
             }
