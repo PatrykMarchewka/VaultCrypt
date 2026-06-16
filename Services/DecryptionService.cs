@@ -62,7 +62,7 @@ namespace VaultCrypt.Services
             {
                 try
                 {
-                    using (SecureBuffer.SecureLargeBuffer decrypted = await RetryHelper.TryUntilSuccessAsync(
+                    using (ISecureBuffer decrypted = await RetryHelper.TryUntilSuccessAsync(
                         tryAction: () => DecryptInOneChunk(vaultFS, checked((int)encryptionOptions.FileSize), _session.GetSlicedKey(encryptionAlgorithmProvider.KeySize), encryptionAlgorithmProvider.EncryptionAlgorithm),
                         catchAction: () => context.ReportTempStatus(ProgressFailure.ProgressTempFailure.ReadingFromStreamFailed),
                         shouldRetry: ex => ex is IOException))
@@ -85,7 +85,7 @@ namespace VaultCrypt.Services
             }
         }
 
-        private SecureBuffer.SecureLargeBuffer DecryptInOneChunk(Stream vaultFS, int fileSize, ReadOnlySpan<byte> key, EncryptionAlgorithm.IEncryptionAlgorithm encryptionAlgorithm)
+        private ISecureBuffer DecryptInOneChunk(Stream vaultFS, int fileSize, ReadOnlySpan<byte> key, EncryptionAlgorithm.IEncryptionAlgorithm encryptionAlgorithm)
         {
             ArgumentNullException.ThrowIfNull(vaultFS);
             ArgumentOutOfRangeException.ThrowIfNegativeOrZero(fileSize);
