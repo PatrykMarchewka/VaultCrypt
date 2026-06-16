@@ -90,9 +90,9 @@ namespace VaultCrypt.Services
             short extraEncryptionDataSize = EncryptionAlgorithm.GetEncryptionAlgorithmInfo[vaultReader.VaultEncryptionAlgorithm].Provider().EncryptionAlgorithm.ExtraEncryptionDataSize;
             using (SecureBuffer.SecureLargeBuffer paddedFileOptions = new SecureBuffer.SecureLargeBuffer(vaultReader.EncryptionOptionsSize - extraEncryptionDataSize))
             {
-                using (SecureBuffer.SecureLargeBuffer encryptionOptionsBytes = EncryptionOptions.FileEncryptionOptions.SerializeFileEncryptionOptions(options))
+                using (ISecureBuffer encryptionOptionsBytes = EncryptionOptions.FileEncryptionOptions.SerializeFileEncryptionOptions(options))
                 {
-                    if ((encryptionOptionsBytes.Length + extraEncryptionDataSize) > vaultReader.EncryptionOptionsSize)
+                    if ((encryptionOptionsBytes.AsSpan.Length + extraEncryptionDataSize) > vaultReader.EncryptionOptionsSize)
                     {
                         throw new VaultEncryptionOptionsOperationException(VaultException.ErrorReason.FileNameTooLong);
                     }
