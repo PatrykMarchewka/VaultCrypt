@@ -29,6 +29,42 @@ namespace VaultCrypt
 
     public class SecureBuffer
     {
+        private SecureBuffer() { } //Private constructor to avoid accidental call by new()
+
+        /// <summary>
+        /// For requested memory below 1MB tries to create <see cref="SecureKeyBuffer"/>, in case of failure or requested memory being higher than or equal to 1MB defaults to <see cref="SecureLargeBuffer"/>
+        /// </summary>
+        /// <param name="length">Size of requested memory in bytes</param>
+        /// <returns>Unmanaged memory buffer with the size of <paramref name="length"/></returns>
+        /// <exception cref="ArgumentOutOfRangeException">Thrown when <paramref name="length"/> is set to negative value or zero</exception>
+        /// <exception cref="PlatformNotSupportedException">Thrown when method is called on unsupported platform</exception>
+        public static ISecureBuffer Create(int length)
+        {
+            ArgumentOutOfRangeException.ThrowIfNegativeOrZero(length);
+
+            if (OperatingSystem.IsWindows() || OperatingSystem.IsLinux() || OperatingSystem.IsMacOS())
+            {
+                if (length >= 1_048_576)
+                {
+                    //Requesting 1MB or more, default to LargeBuffer
+                    return new SecureLargeBuffer(length);
+                }
+                else
+                {
+                    try
+                    {
+                        return new SecureKeyBuffer(length);
+                    }
+                    catch (SecurityException) //Failed to create SecureKeyBuffer, use SecureLargeBuffer instead
+                    {
+                        return new SecureLargeBuffer(length);
+                    }
+                }
+            }
+            throw new PlatformNotSupportedException();
+        }
+
+
         /// <summary>
         /// Class to securely manage memory that is outside GC control and cannot be written as page file to disk
         /// <br/>
