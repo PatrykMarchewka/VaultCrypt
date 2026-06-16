@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Security.Cryptography;
@@ -114,7 +114,7 @@ namespace VaultCrypt.Tests.Services
                 using var encrypted = _service.PadAndEncryptFileEncryptionOptions(options);
 
                 Assert.Equal(_vaultSession.VAULT_READER.EncryptionOptionsSize, encrypted.AsSpan.Length);
-                Assert.False(encrypted.AsSpan.SequenceEqual(new byte[_vaultSession.VAULT_READER.EncryptionOptionsSize]));
+                Assert.False(encrypted.AsSpan.IndexOfAnyExcept((byte)0) == -1);
             }
             finally
             {

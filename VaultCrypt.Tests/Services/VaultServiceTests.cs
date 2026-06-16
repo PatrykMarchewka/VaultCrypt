@@ -48,13 +48,15 @@ namespace VaultCrypt.Tests.Services
                     Assert.Equal(_session.VAULT_READER.HeaderSize, fs.Length);
                     Assert.Equal(VaultSession.NewestVaultVersion, fs.ReadByte());
                     ISecureBuffer salt = _session.VAULT_READER.ReadSalt(fs);
+                    Assert.False(salt.AsSpan.IndexOfAnyExcept((byte)0) == -1); //Asserting that salt is not empty (zeroed out value)
                     Assert.Equal(iterations, _session.VAULT_READER.ReadIterationsNumber(fs));
                     long encryptedMetadataOffset = fs.Position;
                     byte[] encrypted = new byte[_session.VAULT_READER.HeaderSize - encryptedMetadataOffset];
                     fs.Read(encrypted);
                     using (var decrypted = _session.VAULT_READER.ReadAndDecryptData(fs, encryptedMetadataOffset, encrypted.Length))
                     {
-                        Assert.True(decrypted.AsSpan.SequenceEqual(new byte[sizeof(ushort) + _session.VAULT_READER.MetadataOffsetsSize]));
+                        Assert.Equal(sizeof(ushort) + _session.VAULT_READER.MetadataOffsetsSize, decrypted.AsSpan.Length);
+                        Assert.True(decrypted.AsSpan.IndexOfAnyExcept((byte)0) == -1);
                     }
                 }
             }
@@ -257,7 +259,7 @@ namespace VaultCrypt.Tests.Services
                     fs.Position = offsetToDelete;
                     fs.Read(actual);
                 }
-                Assert.True(new byte[_session.VAULT_READER.EncryptionOptionsSize].SequenceEqual(actual));
+                Assert.True(actual.AsSpan().IndexOfAnyExcept((byte)0) == -1);
             }
             finally
             {

@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Security;
@@ -193,8 +193,7 @@ namespace VaultCrypt.Tests.Workflow
                     vaultFs.Position = offsetLorem;
                     vaultFs.Read(actual);
                 }
-
-                Assert.True(new byte[new FileInfo(TestsHelper.LoremIpsumFilePath).Length].SequenceEqual(actual));
+                Assert.True(actual.AsSpan().IndexOfAnyExcept((byte)0) == -1);
             }
             finally
             {

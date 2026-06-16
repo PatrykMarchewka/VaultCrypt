@@ -35,7 +35,7 @@ namespace VaultCrypt.Tests
         {
             var salt = PasswordHelper.GenerateRandomSalt(10);
 
-            Assert.False(new byte[10].SequenceEqual(salt));
+            Assert.False(salt.AsSpan().IndexOfAnyExcept((byte)0) == -1);
         }
 
         [Fact]
