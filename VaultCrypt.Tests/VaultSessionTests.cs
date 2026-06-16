@@ -31,6 +31,40 @@ namespace VaultCrypt.Tests
             Assert.Empty(_session.ENCRYPTED_FILES);
         }
 
+        [Theory]
+        [MemberData(nameof(TestsHelper.InvalidPaths), MemberType = typeof(TestsHelper))]
+        internal void CreateSessionThrowsForInvalidPath(NormalizedPath path, Type expectedException)
+        {
+            Assert.Throws(expectedException, () => _session.CreateSession(vaultPath: path, new FakeVaultReader(), new byte[1], new byte[1], 1));
+        }
+
+        [Fact]
+        internal void CreateSessionThrowsForInvalidVaultReader()
+        {
+            Assert.Throws<ArgumentNullException>(() => _session.CreateSession(NormalizedPath.From("Test"), vaultReader: null!, new byte[1], new byte[1], 1));
+        }
+
+        [Fact]
+        internal void CreateSessionThrowsForInvalidPassword()
+        {
+            Assert.Throws<ArgumentException>(() => _session.CreateSession(NormalizedPath.From("Test"), new FakeVaultReader(), password: new Span<byte>(), new byte[1], 1));
+        }
+
+        [Fact]
+        internal void CreateSessionThrowsForInvalidSalt()
+        {
+            Assert.Throws<ArgumentException>(() => _session.CreateSession(NormalizedPath.From("Test"), new FakeVaultReader(), new byte[1], salt: new Span<byte>(), 1));
+        }
+
+        [Theory]
+        [InlineData(int.MinValue)]
+        [InlineData(-1)]
+        [InlineData(0)]
+        internal void CreateSessionThrowsForInvalidIterations(int iterations)
+        {
+            Assert.Throws<ArgumentOutOfRangeException>(() => _session.CreateSession(NormalizedPath.From("Test"), new FakeVaultReader(), new byte[1], new byte[1], iterations: iterations));
+        }
+
         [Fact]
         internal void DisposeClearsValues()
         {
@@ -51,10 +85,14 @@ namespace VaultCrypt.Tests
             Assert.Equal(1, eventRaisedCount);
         }
 
-        [Fact]
-        internal void GetSlicedKeyThrowsForTooBigKeySize()
+        [Theory]
+        [InlineData(int.MinValue)]
+        [InlineData(-1)]
+        [InlineData(0)]
+        [InlineData(PasswordHelper.KeySize + 1)]
+        internal void GetSlicedKeyThrowsForInvalidKeySize(int keySize)
         {
-            Assert.Throws<ArgumentOutOfRangeException>(() => _session.GetSlicedKey(PasswordHelper.KeySize + 1));
+            Assert.Throws<ArgumentOutOfRangeException>(() => _session.GetSlicedKey(keySize));
         }
 
         [Fact]
