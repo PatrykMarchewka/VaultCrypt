@@ -89,9 +89,9 @@ namespace VaultCrypt.Services
                 byte[] salt = PasswordHelper.GenerateRandomSalt(reader.SaltSize);
                 try
                 {
-                    using SecureBuffer.SecureLargeBuffer vaultHeader = reader.PrepareVaultHeader(salt, iterations);
+                    using ISecureBuffer vaultHeader = reader.PrepareVaultHeader(salt, iterations);
                     _session.CreateSession(vaultPath, reader, password, salt, iterations);
-                    using SecureBuffer.SecureLargeBuffer encryptedMetadata = reader.VaultEncryption(new byte[sizeof(ushort) + reader.MetadataOffsetsSize]);
+                    using ISecureBuffer encryptedMetadata = reader.VaultEncryption(new byte[sizeof(ushort) + reader.MetadataOffsetsSize]);
                     try
                     {
                         RetryHelper.TryUntilSuccess(tryAction: () =>
@@ -154,7 +154,7 @@ namespace VaultCrypt.Services
             IVaultReader reader = _registry.GetVaultReader(version);
             int iterations = RetryHelper.TryUntilSuccess(tryAction: () => reader.ReadIterationsNumber(fs), maxRetries: 10);
 
-            SecureBuffer.SecureLargeBuffer salt = null!;
+            ISecureBuffer salt = null!;
             try
             {
                 salt = RetryHelper.TryUntilSuccess(tryAction: () => reader.ReadSalt(fs), maxRetries: 10);

@@ -498,8 +498,8 @@ namespace VaultCrypt
             ArgumentNullException.ThrowIfNull(stream);
             ArgumentNullException.ThrowIfNull(offsets);
 
-            SecureBuffer.SecureLargeBuffer offsetsBuffer = null!;
-            SecureBuffer.SecureLargeBuffer encryptedMetadataOffsets = null!;
+            ISecureBuffer offsetsBuffer = null!;
+            ISecureBuffer encryptedMetadataOffsets = null!;
             try
             {
                 offsetsBuffer = PrepareMetadataOffsets(offsets);
