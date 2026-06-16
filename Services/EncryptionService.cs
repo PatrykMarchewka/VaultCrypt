@@ -109,7 +109,7 @@ namespace VaultCrypt.Services
                 tryAction: () => fileFS.Length,
                 catchAction: () => context.ReportTempStatus(ProgressFailure.ProgressTempFailure.ReadingFromStreamFailed));
             int bufferSize = (checked((int)Math.Min(chunkSizeInMB * 1024 * 1024, originalFileSize)));
-            SecureBuffer.SecureLargeBuffer buffer = new SecureBuffer.SecureLargeBuffer(bufferSize);
+            ISecureBuffer buffer = SecureBuffer.Create(bufferSize);
             try
             {
                 //Object created to stop multiple threads for trying to write into vault file
@@ -138,7 +138,7 @@ namespace VaultCrypt.Services
                         context.ForceFinish();
                         return;
                     }
-                    SecureBuffer.SecureLargeBuffer currentChunk = new SecureBuffer.SecureLargeBuffer(bytesRead);
+                    ISecureBuffer currentChunk = SecureBuffer.Create(bytesRead);
                     buffer.AsSpan[..bytesRead].CopyTo(currentChunk.AsSpan);
 
                     if (tasks.Any(task => task.IsFaulted)) throw new VaultEncryptionException(VaultException.ErrorReason.TaskFaulted);

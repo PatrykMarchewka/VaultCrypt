@@ -1,7 +1,6 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
-using System.Security;
 using System.Text;
 using System.Threading.Tasks;
 using VaultCrypt.Exceptions;
@@ -25,7 +24,7 @@ namespace VaultCrypt.Tests.ViewModels
 
         private ISecureBuffer SetPasswordBuffer()
         {
-            SecureBuffer.SecureKeyBuffer keyBuffer = new SecureBuffer.SecureKeyBuffer(1);
+            ISecureBuffer keyBuffer = SecureBuffer.Create(1);
             return SetPasswordBuffer(keyBuffer);
         }
 

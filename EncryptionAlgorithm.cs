@@ -146,7 +146,7 @@ namespace VaultCrypt
 
                 byte ivLength = 12;
                 byte authenticationLength = 16;
-                SecureBuffer.SecureLargeBuffer encrypted = new SecureBuffer.SecureLargeBuffer(ivLength + authenticationLength + data.Length);
+                ISecureBuffer encrypted = SecureBuffer.Create(ivLength + authenticationLength + data.Length);
 
                 Span<byte> iv = encrypted.AsSpan[..ivLength];
                 Span<byte> authentication = encrypted.AsSpan.Slice(ivLength, authenticationLength);
@@ -176,7 +176,7 @@ namespace VaultCrypt
                 ReadOnlySpan<byte> tag = data.Slice(12, 16);
                 ReadOnlySpan<byte> encryptedData = data.Slice(28);
 
-                SecureBuffer.SecureLargeBuffer decrypted = new SecureBuffer.SecureLargeBuffer(encryptedData.Length);
+                ISecureBuffer decrypted = SecureBuffer.Create(encryptedData.Length);
                 try
                 {
                     using System.Security.Cryptography.AesGcm aesGcm = new System.Security.Cryptography.AesGcm(key, 16);
@@ -204,7 +204,7 @@ namespace VaultCrypt
 
                 byte ivLength = 12;
                 byte authenticationLength = 16;
-                SecureBuffer.SecureLargeBuffer encrypted = new SecureBuffer.SecureLargeBuffer(ivLength + authenticationLength + data.Length);
+                ISecureBuffer encrypted = SecureBuffer.Create(ivLength + authenticationLength + data.Length);
 
                 Span<byte> iv = encrypted.AsSpan[..ivLength];
                 Span<byte> authentication = encrypted.AsSpan.Slice(ivLength, authenticationLength);
@@ -234,7 +234,7 @@ namespace VaultCrypt
                 ReadOnlySpan<byte> tag = data.Slice(12, 16);
                 ReadOnlySpan<byte> encryptedData = data.Slice(28);
 
-                SecureBuffer.SecureLargeBuffer decrypted = new SecureBuffer.SecureLargeBuffer(encryptedData.Length);
+                ISecureBuffer decrypted = SecureBuffer.Create(encryptedData.Length);
                 try
                 {
                     using System.Security.Cryptography.AesCcm aesCcm = new System.Security.Cryptography.AesCcm(key);
@@ -260,7 +260,7 @@ namespace VaultCrypt
 
                 byte ivLength = 12;
                 byte authenticationLength = 16;
-                SecureBuffer.SecureLargeBuffer encrypted = new SecureBuffer.SecureLargeBuffer(ivLength + authenticationLength + data.Length);
+                ISecureBuffer encrypted = SecureBuffer.Create(ivLength + authenticationLength + data.Length);
 
                 Span<byte> iv = encrypted.AsSpan[..ivLength];
                 Span<byte> authentication = encrypted.AsSpan.Slice(ivLength, authenticationLength);
@@ -290,7 +290,7 @@ namespace VaultCrypt
                 ReadOnlySpan<byte> tag = data.Slice(12, 16);
                 ReadOnlySpan<byte> encryptedData = data.Slice(28);
 
-                SecureBuffer.SecureLargeBuffer decrypted = new SecureBuffer.SecureLargeBuffer(encryptedData.Length);
+                ISecureBuffer decrypted = SecureBuffer.Create(encryptedData.Length);
                 try
                 {
                     using System.Security.Cryptography.ChaCha20Poly1305 chaCha20 = new System.Security.Cryptography.ChaCha20Poly1305(key);
@@ -316,7 +316,7 @@ namespace VaultCrypt
 
                 byte[] iv = new byte[12];
                 byte authenticationLength = 16;
-                SecureBuffer.SecureLargeBuffer encrypted = new SecureBuffer.SecureLargeBuffer(iv.Length + data.Length + authenticationLength);
+                ISecureBuffer encrypted = SecureBuffer.Create(iv.Length + data.Length + authenticationLength);
 
                 Span<byte> output = encrypted.AsSpan.Slice(iv.Length, data.Length + authenticationLength);
                 try
@@ -350,8 +350,8 @@ namespace VaultCrypt
                 byte authenticationLength = 16;
                 ReadOnlySpan<byte> encryptedData = data[12..];
 
-                SecureBuffer.SecureLargeBuffer decryptedWithTag = new SecureBuffer.SecureLargeBuffer(encryptedData.Length);
-                SecureBuffer.SecureLargeBuffer decrypted = new SecureBuffer.SecureLargeBuffer(encryptedData.Length - authenticationLength);
+                ISecureBuffer decryptedWithTag = SecureBuffer.Create(encryptedData.Length);
+                ISecureBuffer decrypted = SecureBuffer.Create(encryptedData.Length - authenticationLength);
                 byte[] ivBytes = iv.ToArray();
                 try
                 {
@@ -391,7 +391,7 @@ namespace VaultCrypt
                 byte ivLength = 12;
                 byte authenticationLength = 64;
 
-                SecureBuffer.SecureLargeBuffer encrypted = new SecureBuffer.SecureLargeBuffer(ivLength + data.Length + authenticationLength);
+                ISecureBuffer encrypted = SecureBuffer.Create(ivLength + data.Length + authenticationLength);
 
                 Span<byte> iv = encrypted.AsSpan[..ivLength];
                 Span<byte> authentication = encrypted.AsSpan.Slice(ivLength + data.Length, authenticationLength);
@@ -434,7 +434,7 @@ namespace VaultCrypt
                 ReadOnlySpan<byte> encryptedData = data[12..^64];
                 ReadOnlySpan<byte> tag = data[^64..];
 
-                SecureBuffer.SecureLargeBuffer decrypted = new SecureBuffer.SecureLargeBuffer(encryptedData.Length);
+                ISecureBuffer decrypted = SecureBuffer.Create(encryptedData.Length);
                 byte[] calculatedTag = new byte[64];
                 try
                 {
@@ -477,7 +477,7 @@ namespace VaultCrypt
 
                 byte ivLength = 12;
                 byte authenticationLength = 64;
-                SecureBuffer.SecureLargeBuffer encrypted = new SecureBuffer.SecureLargeBuffer(ivLength + data.Length + authenticationLength);
+                ISecureBuffer encrypted = SecureBuffer.Create(ivLength + data.Length + authenticationLength);
 
                 Span<byte> iv = encrypted.AsSpan[..ivLength];
                 Span<byte> authentication = encrypted.AsSpan.Slice(ivLength + data.Length, authenticationLength);
@@ -519,7 +519,7 @@ namespace VaultCrypt
                 ReadOnlySpan<byte> encryptedData = data[12..^64];
                 ReadOnlySpan<byte> tag = data[^64..];
 
-                SecureBuffer.SecureLargeBuffer decrypted = new SecureBuffer.SecureLargeBuffer(encryptedData.Length);
+                ISecureBuffer decrypted = SecureBuffer.Create(encryptedData.Length);
                 byte[] calculatedTag = new byte[64];
                 try
                 {
@@ -554,7 +554,7 @@ namespace VaultCrypt
 
                 byte[] iv = new byte[12];
                 byte authenticationLength = 16;
-                SecureBuffer.SecureLargeBuffer encrypted = new SecureBuffer.SecureLargeBuffer(iv.Length + data.Length + authenticationLength);
+                ISecureBuffer encrypted = SecureBuffer.Create(iv.Length + data.Length + authenticationLength);
 
                 Span<byte> output = encrypted.AsSpan.Slice(iv.Length, data.Length + authenticationLength);
                 try
@@ -588,8 +588,8 @@ namespace VaultCrypt
                 byte authenticationLength = 16;
                 ReadOnlySpan<byte> encryptedData = data[12..];
 
-                SecureBuffer.SecureLargeBuffer decryptedWithTag = new SecureBuffer.SecureLargeBuffer(encryptedData.Length);
-                SecureBuffer.SecureLargeBuffer decrypted = new SecureBuffer.SecureLargeBuffer(encryptedData.Length - authenticationLength);
+                ISecureBuffer decryptedWithTag = SecureBuffer.Create(encryptedData.Length);
+                ISecureBuffer decrypted = SecureBuffer.Create(encryptedData.Length - authenticationLength);
                 byte[] ivBytes = iv.ToArray();
                 try
                 {
@@ -625,7 +625,7 @@ namespace VaultCrypt
 
                 byte ivLength = 12;
                 byte authenticationLength = 64;
-                SecureBuffer.SecureLargeBuffer encrypted = new SecureBuffer.SecureLargeBuffer(ivLength + data.Length + authenticationLength);
+                ISecureBuffer encrypted = SecureBuffer.Create(ivLength + data.Length + authenticationLength);
 
                 Span<byte> iv = encrypted.AsSpan[..ivLength];
                 Span<byte> authentication = encrypted.AsSpan.Slice(ivLength + data.Length, authenticationLength);
@@ -667,7 +667,7 @@ namespace VaultCrypt
                 ReadOnlySpan<byte> encryptedData = data[12..^64];
                 ReadOnlySpan<byte> tag = data[^64..];
 
-                SecureBuffer.SecureLargeBuffer decrypted = new SecureBuffer.SecureLargeBuffer(encryptedData.Length);
+                ISecureBuffer decrypted = SecureBuffer.Create(encryptedData.Length);
                 byte[] calculatedTag = new byte[64];
                 try
                 {
@@ -702,7 +702,7 @@ namespace VaultCrypt
 
                 byte[] iv = new byte[12];
                 byte authenticationLength = 16;
-                SecureBuffer.SecureLargeBuffer encrypted = new SecureBuffer.SecureLargeBuffer(iv.Length + data.Length + authenticationLength);
+                ISecureBuffer encrypted = SecureBuffer.Create(iv.Length + data.Length + authenticationLength);
 
                 Span<byte> output = encrypted.AsSpan.Slice(iv.Length, data.Length + authenticationLength);
                 try
@@ -736,8 +736,8 @@ namespace VaultCrypt
                 byte authenticationLength = 16;
                 ReadOnlySpan<byte> encryptedData = data[12..];
 
-                SecureBuffer.SecureLargeBuffer decryptedWithTag = new SecureBuffer.SecureLargeBuffer(encryptedData.Length);
-                SecureBuffer.SecureLargeBuffer decrypted = new SecureBuffer.SecureLargeBuffer(encryptedData.Length - authenticationLength);
+                ISecureBuffer decryptedWithTag = SecureBuffer.Create(encryptedData.Length);
+                ISecureBuffer decrypted = SecureBuffer.Create(encryptedData.Length - authenticationLength);
                 byte[] ivBytes = iv.ToArray();
                 try
                 {
@@ -773,7 +773,7 @@ namespace VaultCrypt
 
                 byte[] iv = new byte[12];
                 byte authenticationLength = 16;
-                SecureBuffer.SecureLargeBuffer encrypted = new SecureBuffer.SecureLargeBuffer(iv.Length + data.Length + authenticationLength);
+                ISecureBuffer encrypted = SecureBuffer.Create(iv.Length + data.Length + authenticationLength);
 
                 Span<byte> output = encrypted.AsSpan.Slice(iv.Length, data.Length + authenticationLength);
                 try
@@ -807,8 +807,8 @@ namespace VaultCrypt
                 byte authenticationLength = 16;
                 ReadOnlySpan<byte> encryptedData = data[12..];
 
-                SecureBuffer.SecureLargeBuffer decryptedWithTag = new SecureBuffer.SecureLargeBuffer(encryptedData.Length);
-                SecureBuffer.SecureLargeBuffer decrypted = new SecureBuffer.SecureLargeBuffer(encryptedData.Length - authenticationLength);
+                ISecureBuffer decryptedWithTag = SecureBuffer.Create(encryptedData.Length);
+                ISecureBuffer decrypted = SecureBuffer.Create(encryptedData.Length - authenticationLength);
                 byte[] ivBytes = iv.ToArray();
                 try
                 {
@@ -844,7 +844,7 @@ namespace VaultCrypt
 
                 byte ivLength = 12;
                 byte authenticationLength = 64;
-                SecureBuffer.SecureLargeBuffer encrypted = new SecureBuffer.SecureLargeBuffer(ivLength + data.Length + authenticationLength);
+                ISecureBuffer encrypted = SecureBuffer.Create(ivLength + data.Length + authenticationLength);
 
                 Span<byte> iv = encrypted.AsSpan[..ivLength];
                 Span<byte> authentication = encrypted.AsSpan.Slice(ivLength + data.Length, authenticationLength);
@@ -886,7 +886,7 @@ namespace VaultCrypt
                 ReadOnlySpan<byte> encryptedData = data[12..^64];
                 ReadOnlySpan<byte> tag = data[^64..];
 
-                SecureBuffer.SecureLargeBuffer decrypted = new SecureBuffer.SecureLargeBuffer(encryptedData.Length);
+                ISecureBuffer decrypted = SecureBuffer.Create(encryptedData.Length);
                 byte[] calculatedTag = new byte[64];
                 try
                 {
@@ -921,7 +921,7 @@ namespace VaultCrypt
 
                 byte ivLength = 24;
                 byte authenticationLength = 64;
-                SecureBuffer.SecureLargeBuffer encrypted = new SecureBuffer.SecureLargeBuffer(ivLength + data.Length + authenticationLength);
+                ISecureBuffer encrypted = SecureBuffer.Create(ivLength + data.Length + authenticationLength);
 
                 Span<byte> iv = encrypted.AsSpan[..ivLength];
                 Span<byte> authentication = encrypted.AsSpan.Slice(ivLength + data.Length, authenticationLength);
@@ -963,7 +963,7 @@ namespace VaultCrypt
                 ReadOnlySpan<byte> encryptedData = data[24..^64];
                 ReadOnlySpan<byte> tag = data[^64..];
 
-                SecureBuffer.SecureLargeBuffer decrypted = new SecureBuffer.SecureLargeBuffer(encryptedData.Length);
+                ISecureBuffer decrypted = SecureBuffer.Create(encryptedData.Length);
                 byte[] calculatedTag = new byte[64];
                 try
                 {

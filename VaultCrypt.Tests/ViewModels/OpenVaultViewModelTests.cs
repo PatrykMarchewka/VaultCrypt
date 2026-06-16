@@ -43,7 +43,7 @@ namespace VaultCrypt.Tests.ViewModels
         {
             //Reflection in order to modify private field, replace with something better when possible
             //TODO: Use something less brittle than reflection
-            buffer ??= new SecureBuffer.SecureKeyBuffer(1);
+            buffer ??= SecureBuffer.Create(1);
             var reflectionPassword = typeof(VaultCrypt.ViewModels.OpenVaultViewModel).GetField("_passwordBuffer", System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance);
             reflectionPassword!.SetValue(_viewModel, buffer);
             var reflectionVaultPath = typeof(VaultCrypt.ViewModels.OpenVaultViewModel).GetField("_vaultPath", System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance);
@@ -372,7 +372,7 @@ namespace VaultCrypt.Tests.ViewModels
         internal void OnNavigatedToSetsValues()
         {
             NormalizedPath expectedPath = NormalizedPath.From("OnNavigatedToSetsValuesTest");
-            SecureBuffer.SecureKeyBuffer expectedBuffer = new SecureBuffer.SecureKeyBuffer(1);
+            ISecureBuffer expectedBuffer = SecureBuffer.Create(1);
             try
             {
                 (ISecureBuffer, NormalizedPath) expected = (expectedBuffer, expectedPath);

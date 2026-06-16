@@ -101,7 +101,7 @@ namespace VaultCrypt.Services
 
             source.Seek(offset, SeekOrigin.Begin);
             destination.Seek(destinationOffset, SeekOrigin.Begin);
-            using (SecureBuffer.SecureLargeBuffer buffer = new SecureBuffer.SecureLargeBuffer(8_388_608)) //8MB buffer
+            using (ISecureBuffer buffer = SecureBuffer.Create(8_388_608)) //8MB buffer
             {
                 while (length > 0)
                 {

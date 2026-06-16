@@ -218,7 +218,7 @@ namespace VaultCrypt.Tests
             };
 
             var session = (VaultSession)Activator.CreateInstance(typeof(VaultSession), nonPublic: true)!;
-            SecureBuffer.SecureKeyBuffer keyBuffer = new SecureBuffer.SecureKeyBuffer(PasswordHelper.KeySize);
+            ISecureBuffer keyBuffer = SecureBuffer.Create(PasswordHelper.KeySize);
             key.CopyTo(keyBuffer.AsSpan);
             typeof(VaultSession).GetProperty(nameof(VaultSession.KEY))!.SetValue(session, keyBuffer);
             typeof(VaultSession).GetProperty(nameof(VaultSession.VAULTPATH))!.SetValue(session, vaultPath ?? vaultPathDefault);

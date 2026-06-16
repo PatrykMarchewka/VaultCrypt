@@ -73,7 +73,7 @@ namespace VaultCrypt
         /// </summary>
         private VaultSession()
         {
-            this.KEY = new SecureBuffer.SecureKeyBuffer(PasswordHelper.KeySize);
+            this.KEY = SecureBuffer.Create(PasswordHelper.KeySize);
             this.ENCRYPTED_FILES = new();
             this.VAULTPATH = NormalizedPath.From(string.Empty);
             this.VAULT_READER = null!;
@@ -392,7 +392,7 @@ namespace VaultCrypt
 
             //Example: extra data (28 bytes for AES) + number of files (ushort) + max metadata offsets size
             int bufferSize = EncryptionAlgorithm.GetEncryptionAlgorithmInfo[VaultEncryptionAlgorithm].Provider().EncryptionAlgorithm.ExtraEncryptionDataSize + sizeof(ushort) + MetadataOffsetsSize;
-            using (SecureBuffer.SecureLargeBuffer buffer = new SecureBuffer.SecureLargeBuffer(bufferSize))
+            using (ISecureBuffer buffer = SecureBuffer.Create(bufferSize))
             {
                 stream.ReadExactly(buffer.AsSpan);
                 return VaultDecryption(buffer.AsSpan);

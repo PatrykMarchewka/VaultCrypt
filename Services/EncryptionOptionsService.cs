@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
@@ -88,7 +88,7 @@ namespace VaultCrypt.Services
 
             IVaultReader vaultReader = _session.VAULT_READER;
             short extraEncryptionDataSize = EncryptionAlgorithm.GetEncryptionAlgorithmInfo[vaultReader.VaultEncryptionAlgorithm].Provider().EncryptionAlgorithm.ExtraEncryptionDataSize;
-            using (SecureBuffer.SecureLargeBuffer paddedFileOptions = new SecureBuffer.SecureLargeBuffer(vaultReader.EncryptionOptionsSize - extraEncryptionDataSize))
+            using (ISecureBuffer paddedFileOptions = SecureBuffer.Create(vaultReader.EncryptionOptionsSize - extraEncryptionDataSize))
             {
                 using (ISecureBuffer encryptionOptionsBytes = EncryptionOptions.FileEncryptionOptions.SerializeFileEncryptionOptions(options))
                 {

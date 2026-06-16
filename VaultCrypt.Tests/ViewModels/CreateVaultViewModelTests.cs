@@ -31,7 +31,7 @@ namespace VaultCrypt.Tests.ViewModels
 
         private ISecureBuffer SetPasswordBuffer()
         {
-            SecureBuffer.SecureKeyBuffer keyBuffer = new SecureBuffer.SecureKeyBuffer(1);
+            ISecureBuffer keyBuffer = SecureBuffer.Create(1);
             return SetPasswordBuffer(keyBuffer);
         }
 

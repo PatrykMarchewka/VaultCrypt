@@ -20,7 +20,7 @@ namespace VaultCrypt.Tests
         private static FakeVaultSession CreateEmptyMockSession()
         {
             FakeVaultSession session = new();
-            SecureBuffer.SecureKeyBuffer keyBuffer = new SecureBuffer.SecureKeyBuffer(PasswordHelper.KeySize);
+            ISecureBuffer keyBuffer = SecureBuffer.Create(PasswordHelper.KeySize);
             byte[] key = new byte[4] { 0, 1, 0, 255 };
             key.CopyTo(keyBuffer.AsSpan);
             session.KEY = keyBuffer;

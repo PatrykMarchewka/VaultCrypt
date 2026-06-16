@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.IO;
@@ -92,7 +92,7 @@ namespace VaultCrypt.Services
             if (key.IsEmpty) throw new ArgumentException("Provided empty key", nameof(key));
             ArgumentNullException.ThrowIfNull(encryptionAlgorithm);
 
-            using (SecureBuffer.SecureLargeBuffer buffer = new SecureBuffer.SecureLargeBuffer(fileSize))
+            using (ISecureBuffer buffer = SecureBuffer.Create(fileSize))
             {
                 vaultFS.ReadExactly(buffer.AsSpan);
                 return encryptionAlgorithm.DecryptBytes(buffer.AsSpan, key);
@@ -113,7 +113,7 @@ namespace VaultCrypt.Services
             int concurrentChunkCount = _systemService.CalculateConcurrency(true, chunkInformation.ChunkSize);
             ulong nextToWrite = 0;
             ulong chunkIndex = 0;
-            SecureBuffer.SecureLargeBuffer buffer = new SecureBuffer.SecureLargeBuffer(extraData + (chunkInformation.ChunkSize * 1024 * 1024));
+            ISecureBuffer buffer = SecureBuffer.Create(extraData + (chunkInformation.ChunkSize * 1024 * 1024));
             try
             {
                 object writeLock = new object();
@@ -144,7 +144,7 @@ namespace VaultCrypt.Services
                         return;
                     }
 
-                    SecureBuffer.SecureLargeBuffer currentChunk = new SecureBuffer.SecureLargeBuffer(bytesRead);
+                    ISecureBuffer currentChunk = SecureBuffer.Create(bytesRead);
                     buffer.AsSpan[..bytesRead].CopyTo(currentChunk.AsSpan);
 
                     if (tasks.Any(task => task.IsFaulted)) throw new VaultDecryptionException(VaultException.ErrorReason.TaskFaulted);

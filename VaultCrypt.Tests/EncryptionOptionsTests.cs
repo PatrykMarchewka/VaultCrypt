@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
@@ -31,7 +31,7 @@ namespace VaultCrypt.Tests
         internal void DifferentConstructorsReturnSameData()
         {
             string fileName = "string";
-            using (SecureBuffer.SecureLargeBuffer fileNameBuffer = new SecureBuffer.SecureLargeBuffer(Encoding.UTF8.GetByteCount(fileName)))
+            using (ISecureBuffer fileNameBuffer = SecureBuffer.Create(Encoding.UTF8.GetByteCount(fileName)))
             {
                 Encoding.UTF8.GetBytes(fileName).CopyTo(fileNameBuffer.AsSpan);
 
@@ -129,7 +129,7 @@ namespace VaultCrypt.Tests
         [Fact]
         internal void EncryptionOptionsThrowsForTooLongFileName()
         {
-            using (SecureBuffer.SecureLargeBuffer buffer = new SecureBuffer.SecureLargeBuffer(ushort.MaxValue + 1))
+            using (ISecureBuffer buffer = SecureBuffer.Create(ushort.MaxValue + 1))
             {
                 Assert.Throws<OverflowException>(() => new EncryptionOptions.FileEncryptionOptions(0, buffer, 0, 0, false, null));
             }
