@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
@@ -28,7 +28,7 @@ namespace VaultCrypt.Services
         /// <returns>Encrypted and padded options</returns>
         /// <exception cref="ArgumentNullException">Thrown when <paramref name="options"/> is set to null</exception>
         /// <exception cref="VaultCrypt.Exceptions.VaultEncryptionOptionsOperationException">Thrown when encrypted <see cref="EncryptionOptions.FileEncryptionOptions"/> would be too big to fit in the vault due to file name being too long</exception>
-        public SecureBuffer.SecureLargeBuffer PadAndEncryptFileEncryptionOptions(EncryptionOptions.FileEncryptionOptions options);
+        public ISecureBuffer PadAndEncryptFileEncryptionOptions(EncryptionOptions.FileEncryptionOptions options);
         /// <summary>
         /// Gets encrypted options at <paramref name="metadataOffset"/> from vault and decrypts it
         /// </summary>
@@ -82,7 +82,7 @@ namespace VaultCrypt.Services
         }
 
 
-        public SecureBuffer.SecureLargeBuffer PadAndEncryptFileEncryptionOptions(EncryptionOptions.FileEncryptionOptions options)
+        public ISecureBuffer PadAndEncryptFileEncryptionOptions(EncryptionOptions.FileEncryptionOptions options)
         {
             ArgumentNullException.ThrowIfNull(options);
 

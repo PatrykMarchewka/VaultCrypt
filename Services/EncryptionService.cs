@@ -78,7 +78,7 @@ namespace VaultCrypt.Services
                     catchAction: () => context.ReportTempStatus(ProgressFailure.ProgressTempFailure.WritingToFileFailed));
                 context.Increment();
 
-                using (SecureBuffer.SecureLargeBuffer paddedFileOptions = _encryptionOptionsService.PadAndEncryptFileEncryptionOptions(options))
+                using (ISecureBuffer paddedFileOptions = _encryptionOptionsService.PadAndEncryptFileEncryptionOptions(options))
                 {
                     //Seek to the end of file to make sure its saved at the end and not after metadata data
                     await RetryHelper.TryUntilSuccessAsync(
@@ -151,7 +151,7 @@ namespace VaultCrypt.Services
                     tasks.Add(Task.Run(async () =>
                     {
                         context.CancellationToken.ThrowIfCancellationRequested();
-                        SecureBuffer.SecureLargeBuffer encryptedChunk = null!;
+                        ISecureBuffer encryptedChunk = null!;
                         try
                         {
                             encryptedChunk = provider.EncryptionAlgorithm.EncryptBytes(currentChunk.AsSpan, _session.KEY.AsSpan[..provider.KeySize]);

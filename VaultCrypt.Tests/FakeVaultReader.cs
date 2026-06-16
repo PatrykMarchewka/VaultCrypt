@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
@@ -70,7 +70,7 @@ namespace VaultCrypt.Tests
 
         public void SaveMetadataOffsets(Stream stream, long[] offsets) => SaveMetadataOffsetsWasCalled = true;
 
-        public SecureBuffer.SecureLargeBuffer VaultEncryption(ReadOnlySpan<byte> data)
+        public ISecureBuffer VaultEncryption(ReadOnlySpan<byte> data)
         {
             VaultEncryptionWasCalled = true;
             return null!;

@@ -4,7 +4,6 @@ using System.Linq;
 using System.Security.Cryptography;
 using System.Text;
 using System.Threading.Tasks;
-using System.Windows.Input;
 
 namespace VaultCrypt.Tests
 {
@@ -144,9 +143,9 @@ namespace VaultCrypt.Tests
         {
             byte[] Key = _key.AsSpan().Slice(0, Provider.KeySize).ToArray();
             short extraData = Provider.EncryptionAlgorithm.ExtraEncryptionDataSize;
-            using (SecureBuffer.SecureLargeBuffer encrypted = Provider.EncryptionAlgorithm.EncryptBytes(_data1, Key))
+            using (ISecureBuffer encrypted = Provider.EncryptionAlgorithm.EncryptBytes(_data1, Key))
             {
-                Assert.Equal(_data1.Length + extraData, encrypted.Length);
+                Assert.Equal(_data1.Length + extraData, encrypted.AsSpan.Length);
             }
         }
 
@@ -155,8 +154,8 @@ namespace VaultCrypt.Tests
         public void EncryptionProducesRandomIV(EncryptionAlgorithm.IEncryptionAlgorithmProvider Provider)
         {
             byte[] Key = _key.AsSpan().Slice(0, Provider.KeySize).ToArray();
-            SecureBuffer.SecureLargeBuffer iv = null!;
-            SecureBuffer.SecureLargeBuffer iv2 = null!;
+            ISecureBuffer iv = null!;
+            ISecureBuffer iv2 = null!;
             try
             {
                 iv = Provider.EncryptionAlgorithm.EncryptBytes(_data1, Key);
@@ -179,8 +178,8 @@ namespace VaultCrypt.Tests
         public void EncryptProducesDifferentOutputData(EncryptionAlgorithm.IEncryptionAlgorithmProvider Provider)
         {
             byte[] Key = _key.AsSpan().Slice(0, Provider.KeySize).ToArray();
-            SecureBuffer.SecureLargeBuffer outputData = null!;
-            SecureBuffer.SecureLargeBuffer outputData2 = null!;
+            ISecureBuffer outputData = null!;
+            ISecureBuffer outputData2 = null!;
             try
             {
                 outputData = Provider.EncryptionAlgorithm.EncryptBytes(_data1, Key);
@@ -199,7 +198,7 @@ namespace VaultCrypt.Tests
         public void DecryptThrowsForWrongKey(EncryptionAlgorithm.IEncryptionAlgorithmProvider Provider)
         {
             byte[] Key = _key.AsSpan().Slice(0, Provider.KeySize).ToArray();
-            using (SecureBuffer.SecureLargeBuffer encrypted = Provider.EncryptionAlgorithm.EncryptBytes(_data1, Key))
+            using (ISecureBuffer encrypted = Provider.EncryptionAlgorithm.EncryptBytes(_data1, Key))
             {
                 byte[] newKey = FlipSingleBit(Key, 1);
 
@@ -212,7 +211,7 @@ namespace VaultCrypt.Tests
         public void DecryptThrowsForTamperedIV(EncryptionAlgorithm.IEncryptionAlgorithmProvider Provider)
         {
             byte[] Key = _key.AsSpan().Slice(0, Provider.KeySize).ToArray();
-            using (SecureBuffer.SecureLargeBuffer encrypted = Provider.EncryptionAlgorithm.EncryptBytes(_data1, Key))
+            using (ISecureBuffer encrypted = Provider.EncryptionAlgorithm.EncryptBytes(_data1, Key))
             {
                 byte[] encryptedTamperedIV = FlipSingleBit(encrypted.AsSpan, 0);
 
@@ -226,7 +225,7 @@ namespace VaultCrypt.Tests
         public void DecryptThrowsForTamperedData(EncryptionAlgorithm.IEncryptionAlgorithmProvider Provider)
         {
             byte[] Key = _key.AsSpan().Slice(0, Provider.KeySize).ToArray();
-            using (SecureBuffer.SecureLargeBuffer encrypted = Provider.EncryptionAlgorithm.EncryptBytes(_data1, Key))
+            using (ISecureBuffer encrypted = Provider.EncryptionAlgorithm.EncryptBytes(_data1, Key))
             {
                 byte[] encryptedTamperedData = FlipSingleBit(encrypted.AsSpan, Provider.EncryptionAlgorithm.ExtraEncryptionDataSize);
 
@@ -239,12 +238,12 @@ namespace VaultCrypt.Tests
         public void DecryptThrowsForTamperedTag(EncryptionAlgorithm.IEncryptionAlgorithmProvider Provider)
         {
             byte[] Key = _key.AsSpan().Slice(0, Provider.KeySize).ToArray();
-            using (SecureBuffer.SecureLargeBuffer encrypted = Provider.EncryptionAlgorithm.EncryptBytes(_data1, Key))
+            using (ISecureBuffer encrypted = Provider.EncryptionAlgorithm.EncryptBytes(_data1, Key))
             {
                 byte[] encryptedTamperedTag = null!;
                 if (Provider.EncryptionAlgorithm.EncryptedOutputOrder == EncryptionAlgorithm.EncryptedOutputOrder.IV_Data_Tag)
                 {
-                    encryptedTamperedTag = FlipSingleBit(encrypted.AsSpan, encrypted.Length - 1);
+                    encryptedTamperedTag = FlipSingleBit(encrypted.AsSpan, encrypted.AsSpan.Length - 1);
                 }
                 else if (Provider.EncryptionAlgorithm.EncryptedOutputOrder == EncryptionAlgorithm.EncryptedOutputOrder.IV_Tag_Data)
                 {
@@ -260,8 +259,8 @@ namespace VaultCrypt.Tests
         public void EncryptsAndDecryptsCorrectly(EncryptionAlgorithm.IEncryptionAlgorithmProvider Provider)
         {
             byte[] Key = _key.AsSpan().Slice(0, Provider.KeySize).ToArray();
-            SecureBuffer.SecureLargeBuffer encrypted = null!;
-            SecureBuffer.SecureLargeBuffer decrypted = null!;
+            ISecureBuffer encrypted = null!;
+            ISecureBuffer decrypted = null!;
             try
             {
                 encrypted = Provider.EncryptionAlgorithm.EncryptBytes(_data1, Key);

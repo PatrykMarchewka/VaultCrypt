@@ -253,7 +253,7 @@ namespace VaultCrypt
         /// <param name="data">Data to encrypt</param>
         /// <returns>Encrypted information</returns>
         /// <exception cref="ArgumentException">Thrown when <paramref name="data"/> is empty</exception>
-        public SecureBuffer.SecureLargeBuffer VaultEncryption(ReadOnlySpan<byte> data);
+        public ISecureBuffer VaultEncryption(ReadOnlySpan<byte> data);
     }
 
     //For new versions append the additional data at the end
@@ -358,7 +358,7 @@ namespace VaultCrypt
         {
             ArgumentNullException.ThrowIfNull(stream);
 
-            SecureBuffer.SecureLargeBuffer decrypted = null!;
+            ISecureBuffer decrypted = null!;
             long[] offsets = null!;
             try
             {
@@ -385,7 +385,8 @@ namespace VaultCrypt
 
         }
 
-        private SecureBuffer.SecureLargeBuffer ReadMetadataOffsetsBytes(Stream stream)
+        //Reads and decrypts metadata offsets as raw bytes
+        private ISecureBuffer ReadMetadataOffsetsBytes(Stream stream)
         {
             stream.Seek(sizeof(byte) + SaltSize + sizeof(int), SeekOrigin.Begin);
 
@@ -516,7 +517,7 @@ namespace VaultCrypt
         }
         #endregion
 
-        public SecureBuffer.SecureLargeBuffer ReadAndDecryptData(Stream stream, long offset, int length)
+        public ISecureBuffer ReadAndDecryptData(Stream stream, long offset, int length)
         {
             ArgumentNullException.ThrowIfNull(stream);
             ArgumentOutOfRangeException.ThrowIfNegative(offset);
@@ -530,7 +531,7 @@ namespace VaultCrypt
             }
         }
 
-        public SecureBuffer.SecureLargeBuffer VaultEncryption(ReadOnlySpan<byte> data)
+        public ISecureBuffer VaultEncryption(ReadOnlySpan<byte> data)
         {
             if (data.IsEmpty) throw new ArgumentException("Provided empty data", nameof(data));
 
@@ -538,7 +539,7 @@ namespace VaultCrypt
             return provider.EncryptionAlgorithm.EncryptBytes(data, _session.GetSlicedKey(provider.KeySize));
         }
 
-        private SecureBuffer.SecureLargeBuffer VaultDecryption(ReadOnlySpan<byte> data)
+        private ISecureBuffer VaultDecryption(ReadOnlySpan<byte> data)
         {
             if (data.IsEmpty) throw new ArgumentException("Provided empty data", nameof(data));
 

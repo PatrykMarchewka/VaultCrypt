@@ -115,7 +115,7 @@ namespace VaultCrypt
             /// <param name="key">Key used to encrypt data</param>
             /// <returns>Encrypted data</returns>
             /// <exception cref="ArgumentException">Thrown when either <paramref name="data"/> or <paramref name="key"/> are empty</exception>
-            public SecureBuffer.SecureLargeBuffer EncryptBytes(ReadOnlySpan<byte> data, ReadOnlySpan<byte> key);
+            public ISecureBuffer EncryptBytes(ReadOnlySpan<byte> data, ReadOnlySpan<byte> key);
             /// <summary>
             /// Decrypts provided <paramref name="data"/> using <paramref name="key"/>
             /// </summary>
@@ -123,7 +123,7 @@ namespace VaultCrypt
             /// <param name="key">Key used to decrypt data</param>
             /// <returns>Decrypted data</returns>
             /// <exception cref="ArgumentException">Thrown when either <paramref name="data"/> or <paramref name="key"/> are empty</exception>
-            public SecureBuffer.SecureLargeBuffer DecryptBytes(ReadOnlySpan<byte> data, ReadOnlySpan<byte> key);
+            public ISecureBuffer DecryptBytes(ReadOnlySpan<byte> data, ReadOnlySpan<byte> key);
         }
 
         private interface AESAlgorithm : IEncryptionAlgorithm;
@@ -139,7 +139,7 @@ namespace VaultCrypt
         {
             public short ExtraEncryptionDataSize => 28;
             public EncryptedOutputOrder EncryptedOutputOrder => EncryptedOutputOrder.IV_Tag_Data;
-            public SecureBuffer.SecureLargeBuffer EncryptBytes(ReadOnlySpan<byte> data, ReadOnlySpan<byte> key)
+            public ISecureBuffer EncryptBytes(ReadOnlySpan<byte> data, ReadOnlySpan<byte> key)
             {
                 if (data.IsEmpty) throw new ArgumentException("Provided empty data", nameof(data));
                 if (key.IsEmpty) throw new ArgumentException("Provided empty key", nameof(key));
@@ -167,7 +167,7 @@ namespace VaultCrypt
                 }
             }
 
-            public SecureBuffer.SecureLargeBuffer DecryptBytes(ReadOnlySpan<byte> data, ReadOnlySpan<byte> key)
+            public ISecureBuffer DecryptBytes(ReadOnlySpan<byte> data, ReadOnlySpan<byte> key)
             {
                 if (data.IsEmpty) throw new ArgumentException("Provided empty data", nameof(data));
                 if (key.IsEmpty) throw new ArgumentException("Provided empty key", nameof(key));
@@ -197,7 +197,7 @@ namespace VaultCrypt
         {
             public short ExtraEncryptionDataSize => 28;
             public EncryptedOutputOrder EncryptedOutputOrder => EncryptedOutputOrder.IV_Tag_Data;
-            public SecureBuffer.SecureLargeBuffer EncryptBytes(ReadOnlySpan<byte> data, ReadOnlySpan<byte> key)
+            public ISecureBuffer EncryptBytes(ReadOnlySpan<byte> data, ReadOnlySpan<byte> key)
             {
                 if (data.IsEmpty) throw new ArgumentException("Provided empty data", nameof(data));
                 if (key.IsEmpty) throw new ArgumentException("Provided empty key", nameof(key));
@@ -225,7 +225,7 @@ namespace VaultCrypt
                 }
             }
 
-            public SecureBuffer.SecureLargeBuffer DecryptBytes(ReadOnlySpan<byte> data, ReadOnlySpan<byte> key)
+            public ISecureBuffer DecryptBytes(ReadOnlySpan<byte> data, ReadOnlySpan<byte> key)
             {
                 if (data.IsEmpty) throw new ArgumentException("Provided empty data", nameof(data));
                 if (key.IsEmpty) throw new ArgumentException("Provided empty key", nameof(key));
@@ -253,7 +253,7 @@ namespace VaultCrypt
         {
             public short ExtraEncryptionDataSize => 28;
             public EncryptedOutputOrder EncryptedOutputOrder => EncryptedOutputOrder.IV_Tag_Data;
-            public SecureBuffer.SecureLargeBuffer EncryptBytes(ReadOnlySpan<byte> data, ReadOnlySpan<byte> key)
+            public ISecureBuffer EncryptBytes(ReadOnlySpan<byte> data, ReadOnlySpan<byte> key)
             {
                 if (data.IsEmpty) throw new ArgumentException("Provided empty data", nameof(data));
                 if (key.IsEmpty) throw new ArgumentException("Provided empty key", nameof(key));
@@ -281,7 +281,7 @@ namespace VaultCrypt
                 }
             }
 
-            public SecureBuffer.SecureLargeBuffer DecryptBytes(ReadOnlySpan<byte> data, ReadOnlySpan<byte> key)
+            public ISecureBuffer DecryptBytes(ReadOnlySpan<byte> data, ReadOnlySpan<byte> key)
             {
                 if (data.IsEmpty) throw new ArgumentException("Provided empty data", nameof(data));
                 if (key.IsEmpty) throw new ArgumentException("Provided empty key", nameof(key));
@@ -309,7 +309,7 @@ namespace VaultCrypt
         {
             public short ExtraEncryptionDataSize => 28;
             public EncryptedOutputOrder EncryptedOutputOrder => EncryptedOutputOrder.IV_Data_Tag;
-            public SecureBuffer.SecureLargeBuffer EncryptBytes(ReadOnlySpan<byte> data, ReadOnlySpan<byte> key)
+            public ISecureBuffer EncryptBytes(ReadOnlySpan<byte> data, ReadOnlySpan<byte> key)
             {
                 if (data.IsEmpty) throw new ArgumentException("Provided empty data", nameof(data));
                 if (key.IsEmpty) throw new ArgumentException("Provided empty key", nameof(key));
@@ -341,7 +341,7 @@ namespace VaultCrypt
                 }
             }
 
-            public SecureBuffer.SecureLargeBuffer DecryptBytes(ReadOnlySpan<byte> data, ReadOnlySpan<byte> key)
+            public ISecureBuffer DecryptBytes(ReadOnlySpan<byte> data, ReadOnlySpan<byte> key)
             {
                 if (data.IsEmpty) throw new ArgumentException("Provided empty data", nameof(data));
                 if (key.IsEmpty) throw new ArgumentException("Provided empty key", nameof(key));
@@ -383,7 +383,7 @@ namespace VaultCrypt
             public short ExtraEncryptionDataSize => 76;
             public EncryptedOutputOrder EncryptedOutputOrder => EncryptedOutputOrder.IV_Data_Tag;
 
-            public SecureBuffer.SecureLargeBuffer EncryptBytes(ReadOnlySpan<byte> data, ReadOnlySpan<byte> key)
+            public ISecureBuffer EncryptBytes(ReadOnlySpan<byte> data, ReadOnlySpan<byte> key)
             {
                 if (data.IsEmpty) throw new ArgumentException("Provided empty data", nameof(data));
                 if (key.IsEmpty) throw new ArgumentException("Provided empty key", nameof(key));
@@ -425,7 +425,7 @@ namespace VaultCrypt
 
             /// <inheritdoc/>
             /// <exception cref="VaultDecryptionException">Thrown when calculated HMAC does not equal the expected HMAC</exception>
-            public SecureBuffer.SecureLargeBuffer DecryptBytes(ReadOnlySpan<byte> data, ReadOnlySpan<byte> key)
+            public ISecureBuffer DecryptBytes(ReadOnlySpan<byte> data, ReadOnlySpan<byte> key)
             {
                 if (data.IsEmpty) throw new ArgumentException("Provided empty data", nameof(data));
                 if (key.IsEmpty) throw new ArgumentException("Provided empty key", nameof(key));
@@ -470,7 +470,7 @@ namespace VaultCrypt
             public short ExtraEncryptionDataSize => 76;
             public EncryptedOutputOrder EncryptedOutputOrder => EncryptedOutputOrder.IV_Data_Tag;
 
-            public SecureBuffer.SecureLargeBuffer EncryptBytes(ReadOnlySpan<byte> data, ReadOnlySpan<byte> key)
+            public ISecureBuffer EncryptBytes(ReadOnlySpan<byte> data, ReadOnlySpan<byte> key)
             {
                 if (data.IsEmpty) throw new ArgumentException("Provided empty data", nameof(data));
                 if (key.IsEmpty) throw new ArgumentException("Provided empty key", nameof(key));
@@ -510,7 +510,7 @@ namespace VaultCrypt
 
             /// <inheritdoc/>
             /// <exception cref="VaultDecryptionException">Thrown when calculated HMAC does not equal the expected HMAC</exception>
-            public SecureBuffer.SecureLargeBuffer DecryptBytes(ReadOnlySpan<byte> data, ReadOnlySpan<byte> key)
+            public ISecureBuffer DecryptBytes(ReadOnlySpan<byte> data, ReadOnlySpan<byte> key)
             {
                 if (data.IsEmpty) throw new ArgumentException("Provided empty data", nameof(data));
                 if (key.IsEmpty) throw new ArgumentException("Provided empty key", nameof(key));
@@ -547,7 +547,7 @@ namespace VaultCrypt
         {
             public short ExtraEncryptionDataSize => 28;
             public EncryptedOutputOrder EncryptedOutputOrder => EncryptedOutputOrder.IV_Data_Tag;
-            public SecureBuffer.SecureLargeBuffer EncryptBytes(ReadOnlySpan<byte> data, ReadOnlySpan<byte> key)
+            public ISecureBuffer EncryptBytes(ReadOnlySpan<byte> data, ReadOnlySpan<byte> key)
             {
                 if (data.IsEmpty) throw new ArgumentException("Provided empty data", nameof(data));
                 if (key.IsEmpty) throw new ArgumentException("Provided empty key", nameof(key));
@@ -579,7 +579,7 @@ namespace VaultCrypt
                 }
             }
 
-            public SecureBuffer.SecureLargeBuffer DecryptBytes(ReadOnlySpan<byte> data, ReadOnlySpan<byte> key)
+            public ISecureBuffer DecryptBytes(ReadOnlySpan<byte> data, ReadOnlySpan<byte> key)
             {
                 if (data.IsEmpty) throw new ArgumentException("Provided empty data", nameof(data));
                 if (key.IsEmpty) throw new ArgumentException("Provided empty key", nameof(key));
@@ -618,7 +618,7 @@ namespace VaultCrypt
         {
             public short ExtraEncryptionDataSize => 76;
             public EncryptedOutputOrder EncryptedOutputOrder => EncryptedOutputOrder.IV_Data_Tag;
-            public SecureBuffer.SecureLargeBuffer EncryptBytes(ReadOnlySpan<byte> data, ReadOnlySpan<byte> key)
+            public ISecureBuffer EncryptBytes(ReadOnlySpan<byte> data, ReadOnlySpan<byte> key)
             {
                 if (data.IsEmpty) throw new ArgumentException("Provided empty data", nameof(data));
                 if (key.IsEmpty) throw new ArgumentException("Provided empty key", nameof(key));
@@ -658,7 +658,7 @@ namespace VaultCrypt
 
             /// <inheritdoc/>
             /// <exception cref="VaultDecryptionException">Thrown when calculated HMAC does not equal the expected HMAC</exception>
-            public SecureBuffer.SecureLargeBuffer DecryptBytes(ReadOnlySpan<byte> data, ReadOnlySpan<byte> key)
+            public ISecureBuffer DecryptBytes(ReadOnlySpan<byte> data, ReadOnlySpan<byte> key)
             {
                 if (data.IsEmpty) throw new ArgumentException("Provided empty data", nameof(data));
                 if (key.IsEmpty) throw new ArgumentException("Provided empty key", nameof(key));
@@ -695,7 +695,7 @@ namespace VaultCrypt
         {
             public short ExtraEncryptionDataSize => 28;
             public EncryptedOutputOrder EncryptedOutputOrder => EncryptedOutputOrder.IV_Data_Tag;
-            public SecureBuffer.SecureLargeBuffer EncryptBytes(ReadOnlySpan<byte> data, ReadOnlySpan<byte> key)
+            public ISecureBuffer EncryptBytes(ReadOnlySpan<byte> data, ReadOnlySpan<byte> key)
             {
                 if (data.IsEmpty) throw new ArgumentException("Provided empty data", nameof(data));
                 if (key.IsEmpty) throw new ArgumentException("Provided empty key", nameof(key));
@@ -727,7 +727,7 @@ namespace VaultCrypt
                 }
             }
 
-            public SecureBuffer.SecureLargeBuffer DecryptBytes(ReadOnlySpan<byte> data, ReadOnlySpan<byte> key)
+            public ISecureBuffer DecryptBytes(ReadOnlySpan<byte> data, ReadOnlySpan<byte> key)
             {
                 if (data.IsEmpty) throw new ArgumentException("Provided empty data", nameof(data));
                 if (key.IsEmpty) throw new ArgumentException("Provided empty key", nameof(key));
@@ -766,7 +766,7 @@ namespace VaultCrypt
         {
             public short ExtraEncryptionDataSize => 28;
             public EncryptedOutputOrder EncryptedOutputOrder => EncryptedOutputOrder.IV_Data_Tag;
-            public SecureBuffer.SecureLargeBuffer EncryptBytes(ReadOnlySpan<byte> data, ReadOnlySpan<byte> key)
+            public ISecureBuffer EncryptBytes(ReadOnlySpan<byte> data, ReadOnlySpan<byte> key)
             {
                 if (data.IsEmpty) throw new ArgumentException("Provided empty data", nameof(data));
                 if (key.IsEmpty) throw new ArgumentException("Provided empty key", nameof(key));
@@ -798,7 +798,7 @@ namespace VaultCrypt
                 }
             }
 
-            public SecureBuffer.SecureLargeBuffer DecryptBytes(ReadOnlySpan<byte> data, ReadOnlySpan<byte> key)
+            public ISecureBuffer DecryptBytes(ReadOnlySpan<byte> data, ReadOnlySpan<byte> key)
             {
                 if (data.IsEmpty) throw new ArgumentException("Provided empty data", nameof(data));
                 if (key.IsEmpty) throw new ArgumentException("Provided empty key", nameof(key));
@@ -837,7 +837,7 @@ namespace VaultCrypt
         {
             public short ExtraEncryptionDataSize => 76;
             public EncryptedOutputOrder EncryptedOutputOrder => EncryptedOutputOrder.IV_Data_Tag;
-            public SecureBuffer.SecureLargeBuffer EncryptBytes(ReadOnlySpan<byte> data, ReadOnlySpan<byte> key)
+            public ISecureBuffer EncryptBytes(ReadOnlySpan<byte> data, ReadOnlySpan<byte> key)
             {
                 if (data.IsEmpty) throw new ArgumentException("Provided empty data", nameof(data));
                 if (key.IsEmpty) throw new ArgumentException("Provided empty key", nameof(key));
@@ -877,7 +877,7 @@ namespace VaultCrypt
 
             /// <inheritdoc/>
             /// <exception cref="VaultDecryptionException">Thrown when calculated HMAC does not equal the expected HMAC</exception>
-            public SecureBuffer.SecureLargeBuffer DecryptBytes(ReadOnlySpan<byte> data, ReadOnlySpan<byte> key)
+            public ISecureBuffer DecryptBytes(ReadOnlySpan<byte> data, ReadOnlySpan<byte> key)
             {
                 if (data.IsEmpty) throw new ArgumentException("Provided empty data", nameof(data));
                 if (key.IsEmpty) throw new ArgumentException("Provided empty key", nameof(key));
@@ -914,7 +914,7 @@ namespace VaultCrypt
         {
             public short ExtraEncryptionDataSize => 88;
             public EncryptedOutputOrder EncryptedOutputOrder => EncryptedOutputOrder.IV_Data_Tag;
-            public SecureBuffer.SecureLargeBuffer EncryptBytes(ReadOnlySpan<byte> data, ReadOnlySpan<byte> key)
+            public ISecureBuffer EncryptBytes(ReadOnlySpan<byte> data, ReadOnlySpan<byte> key)
             {
                 if (data.IsEmpty) throw new ArgumentException("Provided empty data", nameof(data));
                 if (key.IsEmpty) throw new ArgumentException("Provided empty key", nameof(key));
@@ -954,7 +954,7 @@ namespace VaultCrypt
 
             /// <inheritdoc/>
             /// <exception cref="VaultDecryptionException">Thrown when calculated HMAC does not equal the expected HMAC</exception>
-            public SecureBuffer.SecureLargeBuffer DecryptBytes(ReadOnlySpan<byte> data, ReadOnlySpan<byte> key)
+            public ISecureBuffer DecryptBytes(ReadOnlySpan<byte> data, ReadOnlySpan<byte> key)
             {
                 if (data.IsEmpty) throw new ArgumentException("Provided empty data", nameof(data));
                 if (key.IsEmpty) throw new ArgumentException("Provided empty key", nameof(key));
