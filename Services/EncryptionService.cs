@@ -101,7 +101,7 @@ namespace VaultCrypt.Services
             ArgumentNullException.ThrowIfNull(context);
 
             var tasks = new List<Task>();
-            var results = new ConcurrentDictionary<ulong, SecureBuffer.SecureLargeBuffer>();
+            var results = new ConcurrentDictionary<ulong, ISecureBuffer>();
             ulong nextToWrite = 0;
             ulong chunkIndex = 0;
 

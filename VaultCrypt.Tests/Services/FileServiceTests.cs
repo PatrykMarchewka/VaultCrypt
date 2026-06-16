@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Linq;
@@ -16,14 +16,14 @@ namespace VaultCrypt.Tests.Services
         [Fact]
         internal void WriteReadyChunkWritesToStream()
         {
-            SecureBuffer.SecureLargeBuffer buffer = new SecureBuffer.SecureLargeBuffer(100);
-            SecureBuffer.SecureLargeBuffer copy = new SecureBuffer.SecureLargeBuffer(100);
+            ISecureBuffer buffer = SecureBuffer.Create(100);
+            ISecureBuffer copy = SecureBuffer.Create(100);
             try
             {
                 RandomNumberGenerator.Fill(buffer.AsSpan);
                 buffer.AsSpan.CopyTo(copy.AsSpan);
                 ulong nextToWrite = 0;
-                var dictionary = new ConcurrentDictionary<ulong, SecureBuffer.SecureLargeBuffer>() { [0] = buffer };
+                var dictionary = new ConcurrentDictionary<ulong, ISecureBuffer>() { [0] = buffer };
                 var stream = new MemoryStream();
 
                 _service.WriteReadyChunk(dictionary, ref nextToWrite, 0, stream, new object());

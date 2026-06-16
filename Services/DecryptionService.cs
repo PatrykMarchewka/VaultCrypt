@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.IO;
@@ -109,7 +109,7 @@ namespace VaultCrypt.Services
             ArgumentNullException.ThrowIfNull(context);
 
             var tasks = new List<Task>();
-            var results = new ConcurrentDictionary<ulong, SecureBuffer.SecureLargeBuffer>();
+            var results = new ConcurrentDictionary<ulong, ISecureBuffer>();
             int concurrentChunkCount = _systemService.CalculateConcurrency(true, chunkInformation.ChunkSize);
             ulong nextToWrite = 0;
             ulong chunkIndex = 0;
@@ -157,7 +157,7 @@ namespace VaultCrypt.Services
                     tasks.Add(Task.Run(async () =>
                     {
                         context.CancellationToken.ThrowIfCancellationRequested();
-                        SecureBuffer.SecureLargeBuffer decryptedChunk = null!;
+                        ISecureBuffer decryptedChunk = null!;
                         try
                         {
                             decryptedChunk = provider.EncryptionAlgorithm.DecryptBytes(currentChunk.AsSpan, _session.KEY.AsSpan[..provider.KeySize]);
