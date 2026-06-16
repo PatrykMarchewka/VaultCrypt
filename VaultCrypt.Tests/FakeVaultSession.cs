@@ -36,7 +36,7 @@ namespace VaultCrypt.Tests
             return session;
         }
 
-        public SecureBuffer.SecureKeyBuffer KEY { get; set; }
+        public ISecureBuffer KEY { get; set; }
 
         public NormalizedPath VAULTPATH { get; set; }
 

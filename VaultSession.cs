@@ -17,7 +17,7 @@ namespace VaultCrypt
         /// <summary>
         /// Key used to encrypt/decrypt data
         /// </summary>
-        public SecureBuffer.SecureKeyBuffer KEY { get; }
+        public ISecureBuffer KEY { get; }
         /// <summary>
         /// Path to vault file
         /// </summary>
@@ -59,7 +59,7 @@ namespace VaultCrypt
     public class VaultSession : IVaultSession
     {
 
-        public SecureBuffer.SecureKeyBuffer KEY { get; private set; }
+        public ISecureBuffer KEY { get; private set; }
         public NormalizedPath VAULTPATH { get; private set; }
         public Dictionary<long, EncryptedFileInfo> ENCRYPTED_FILES { get; private set; }
         public IVaultReader VAULT_READER { get; private set; }
