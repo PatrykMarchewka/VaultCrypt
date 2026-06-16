@@ -36,7 +36,7 @@ namespace VaultCrypt.Tests
         {
             _session.Dispose();
 
-            Assert.True(_session.KEY.AsSpan.SequenceEqual(new byte[_session.KEY.Length]));
+            Assert.True(_session.KEY.AsSpan.IndexOfAnyExcept((byte)0) == -1);
             Assert.Empty(_session.ENCRYPTED_FILES);
             Assert.Empty(_session.VAULTPATH);
             Assert.Null(_session.VAULT_READER);
