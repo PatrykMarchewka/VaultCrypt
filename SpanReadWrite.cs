@@ -1,7 +1,8 @@
-using System;
+﻿using System;
 using System.Buffers.Binary;
 using System.Collections.Generic;
 using System.Linq;
+using System.Runtime.InteropServices;
 using System.Text;
 using System.Threading.Tasks;
 
@@ -117,13 +118,25 @@ namespace VaultCrypt
         /// <summary>
         /// Writes span and advances index by its length
         /// </summary>
-        /// <param name="value">ReadOnlySpan to write</param>
+        /// <param name="value">Span to write</param>
         /// <exception cref="InvalidOperationException">Thrown when <paramref name="value"/> cannot fit in the Span</exception>
         public void WriteSpan(ReadOnlySpan<byte> value)
         {
             if(_index + value.Length > _data.Length) throw new InvalidOperationException("Cannot write past Span length");
             value.CopyTo(_data.Slice(_index));
             _index += value.Length;
+        }
+
+        /// <inheritdoc cref="WriteSpan(ReadOnlySpan{byte})"/>
+        public void WriteSpan(Span<byte> value)
+        {
+            WriteSpan((ReadOnlySpan<byte>)value);
+        }
+
+        /// <inheritdoc cref="WriteSpan(ReadOnlySpan{byte})"/>
+        public void WriteSpan<T>(Span<T> value) where T : struct
+        {
+            WriteSpan(MemoryMarshal.AsBytes(value));
         }
 
         /// <summary>

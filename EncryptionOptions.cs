@@ -172,9 +172,10 @@ namespace VaultCrypt
             public static ISecureBuffer SerializeChunkInformation(ChunkInformation chunkInformation)
             {
                 ISecureBuffer chunkBytes = SecureBuffer.Create(14);
-                BinaryPrimitives.WriteUInt16LittleEndian(chunkBytes.AsSpan.Slice(0, 2), chunkInformation.ChunkSize);
-                BinaryPrimitives.WriteUInt64LittleEndian(chunkBytes.AsSpan.Slice(2, 8), chunkInformation.TotalChunks);
-                BinaryPrimitives.WriteUInt32LittleEndian(chunkBytes.AsSpan.Slice(10, 4), chunkInformation.FinalChunkSize);
+                SpanWriter writer = new SpanWriter(chunkBytes.AsSpan);
+                writer.WriteUInt16(chunkInformation.ChunkSize);
+                writer.WriteUInt64(chunkInformation.TotalChunks);
+                writer.WriteUInt32(chunkInformation.FinalChunkSize);
                 return chunkBytes;
             }
 

@@ -454,8 +454,9 @@ namespace VaultCrypt
             try
             {
                 ISecureBuffer offsetsBuffer = SecureBuffer.Create(sizeof(ushort) + (distinctOffsets.Length * sizeof(long)));
-                BinaryPrimitives.WriteUInt16LittleEndian(offsetsBuffer.AsSpan, (ushort)distinctOffsets.Length);
-                MemoryMarshal.AsBytes(distinctOffsets.AsSpan()).CopyTo(offsetsBuffer.AsSpan.Slice(sizeof(ushort)));
+                SpanWriter writer = new SpanWriter(offsetsBuffer.AsSpan);
+                writer.WriteUInt16(checked((ushort)distinctOffsets.Length));
+                writer.WriteSpan(distinctOffsets.AsSpan());
                 return offsetsBuffer;
             }
             finally
