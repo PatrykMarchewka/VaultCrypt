@@ -24,20 +24,20 @@ namespace VaultCrypt
         {
             public byte Version { get; private set; } //Fixed 1 byte, version of the FileEncryptionOptions
             public ushort NameLength { get; private set; } //Fixed 2 bytes, length of fileName text
-            public SecureBuffer.SecureLargeBuffer FileName { get; private set; } //Varying length (read from nameLength), file name with extension!
+            public ISecureBuffer FileName { get; private set; } //Varying length (read from nameLength), file name with extension!
             public ulong FileSize { get; private set; } //Fixed 8 bytes, Size in bytes of encrypted file, with extra encryption metadata
             public byte EncryptionAlgorithm { get; private set; } //Fixed 1 byte, Encryption algorithm ID
             public bool IsChunked { get; private set; } //Fixed 1 byte, Whether file is chunked or not
             public ChunkInformation? ChunkInformation { get; private set; } //Fixed 14 bytes (2 bytes chunk size + 8 bytes total chunks count + 4 bytes final chunk size)
 
-            public FileEncryptionOptions(byte version, SecureBuffer.SecureLargeBuffer fileName, ulong fileSize, byte algorithm, bool chunked, ChunkInformation? chunkInformation)
+            public FileEncryptionOptions(byte version, ISecureBuffer fileName, ulong fileSize, byte algorithm, bool chunked, ChunkInformation? chunkInformation)
             {
                 try
                 {
                     if (chunked && chunkInformation is null) throw new ArgumentException("Chunk information cannot be null if chunk flag is set to true");
 
                     Version = version;
-                    NameLength = checked((ushort)fileName.Length);
+                    NameLength = checked((ushort)fileName.AsSpan.Length);
                     FileName = fileName;
                     FileSize = fileSize;
                     EncryptionAlgorithm = algorithm;
@@ -63,9 +63,9 @@ namespace VaultCrypt
                 return Encoding.UTF8.GetString(this.FileName.AsSpan);
             }
 
-            private static SecureBuffer.SecureLargeBuffer SetFileName(string fileName)
+            private static ISecureBuffer SetFileName(string fileName)
             {
-                var buffer = new SecureBuffer.SecureLargeBuffer(Encoding.UTF8.GetByteCount(fileName));
+                var buffer = SecureBuffer.Create(Encoding.UTF8.GetByteCount(fileName));
                 Encoding.UTF8.GetBytes(fileName, buffer.AsSpan);
 
                 return buffer;
@@ -103,20 +103,20 @@ namespace VaultCrypt
                 bufferSpan.WriteByte(encryptionOptions.IsChunked ? (byte)1 : (byte)0);
                 if (encryptionOptions.IsChunked)
                 {
-                    using (SecureBuffer.SecureLargeBuffer chunkInfo = ChunkInformation.SerializeChunkInformation(encryptionOptions.ChunkInformation!))
+                    using (ISecureBuffer chunkInfo = ChunkInformation.SerializeChunkInformation(encryptionOptions.ChunkInformation!))
                     {
                         bufferSpan.WriteSpan(chunkInfo.AsSpan);
                     }
                 }
             }
 
-            public static SecureBuffer.SecureLargeBuffer SerializeFileEncryptionOptions(FileEncryptionOptions encryptionOptions)
+            public static ISecureBuffer SerializeFileEncryptionOptions(FileEncryptionOptions encryptionOptions)
             {
                 ArgumentNullException.ThrowIfNull(encryptionOptions);
 
                 int resultSize = sizeof(byte) + sizeof(ushort) + encryptionOptions.NameLength + sizeof(ulong) + sizeof(byte) + sizeof(byte);
                 if (encryptionOptions.IsChunked) resultSize += ChunkInformation.ChunkInformationSize;
-                SecureBuffer.SecureLargeBuffer buffer = new SecureBuffer.SecureLargeBuffer(resultSize);
+                ISecureBuffer buffer = SecureBuffer.Create(resultSize);
                 try
                 {
                     WriteFileEncryptionOptionsToSpan(encryptionOptions, buffer.AsSpan);
@@ -169,9 +169,9 @@ namespace VaultCrypt
                 this.FinalChunkSize = finalChunkSize;
             }
 
-            public static SecureBuffer.SecureLargeBuffer SerializeChunkInformation(ChunkInformation chunkInformation)
+            public static ISecureBuffer SerializeChunkInformation(ChunkInformation chunkInformation)
             {
-                SecureBuffer.SecureLargeBuffer chunkBytes = new SecureBuffer.SecureLargeBuffer(14);
+                ISecureBuffer chunkBytes = SecureBuffer.Create(14);
                 BinaryPrimitives.WriteUInt16LittleEndian(chunkBytes.AsSpan.Slice(0, 2), chunkInformation.ChunkSize);
                 BinaryPrimitives.WriteUInt64LittleEndian(chunkBytes.AsSpan.Slice(2, 8), chunkInformation.TotalChunks);
                 BinaryPrimitives.WriteUInt32LittleEndian(chunkBytes.AsSpan.Slice(10, 4), chunkInformation.FinalChunkSize);
