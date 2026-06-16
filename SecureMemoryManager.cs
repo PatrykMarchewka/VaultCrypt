@@ -35,7 +35,7 @@ namespace VaultCrypt
         public override Span<byte> GetSpan()
         {
             //Volatile read to ensure that Main and GC threads dont overlap and read wrong value
-            ObjectDisposedException.ThrowIf(Volatile.Read(ref _disposed) == 1, nameof(SecureLargeBuffer));
+            ObjectDisposedException.ThrowIf(Volatile.Read(ref _disposed) == 1, nameof(SecureUnmanagedMemoryManager));
             return new Span<byte>(_pointer, _length);
         }
 
@@ -45,9 +45,12 @@ namespace VaultCrypt
         /// <param name="elementIndex">Offset in bytes from the start of the memory</param>
         /// <returns>Memory handle struct holding the pointer with the added <paramref name="elementIndex"/> offset</returns>
         /// <exception cref="ObjectDisposedException">Thrown when the object is marked as already disposed</exception>
-        public override MemoryHandle Pin(int elementIndex = 0){
+        /// <exception cref="ArgumentOutOfRangeException">Thrown when trying to pin memory outside allowed memory region</exception>
+        public override MemoryHandle Pin(int elementIndex = 0)
+        {
             //Volatile read to ensure that Main and GC threads dont overlap and read wrong value
-            ObjectDisposedException.ThrowIf(Volatile.Read(ref _disposed) == 1, nameof(SecureLargeBuffer));
+            ObjectDisposedException.ThrowIf(Volatile.Read(ref _disposed) == 1, nameof(SecureUnmanagedMemoryManager));
+            ArgumentOutOfRangeException.ThrowIfGreaterThan(elementIndex, _length);
             return new MemoryHandle(_pointer + elementIndex);
         }
 

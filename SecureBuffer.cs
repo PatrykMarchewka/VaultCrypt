@@ -24,6 +24,12 @@ namespace VaultCrypt
         /// </summary>
         /// <exception cref="ObjectDisposedException">Thrown when the object is marked as already disposed</exception>
         public Span<byte> AsSpan { get; }
+
+        /// <summary>
+        /// Creates a new memory struct over memory region
+        /// </summary>
+        /// <exception cref="ObjectDisposedException">Thrown when the object is marked as already disposed</exception>
+        public Memory<byte> AsMemory { get; }
     }
 
 
@@ -102,6 +108,20 @@ namespace VaultCrypt
                     //Volatile read to ensure that Main and GC threads dont overlap and read wrong value
                     ObjectDisposedException.ThrowIf(Volatile.Read(ref _disposed) == 1, nameof(SecureKeyBuffer));
                     return new Span<byte>(_pointer, _availableLength);
+                }
+            }
+
+            /// <summary>
+            /// Creates a new instance of <see cref="SecureUnmanagedMemoryManager"/> and returns memory block
+            /// </summary>
+            /// <exception cref="ObjectDisposedException">Thrown when the object is marked as already disposed</exception>
+            public Memory<byte> AsMemory
+            {
+                get
+                {
+                    //Volatile read to ensure that Main and GC threads dont overlap and read wrong value
+                    ObjectDisposedException.ThrowIf(Volatile.Read(ref _disposed) == 1, nameof(SecureKeyBuffer));
+                    return new SecureUnmanagedMemoryManager(_pointer, _availableLength).Memory;
                 }
             }
 
