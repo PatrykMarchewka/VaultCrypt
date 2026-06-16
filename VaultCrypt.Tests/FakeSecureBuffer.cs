@@ -10,6 +10,7 @@ namespace VaultCrypt.Tests
     {
         public bool LengthWasCalled = false;
         public bool AsSpanWasCalled = false;
+        public bool AsMemoryWasCalled = false;
         public bool DisposeWasCalled = false;
         private bool Empty;
         
@@ -35,9 +36,18 @@ namespace VaultCrypt.Tests
             else return new byte[1];
         }
 
+        private Memory<byte> GetMemory()
+        {
+            AsMemoryWasCalled = true;
+            if (Empty) return Memory<byte>.Empty;
+            else return new byte[1];
+        }
+
         public int Length => GetLength();
 
         public Span<byte> AsSpan => GetSpan();
+
+        public Memory<byte> AsMemory => GetMemory();
 
         public void Dispose()
         {
