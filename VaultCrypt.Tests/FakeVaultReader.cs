@@ -36,13 +36,13 @@ namespace VaultCrypt.Tests
 
         public void PopulateEncryptedFilesList(Stream stream) => PopulateEncryptedFilesListWasCalled = true;
 
-        public SecureBuffer.SecureLargeBuffer PrepareVaultHeader(ReadOnlySpan<byte> salt, int iterations)
+        public ISecureBuffer PrepareVaultHeader(ReadOnlySpan<byte> salt, int iterations)
         {
             PrepareVaultHeaderWasCalled = true;
             return null!;
         }
 
-        public SecureBuffer.SecureLargeBuffer ReadAndDecryptData(Stream stream, long offset, int length)
+        public ISecureBuffer ReadAndDecryptData(Stream stream, long offset, int length)
         {
             ReadAndDecryptMetadataWasCalled = true;
             return null!;
@@ -60,7 +60,7 @@ namespace VaultCrypt.Tests
             return new long[0];
         }
 
-        public SecureBuffer.SecureLargeBuffer ReadSalt(Stream stream)
+        public ISecureBuffer ReadSalt(Stream stream)
         {
             ReadSaltWasCalled = true;
             return null!;

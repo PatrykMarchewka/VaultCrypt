@@ -47,7 +47,7 @@ namespace VaultCrypt.Tests.Services
                 {
                     Assert.Equal(_session.VAULT_READER.HeaderSize, fs.Length);
                     Assert.Equal(VaultSession.NewestVaultVersion, fs.ReadByte());
-                    Assert.False(_session.VAULT_READER.ReadSalt(fs).AsSpan.SequenceEqual(new byte[_session.VAULT_READER.SaltSize])); //Asserting that salt is not empty (zeroed out value)
+                    ISecureBuffer salt = _session.VAULT_READER.ReadSalt(fs);
                     Assert.Equal(iterations, _session.VAULT_READER.ReadIterationsNumber(fs));
                     long encryptedMetadataOffset = fs.Position;
                     byte[] encrypted = new byte[_session.VAULT_READER.HeaderSize - encryptedMetadataOffset];

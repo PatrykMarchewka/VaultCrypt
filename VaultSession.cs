@@ -182,7 +182,7 @@ namespace VaultCrypt
         /// <param name="stream">Stream to vault file to read from</param>
         /// <returns>Salt read from <paramref name="stream"/></returns>
         /// <exception cref="ArgumentNullException">Thrown when <paramref name="stream"/> is null</exception>
-        public SecureBuffer.SecureLargeBuffer ReadSalt(Stream stream);
+        public ISecureBuffer ReadSalt(Stream stream);
 
         /// <summary>
         /// Reads password iteration number from vault header
@@ -200,7 +200,7 @@ namespace VaultCrypt
         /// <returns>Array containing <see cref="Version"/>, <paramref name="salt"/> and <paramref name="iterations"/></returns>
         /// <exception cref="ArgumentException">Thrown when <paramref name="salt"/> is empty</exception>
         /// <exception cref="ArgumentOutOfRangeException">Thrown when <paramref name="iterations"/> is set to negative value or zero</exception>
-        public SecureBuffer.SecureLargeBuffer PrepareVaultHeader(ReadOnlySpan<byte> salt, int iterations);
+        public ISecureBuffer PrepareVaultHeader(ReadOnlySpan<byte> salt, int iterations);
 
         /// <summary>
         /// Reads and decrypts metadata offsets
@@ -245,7 +245,7 @@ namespace VaultCrypt
         /// <returns>Decrypted information</returns>
         /// <exception cref="ArgumentNullException">Thrown when <paramref name="stream"/> is set to null</exception>
         /// <exception cref="ArgumentOutOfRangeException">Thrown when <paramref name="offset"/> is set to negative value or <paramref name="length"/> is set to negative or zero value</exception>
-        public SecureBuffer.SecureLargeBuffer ReadAndDecryptData(Stream stream, long offset, int length);
+        public ISecureBuffer ReadAndDecryptData(Stream stream, long offset, int length);
 
         /// <summary>
         /// Encrypts <paramref name="data"/> using <see cref="VaultEncryptionAlgorithm"/>
@@ -297,11 +297,11 @@ namespace VaultCrypt
         }
 
         #region Vault header
-        public SecureBuffer.SecureLargeBuffer ReadSalt(Stream stream)
+        public ISecureBuffer ReadSalt(Stream stream)
         {
             ArgumentNullException.ThrowIfNull(stream);
 
-            SecureBuffer.SecureLargeBuffer salt = new SecureBuffer.SecureLargeBuffer(SaltSize);
+            ISecureBuffer salt = SecureBuffer.Create(SaltSize);
             try
             {
                 stream.Seek(1, SeekOrigin.Begin);
@@ -330,12 +330,12 @@ namespace VaultCrypt
                 CryptographicOperations.ZeroMemory(iterationBytes);
             }
         }
-        public SecureBuffer.SecureLargeBuffer PrepareVaultHeader(ReadOnlySpan<byte> salt, int iterations)
+        public ISecureBuffer PrepareVaultHeader(ReadOnlySpan<byte> salt, int iterations)
         {
             if (salt.IsEmpty) throw new ArgumentException("Provided empty salt", nameof(salt));
             ArgumentOutOfRangeException.ThrowIfNegativeOrZero(iterations);
 
-            SecureBuffer.SecureLargeBuffer buffer = new SecureBuffer.SecureLargeBuffer(1 + SaltSize + sizeof(int));
+            ISecureBuffer buffer = SecureBuffer.Create(1 + SaltSize + sizeof(int));
             try
             {
                 buffer.AsSpan[0] = Version;
@@ -343,7 +343,7 @@ namespace VaultCrypt
                 BinaryPrimitives.WriteInt32LittleEndian(buffer.AsSpan.Slice(1 + SaltSize, sizeof(int)), iterations);
                 return buffer;
             }
-            catch(Exception)
+            catch (Exception)
             {
                 buffer.Dispose();
                 throw;
@@ -446,13 +446,14 @@ namespace VaultCrypt
             }
         }
 
-        private SecureBuffer.SecureLargeBuffer PrepareMetadataOffsets(long[] offsets)
+        //Converts offsets into ISecureBuffer holding metadata
+        private ISecureBuffer PrepareMetadataOffsets(long[] offsets)
         {
             //Remove all duplicates and offsets pointing to 0
             long[] distinctOffsets = [.. offsets.Distinct().Where(offset => offset != 0)];
             try
             {
-                SecureBuffer.SecureLargeBuffer offsetsBuffer = new SecureBuffer.SecureLargeBuffer(sizeof(ushort) + (distinctOffsets.Length * sizeof(long)));
+                ISecureBuffer offsetsBuffer = SecureBuffer.Create(sizeof(ushort) + (distinctOffsets.Length * sizeof(long)));
                 BinaryPrimitives.WriteUInt16LittleEndian(offsetsBuffer.AsSpan, (ushort)distinctOffsets.Length);
                 MemoryMarshal.AsBytes(distinctOffsets.AsSpan()).CopyTo(offsetsBuffer.AsSpan.Slice(sizeof(ushort)));
                 return offsetsBuffer;
@@ -464,15 +465,11 @@ namespace VaultCrypt
             
         }
 
-        /// <summary>
-        /// Pads supplied <paramref name="metadataOffsets"/> to <see cref="MetadataOffsetsSize"/> and encrypts the entire collection
-        /// </summary>
-        /// <param name="metadataOffsets"></param>
-        /// <returns></returns>
-        private SecureBuffer.SecureLargeBuffer PadMetadataOffsetsAndEncrypt(SecureBuffer.SecureLargeBuffer metadataOffsets)
+        //Pads supplied metadataOffsets to match session's metadataoffset size and encrypts the entire collection
+        private ISecureBuffer PadMetadataOffsetsAndEncrypt(ISecureBuffer metadataOffsets)
         {
-            SecureBuffer.SecureLargeBuffer paddedMetadataOffsets = new SecureBuffer.SecureLargeBuffer(sizeof(ushort) + MetadataOffsetsSize); //2 bytes ushort for number of currently attached offsets
-            SecureBuffer.SecureLargeBuffer encryptedMetadataOffsets = null!;
+            ISecureBuffer paddedMetadataOffsets = SecureBuffer.Create(sizeof(ushort) + MetadataOffsetsSize); //2 bytes ushort for number of currently attached offsets
+            ISecureBuffer encryptedMetadataOffsets = null!;
             try
             {
                 metadataOffsets.AsSpan.CopyTo(paddedMetadataOffsets.AsSpan);
@@ -523,7 +520,7 @@ namespace VaultCrypt
             ArgumentOutOfRangeException.ThrowIfNegative(offset);
             ArgumentOutOfRangeException.ThrowIfNegativeOrZero(length);
 
-            using (SecureBuffer.SecureLargeBuffer buffer = new SecureBuffer.SecureLargeBuffer(length))
+            using (ISecureBuffer buffer = SecureBuffer.Create(length))
             {
                 stream.Seek(offset, SeekOrigin.Begin);
                 stream.ReadExactly(buffer.AsSpan);

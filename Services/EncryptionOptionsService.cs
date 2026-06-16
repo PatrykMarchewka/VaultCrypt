@@ -109,7 +109,7 @@ namespace VaultCrypt.Services
 
             IVaultReader vaultReader = _session.VAULT_READER;
 
-            using (SecureBuffer.SecureLargeBuffer decryptedMetadata = vaultReader.ReadAndDecryptData(vaultFS, metadataOffset, vaultReader.EncryptionOptionsSize))
+            using (ISecureBuffer decryptedMetadata = vaultReader.ReadAndDecryptData(vaultFS, metadataOffset, vaultReader.EncryptionOptionsSize))
             {
                 return EncryptionOptions.FileEncryptionOptionsReader.Deserialize(decryptedMetadata.AsSpan);
             }
