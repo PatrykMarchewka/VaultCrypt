@@ -52,8 +52,8 @@ namespace VaultCrypt.Tests
             ReadOnlySpan<byte> firstHalf = randomData.AsSpan().Slice(0, 5);
             ReadOnlySpan<byte> secondHalf = randomData.AsSpan().Slice(5, 5);
 
-            using SecureBuffer.SecureLargeBuffer actualFirstHalf = reader.ReadBytes(5);
-            using SecureBuffer.SecureLargeBuffer actualSecondHalf = reader.ReadBytes(5);
+            using ISecureBuffer actualFirstHalf = reader.ReadBytes(5);
+            using ISecureBuffer actualSecondHalf = reader.ReadBytes(5);
 
             Assert.True(firstHalf.SequenceEqual(actualFirstHalf.AsSpan));
             Assert.True(secondHalf.SequenceEqual(actualSecondHalf.AsSpan));
@@ -178,7 +178,7 @@ namespace VaultCrypt.Tests
             expectedIndex += 8;
 
             byte[] expectedBytes = randomData[expectedIndex..];
-            using (SecureBuffer.SecureLargeBuffer actualBytes = reader.ReadBytes(size - expectedIndex))
+            using (ISecureBuffer actualBytes = reader.ReadBytes(size - expectedIndex))
             {
                 Assert.True(actualBytes.AsSpan.SequenceEqual(expectedBytes));
             }

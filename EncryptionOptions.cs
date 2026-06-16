@@ -209,7 +209,7 @@ namespace VaultCrypt
                 var spanReader = new SpanReader(data);
                 byte version = spanReader.ReadByte();
                 ushort nameLength = spanReader.ReadUInt16();
-                SecureBuffer.SecureLargeBuffer fileName = spanReader.ReadBytes(nameLength);
+                ISecureBuffer fileName = spanReader.ReadBytes(nameLength);
                 ulong fileSize = spanReader.ReadUInt64();
                 byte encryptionAlgorithm = spanReader.ReadByte();
                 bool chunked = spanReader.ReadByte() == 1 ? true : false;
@@ -223,7 +223,7 @@ namespace VaultCrypt
                 var spanReader = new SpanReader(data);
                 byte version = spanReader.ReadByte();
                 ushort nameLength = spanReader.ReadUInt16();
-                SecureBuffer.SecureLargeBuffer fileName = spanReader.ReadBytes(nameLength);
+                ISecureBuffer fileName = spanReader.ReadBytes(nameLength);
                 ulong fileSize = spanReader.ReadUInt64();
                 byte encryptionAlgorithm = spanReader.ReadByte();
                 bool chunked = spanReader.ReadByte() == 1 ? true : false;

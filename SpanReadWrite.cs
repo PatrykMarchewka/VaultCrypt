@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Buffers.Binary;
 using System.Collections.Generic;
 using System.Linq;
@@ -35,14 +35,14 @@ namespace VaultCrypt
         /// Reads bytes number equal to <paramref name="length"/> and advances index counter by it
         /// </summary>
         /// <param name="length">Number of bytes to read</param>
-        /// <returns>SecureLargeBuffer containing data read at current index</returns>
+        /// <returns>Buffer containing data read at current index</returns>
         /// <exception cref="ArgumentOutOfRangeException">Thrown when value cannot be read as it goes outside the array or when passed <paramref name="length"/> is equal or less than zero </exception>
-        public SecureBuffer.SecureLargeBuffer ReadBytes(int length)
+        public ISecureBuffer ReadBytes(int length)
         {
             ArgumentOutOfRangeException.ThrowIfNegativeOrZero(length);
             ArgumentOutOfRangeException.ThrowIfGreaterThan(_index + length, _data.Length);
 
-            SecureBuffer.SecureLargeBuffer result = new SecureBuffer.SecureLargeBuffer(length);
+            ISecureBuffer result = SecureBuffer.Create(length);
             _data.Slice(_index, length).CopyTo(result.AsSpan);
             _index += length;
             return result;
