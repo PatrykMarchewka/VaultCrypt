@@ -3,7 +3,6 @@ using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.ComponentModel;
 using System.Linq;
-using System.Security;
 using System.Text;
 using System.Threading.Tasks;
 using System.Windows.Input;
@@ -29,7 +28,16 @@ namespace VaultCrypt.ViewModels
         public ObservableCollection<string> PermMessages { get; } = new ObservableCollection<string>();
 
         private string _tempMessage = string.Empty;
-        public string TempMessage => _tempMessage;
+        public string TempMessage
+        {
+            get => _tempMessage;
+            set
+            {
+                if (_tempMessage == value) return;
+                _tempMessage = value;
+                OnPropertyChanged(nameof(TempMessage));
+            }
+        }
 
         private IProgress<ProgressReported> _progress;
 
@@ -56,8 +64,8 @@ namespace VaultCrypt.ViewModels
 
         private void SetTempMessage(string? tempMessage)
         {
-            if (!string.IsNullOrEmpty(tempMessage)) _tempMessage = tempMessage;
-            else _tempMessage = string.Empty;
+            if (!string.IsNullOrEmpty(tempMessage)) TempMessage = tempMessage;
+            else TempMessage = string.Empty;
         }
 
         public void Finish()
@@ -75,7 +83,7 @@ namespace VaultCrypt.ViewModels
         {
             Context.Dispose();
             PermMessages.Clear();
-            _tempMessage = string.Empty;
+            TempMessage = string.Empty;
             NavigationRequested?.Invoke(new NavigateFromProgressRequest());
         }
 
