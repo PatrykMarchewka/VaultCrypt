@@ -17,6 +17,7 @@ namespace VaultCrypt
         /// <summary>
         /// Gets full length of the buffer which may be padded depending on implementation
         /// </summary>
+        /// <exception cref="ObjectDisposedException">Thrown when the object is marked as already disposed</exception>
         public int Length { get; }
 
         /// <summary>
@@ -80,7 +81,7 @@ namespace VaultCrypt
         /// MacOS: 64-256KB <br/>
         /// For compatibility the buffer should not be created for memory over 32KB
         /// </summary>
-        public unsafe class SecureKeyBuffer : ISecureBuffer
+        private unsafe class SecureKeyBuffer : ISecureBuffer
         {
             private void* _pointer;
             private int _disposed; //0 = alive, 1 = disposed, any other value should be treated as an error. Required to be int to use with Interlocked for atomic operation
@@ -346,13 +347,13 @@ namespace VaultCrypt
         }
 
         /// <summary>
-        /// Class to securely manage memory that is outside GC control, intended for memory above 32KB
+        /// Class to securely manage memory that is outside GC control, intended for memory that is not suitable for <see cref="SecureBuffer.SecureKeyBuffer"/>
         /// </summary>
-        public unsafe class SecureLargeBuffer : ISecureBuffer
+        private unsafe class SecureLargeBuffer : ISecureBuffer
         {
             private void* _pointer;
             private int _disposed; //0 = alive, 1 = disposed, any other value should be treated as an error. Required to be int to use with Interlocked for atomic operation
-            private int _length;
+            private int _length; //Length of the buffer, not padded
             /// <summary>
             /// Gets full length of the buffer
             /// </summary>
@@ -404,7 +405,7 @@ namespace VaultCrypt
                 _pointer = NativeMemory.AllocZeroed((nuint)length);
             }
 
-            //Zeroes the memory and frees
+            //Zeroes the memory and frees it making it available to other processes
             private void ReleaseMemory()
             {
                 if (_pointer is null) return;
