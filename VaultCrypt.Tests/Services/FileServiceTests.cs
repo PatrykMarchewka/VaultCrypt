@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Linq;
@@ -150,7 +150,7 @@ namespace VaultCrypt.Tests.Services
         [InlineData(0)]
         internal void CopyPartOfFileThrowsForInvalidLength(ulong length)
         {
-            Assert.Throws<ArgumentOutOfRangeException>(() => _service.CopyPartOfFile(new MemoryStream(), 1, 0, new MemoryStream(), 3));
+            Assert.Throws<ArgumentOutOfRangeException>(() => _service.CopyPartOfFile(new MemoryStream(), 1, length, new MemoryStream(), 3));
         }
 
         [Fact]
