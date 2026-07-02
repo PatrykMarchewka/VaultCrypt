@@ -1,32 +1,26 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Linq;
-using System.Runtime.CompilerServices;
 using System.Text;
 using System.Threading.Tasks;
 using System.Windows;
 using System.Windows.Controls;
-using VaultCrypt.Exceptions;
 using VaultCrypt.ViewModels;
 
 namespace VaultCrypt.Services
 {
     internal interface IDialogService
     {
-        public void ShowWindow(UserControl view, IViewModel viewModel);
+        /// <summary>
+        /// Shows new <see cref="DialogWindow"/> with information about the <paramref name="ex"/>
+        /// </summary>
+        /// <param name="ex">Exception to show</param>
         public void ShowErrorWindow(Exception ex);
     }
 
 
     internal class DialogService : IDialogService
     {
-        public void ShowWindow(UserControl view, IViewModel viewModel)
-        {
-            var window = new DialogWindow();
-            SetContent(window, view, viewModel);
-            window.ShowDialog();
-        }
-
         public void ShowErrorWindow(Exception ex)
         {
             var window = new DialogWindow();
