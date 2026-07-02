@@ -425,7 +425,6 @@ namespace VaultCrypt
             {
                 oldOffsets = ReadMetadataOffsets(stream);
                 newOffsets = oldOffsets.Where((offset, index) => index != itemIndex).ToArray();
-                CryptographicOperations.ZeroMemory(MemoryMarshal.AsBytes(oldOffsets.AsSpan()));
                 SaveMetadataOffsets(stream, newOffsets);
             }
             finally
