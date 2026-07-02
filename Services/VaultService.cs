@@ -55,14 +55,13 @@ namespace VaultCrypt.Services
     public class VaultService : IVaultService
     {
         private readonly IFileService _fileService;
-        private readonly IVaultSession _session;
+        private IVaultSession _session => VaultSession.CurrentSession;
         private readonly IEncryptionOptionsService _encryptionOptionsService;
         private readonly ISystemService _systemService;
 
-        public VaultService(IFileService fileService, IVaultSession session, IEncryptionOptionsService encryptionOptionsService, ISystemService systemService, IVaultRegistry registry)
+        public VaultService(IFileService fileService, IEncryptionOptionsService encryptionOptionsService, ISystemService systemService)
         {
             this._fileService = fileService;
-            this._session = session;
             this._encryptionOptionsService = encryptionOptionsService;
             this._systemService = systemService;
         }

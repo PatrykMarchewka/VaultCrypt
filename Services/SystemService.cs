@@ -35,12 +35,7 @@ namespace VaultCrypt.Services
 
     public class SystemService : ISystemService
     {
-        private readonly IVaultSession _session;
-
-        public SystemService(IVaultSession session)
-        {
-            this._session = session;
-        }
+        private IVaultSession _session => VaultSession.CurrentSession;
 
         public void CheckFreeSpace(NormalizedPath filePath)
         {

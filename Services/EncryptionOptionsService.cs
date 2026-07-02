@@ -42,11 +42,7 @@ namespace VaultCrypt.Services
 
     public class EncryptionOptionsService : IEncryptionOptionsService
     {
-        private readonly IVaultSession _session;
-        public EncryptionOptionsService(IVaultSession session)
-        {
-            this._session = session;
-        }
+        private IVaultSession _session => VaultSession.CurrentSession;
 
         public EncryptionOptions.FileEncryptionOptions PrepareEncryptionOptions(FileInfo fileInfo, EncryptionAlgorithm.EncryptionAlgorithmInfo algorithm, ushort chunkSizeInMB)
         {

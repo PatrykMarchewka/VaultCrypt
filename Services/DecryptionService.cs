@@ -29,14 +29,13 @@ namespace VaultCrypt.Services
     {
         private readonly IFileService _fileService;
         private readonly IEncryptionOptionsService _encryptionOptionsService;
-        private readonly IVaultSession _session;
+        private IVaultSession _session => VaultSession.CurrentSession;
         private readonly ISystemService _systemService;
 
-        public DecryptionService(IFileService fileService, IEncryptionOptionsService encryptionOptionsService, IVaultSession session, ISystemService systemService)
+        public DecryptionService(IFileService fileService, IEncryptionOptionsService encryptionOptionsService, ISystemService systemService)
         {
             this._fileService = fileService;
             this._encryptionOptionsService = encryptionOptionsService;
-            this._session = session;
             this._systemService = systemService;
         }
 
