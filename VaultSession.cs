@@ -15,6 +15,10 @@ namespace VaultCrypt
     public interface IVaultSession : IDisposable
     {
         /// <summary>
+        /// Version of the vault attached to this session instance
+        /// </summary>
+        public byte VERSION { get; }
+        /// <summary>
         /// Key used to encrypt/decrypt data
         /// </summary>
         public ISecureBuffer KEY { get; }
@@ -58,7 +62,7 @@ namespace VaultCrypt
 
     public class VaultSession : IVaultSession
     {
-
+        public byte VERSION { get; private set; }
         public ISecureBuffer KEY { get; private set; }
         public NormalizedPath VAULTPATH { get; private set; }
         public Dictionary<long, EncryptedFileInfo> ENCRYPTED_FILES { get; private set; }
@@ -73,6 +77,7 @@ namespace VaultCrypt
         /// </summary>
         private VaultSession()
         {
+            this.VERSION = 0;
             this.KEY = SecureBuffer.Create(PasswordHelper.KeySize);
             this.ENCRYPTED_FILES = new();
             this.VAULTPATH = NormalizedPath.From(string.Empty);
@@ -103,6 +108,7 @@ namespace VaultCrypt
         /// </summary>
         public void Dispose()
         {
+            this.VERSION = 0;
             CryptographicOperations.ZeroMemory(this.KEY.AsSpan);
             this.ENCRYPTED_FILES.Clear();
             this.VAULTPATH = NormalizedPath.From(string.Empty);
