@@ -102,6 +102,7 @@ namespace VaultCrypt
 
         public ReadOnlySpan<byte> GetSlicedKey(int keySize)
         {
+            ArgumentOutOfRangeException.ThrowIfNegativeOrZero(keySize);
             if (keySize > PasswordHelper.KeySize) throw new ArgumentOutOfRangeException("Requested bigger slice than the length of entire key");
             return this.KEY.AsSpan[..keySize];
         }
@@ -390,7 +391,7 @@ namespace VaultCrypt
         public void AddAndSaveMetadataOffsets(Stream stream, long newOffset)
         {
             ArgumentNullException.ThrowIfNull(stream);
-            ArgumentOutOfRangeException.ThrowIfNegativeOrZero(newOffset);
+            ArgumentOutOfRangeException.ThrowIfLessThan(newOffset, this.HeaderSize); //Prevent adding new offset belonging to header information
 
             long[] oldOffsets = null!;
             long[] newOffsets = null!;

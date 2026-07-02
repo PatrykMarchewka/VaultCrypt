@@ -394,6 +394,7 @@ namespace VaultCrypt.Services
         public async Task DeleteFileFromVault(long offset, ProgressionContext context)
         {
             IVaultReader vaultReader = VaultRegistry.GetVaultReader(_session.VERSION);
+            ArgumentOutOfRangeException.ThrowIfLessThan(offset, vaultReader.HeaderSize); //Prevent deleting metadata bytes
             ArgumentNullException.ThrowIfNull(context);
 
             FileStream vaultFS = null!;

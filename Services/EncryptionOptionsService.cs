@@ -102,6 +102,7 @@ namespace VaultCrypt.Services
         {
             ArgumentNullException.ThrowIfNull(vaultFS);
             IVaultReader vaultReader = VaultRegistry.GetVaultReader(_session.VERSION);
+            ArgumentOutOfRangeException.ThrowIfLessThan(metadataOffset, vaultReader.HeaderSize); //First FileEncryptionOptions must always be after header
 
             using (ISecureBuffer decryptedMetadata = vaultReader.ReadAndDecryptData(vaultFS, metadataOffset, vaultReader.EncryptionOptionsSize))
             {

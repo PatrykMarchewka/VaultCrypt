@@ -43,6 +43,7 @@ namespace VaultCrypt.Services
         public async Task Decrypt(long metadataOffset, NormalizedPath filePath, ProgressionContext context)
         {
             IVaultReader reader = VaultRegistry.GetVaultReader(_session.VERSION);
+            ArgumentOutOfRangeException.ThrowIfLessThan(metadataOffset, reader.HeaderSize); //Decrypt should never be called on offset that is part of metadata
             ArgumentNullException.ThrowIfNullOrWhiteSpace(filePath);
             ArgumentNullException.ThrowIfNull(context);
 
