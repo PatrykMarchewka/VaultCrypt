@@ -398,7 +398,7 @@ namespace VaultCrypt
             try
             {
                 oldOffsets = ReadMetadataOffsets(stream);
-                if (((oldOffsets.Length + 1) * 8) > MetadataOffsetsSize)
+                if (((oldOffsets.Length + 1) * sizeof(long)) > MetadataOffsetsSize)
                 {
                     throw new VaultOperationException(VaultException.ErrorReason.FullVault);
                 }
