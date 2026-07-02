@@ -23,6 +23,7 @@ namespace VaultCrypt.Tests
             ISecureBuffer keyBuffer = SecureBuffer.Create(PasswordHelper.KeySize);
             byte[] key = new byte[4] { 0, 1, 0, 255 };
             key.CopyTo(keyBuffer.AsSpan);
+            session.VERSION = 0;
             session.KEY = keyBuffer;
             session.VAULTPATH = NormalizedPath.From("C:\\FakeVaultSession\\");
             session.ENCRYPTED_FILES = new()
@@ -34,6 +35,8 @@ namespace VaultCrypt.Tests
 
             return session;
         }
+
+        public byte VERSION { get; set; }
 
         public ISecureBuffer KEY { get; set; }
 
