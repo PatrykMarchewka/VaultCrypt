@@ -35,14 +35,17 @@ namespace VaultCrypt
         /// </summary>
         public event Action? EncryptedFilesListUpdated;
         /// <summary>
-        /// Sets <see cref="IVaultSession"/> fields
+        /// Sets this session fields
         /// </summary>
+        /// <param name="version">Version of the vault</param>
         /// <param name="vaultPath">Path to vault file</param>
-        /// <param name="vaultReader">Reader instance to use when reading or writing to vault</param>
         /// <param name="password">Password to derive key from</param>
-        /// <param name="salt">Salt used to derive key</param>
-        /// <param name="iterations">Iterations number used when deriving key</param>
-        public void CreateSession(NormalizedPath vaultPath, IVaultReader vaultReader, ReadOnlySpan<byte> password, ReadOnlySpan<byte> salt, int iterations);
+        /// <param name="salt">Salt used to derive key from</param>
+        /// <param name="iterations">Number of iterations used when deriving key</param>
+        /// <exception cref="ArgumentNullException">Thrown when <paramref name="vaultPath"/> is set to null</exception>
+        /// <exception cref="ArgumentException">Thrown when <paramref name="vaultPath"/> is empty or set to whitespace only characters, or when <paramref name="password"/> is empty, or when <paramref name="salt"/> is empty</exception>
+        /// <exception cref="ArgumentOutOfRangeException">Thrown when <paramref name="iterations"/> is set to negative value or zero</exception>
+        public void CreateSession(byte version, NormalizedPath vaultPath, ReadOnlySpan<byte> password, ReadOnlySpan<byte> salt, int iterations);
         /// <summary>
         /// Raises <see cref="EncryptedFilesListUpdated"/>
         /// </summary>
@@ -79,8 +82,14 @@ namespace VaultCrypt
             this.VAULTPATH = NormalizedPath.From(string.Empty);
         }
 
-        public void CreateSession(NormalizedPath vaultPath, IVaultReader vaultReader, ReadOnlySpan<byte> password, ReadOnlySpan<byte> salt, int iterations)
+        public void CreateSession(byte version, NormalizedPath vaultPath, ReadOnlySpan<byte> password, ReadOnlySpan<byte> salt, int iterations)
         {
+            ArgumentException.ThrowIfNullOrWhiteSpace(vaultPath);
+            if (password.IsEmpty) throw new ArgumentException("Provided empty password");
+            if (salt.IsEmpty) throw new ArgumentException("Provided empty salt");
+            ArgumentOutOfRangeException.ThrowIfNegativeOrZero(iterations);
+
+            this.VERSION = version;
             PasswordHelper.DeriveKey(password, salt, iterations, this.KEY.AsSpan);
             this.VAULTPATH = vaultPath;
             this.ENCRYPTED_FILES.Clear();

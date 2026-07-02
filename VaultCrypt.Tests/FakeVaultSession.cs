@@ -43,7 +43,7 @@ namespace VaultCrypt.Tests
 
         public event Action? EncryptedFilesListUpdated;
 
-        public void CreateSession(NormalizedPath vaultPath, IVaultReader vaultReader, ReadOnlySpan<byte> password, ReadOnlySpan<byte> salt, int iterations) => CreateSessionWasCalled = true;
+        public void CreateSession(byte version, NormalizedPath vaultPath, ReadOnlySpan<byte> password, ReadOnlySpan<byte> salt, int iterations) => CreateSessionWasCalled = true;
 
         public void RaiseEncryptedFileListUpdated() => RaiseEncryptedFileListUpdatedWasCalled = true;
 

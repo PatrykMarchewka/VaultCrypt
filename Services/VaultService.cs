@@ -88,7 +88,7 @@ namespace VaultCrypt.Services
                 try
                 {
                     using ISecureBuffer vaultHeader = reader.PrepareVaultHeader(salt, iterations);
-                    _session.CreateSession(vaultPath, reader, password, salt, iterations);
+                    _session.CreateSession(VaultSession.NewestVaultVersion, vaultPath, password, salt, iterations);
                     using ISecureBuffer encryptedMetadata = reader.VaultEncryption(new byte[sizeof(ushort) + reader.MetadataOffsetsSize]);
                     try
                     {
@@ -156,7 +156,7 @@ namespace VaultCrypt.Services
             try
             {
                 salt = RetryHelper.TryUntilSuccess(tryAction: () => reader.ReadSalt(fs), maxRetries: 10);
-                _session.CreateSession(path, reader, password, salt.AsSpan, iterations);
+                _session.CreateSession(version, path, password, salt.AsSpan, iterations);
             }
             finally
             {
