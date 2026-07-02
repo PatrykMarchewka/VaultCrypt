@@ -58,7 +58,6 @@ namespace VaultCrypt.Services
         private readonly IVaultSession _session;
         private readonly IEncryptionOptionsService _encryptionOptionsService;
         private readonly ISystemService _systemService;
-        private readonly IVaultRegistry _registry;
 
         public VaultService(IFileService fileService, IVaultSession session, IEncryptionOptionsService encryptionOptionsService, ISystemService systemService, IVaultRegistry registry)
         {
@@ -66,7 +65,6 @@ namespace VaultCrypt.Services
             this._session = session;
             this._encryptionOptionsService = encryptionOptionsService;
             this._systemService = systemService;
-            this._registry = registry;
         }
 
         public void CreateVault(NormalizedPath folderPath, string vaultName, ReadOnlySpan<byte> password, int iterations)
@@ -85,7 +83,7 @@ namespace VaultCrypt.Services
                     RetryHelper.TryUntilSuccess(tryAction: () => { Directory.CreateDirectory(folderPath); createdDirectory = true; }, maxRetries: 10);
                 }
                 NormalizedPath vaultPath = NormalizedPath.From($"{folderPath}\\{vaultName}.vlt");
-                IVaultReader reader = _registry.GetVaultReader(VaultSession.NewestVaultVersion);
+                IVaultReader reader = VaultRegistry.GetVaultReader(VaultSession.NewestVaultVersion);
                 byte[] salt = PasswordHelper.GenerateRandomSalt(reader.SaltSize);
                 try
                 {
@@ -151,7 +149,7 @@ namespace VaultCrypt.Services
             using FileStream fs = RetryHelper.TryUntilSuccess(tryAction: () => new FileStream(path, FileMode.Open, FileAccess.Read), maxRetries: 10);
             byte version = RetryHelper.TryUntilSuccess(tryAction: () => (byte)fs.ReadByte(), maxRetries: 10);
 
-            IVaultReader reader = _registry.GetVaultReader(version);
+            IVaultReader reader = VaultRegistry.GetVaultReader(version);
             int iterations = RetryHelper.TryUntilSuccess(tryAction: () => reader.ReadIterationsNumber(fs), maxRetries: 10);
 
             ISecureBuffer salt = null!;
@@ -194,7 +192,7 @@ namespace VaultCrypt.Services
             long[] offsets = null!;
             try
             {
-                offsets = _session.VAULT_READER.ReadMetadataOffsets(stream);
+                offsets = VaultRegistry.GetVaultReader(_session.VERSION).ReadMetadataOffsets(stream);
                 foreach (long offset in offsets)
                 {
                     EncryptionOptions.FileEncryptionOptions fileEncryptionOptions = null!;
@@ -272,7 +270,7 @@ namespace VaultCrypt.Services
                     context.ForceFinish();
                     return;
                 }
-                var reader = _session.VAULT_READER;
+                var reader = VaultRegistry.GetVaultReader(_session.VERSION);
 
                 try
                 {
@@ -396,7 +394,7 @@ namespace VaultCrypt.Services
 
         public async Task DeleteFileFromVault(long offset, ProgressionContext context)
         {
-            ArgumentOutOfRangeException.ThrowIfLessThan(offset, _session.VAULT_READER.HeaderSize);
+            IVaultReader vaultReader = VaultRegistry.GetVaultReader(_session.VERSION);
             ArgumentNullException.ThrowIfNull(context);
 
             FileStream vaultFS = null!;
@@ -435,7 +433,7 @@ namespace VaultCrypt.Services
                 else
                 {
                     //Deleting file that isn't last or only, zero out the block
-                    var encryptionMetadataSize = _session.VAULT_READER.EncryptionOptionsSize;
+                    var encryptionMetadataSize = vaultReader.EncryptionOptionsSize;
                     int currentKey = fileList.FindIndex(file => file.Key == offset);
                     ulong offsetDistance = (ulong)(fileList[currentKey + 1].Key - fileList[currentKey].Key);
                     EncryptionOptions.FileEncryptionOptions encryptionOptions = null!;

@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
@@ -86,7 +86,7 @@ namespace VaultCrypt.Services
         {
             ArgumentNullException.ThrowIfNull(options);
 
-            IVaultReader vaultReader = _session.VAULT_READER;
+            IVaultReader vaultReader = VaultRegistry.GetVaultReader(_session.VERSION);
             short extraEncryptionDataSize = EncryptionAlgorithm.GetEncryptionAlgorithmInfo[vaultReader.VaultEncryptionAlgorithm].Provider().EncryptionAlgorithm.ExtraEncryptionDataSize;
             using (ISecureBuffer paddedFileOptions = SecureBuffer.Create(vaultReader.EncryptionOptionsSize - extraEncryptionDataSize))
             {
@@ -105,9 +105,7 @@ namespace VaultCrypt.Services
         public EncryptionOptions.FileEncryptionOptions GetDecryptedFileEncryptionOptions(Stream vaultFS, long metadataOffset)
         {
             ArgumentNullException.ThrowIfNull(vaultFS);
-            ArgumentOutOfRangeException.ThrowIfLessThan(metadataOffset, _session.VAULT_READER.HeaderSize);
-
-            IVaultReader vaultReader = _session.VAULT_READER;
+            IVaultReader vaultReader = VaultRegistry.GetVaultReader(_session.VERSION);
 
             using (ISecureBuffer decryptedMetadata = vaultReader.ReadAndDecryptData(vaultFS, metadataOffset, vaultReader.EncryptionOptionsSize))
             {

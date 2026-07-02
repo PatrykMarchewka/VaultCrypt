@@ -31,7 +31,6 @@ namespace VaultCrypt.Tests
                 {1, new EncryptedFileInfo("TEST", 123, EncryptionAlgorithm.GetEncryptionAlgorithmInfo[0]) },
                 {long.MaxValue, new EncryptedFileInfo("MAX", ulong.MaxValue, EncryptionAlgorithm.GetEncryptionAlgorithmInfo[1]) }
             };
-            session.VAULT_READER = new FakeVaultReader();
 
             return session;
         }
@@ -41,8 +40,6 @@ namespace VaultCrypt.Tests
         public NormalizedPath VAULTPATH { get; set; }
 
         public Dictionary<long, EncryptedFileInfo> ENCRYPTED_FILES { get; set; }
-
-        public IVaultReader VAULT_READER { get; set; }
 
         public event Action? EncryptedFilesListUpdated;
 

@@ -31,10 +31,6 @@ namespace VaultCrypt
         /// </summary>
         public Dictionary<long, EncryptedFileInfo> ENCRYPTED_FILES { get; }
         /// <summary>
-        /// <see cref="IVaultReader"/> instance to properly read and write to vault
-        /// </summary>
-        public IVaultReader VAULT_READER { get; }
-        /// <summary>
         /// Event to invoke when refreshing <see cref="ENCRYPTED_FILES"/> list
         /// </summary>
         public event Action? EncryptedFilesListUpdated;
@@ -66,7 +62,7 @@ namespace VaultCrypt
         public ISecureBuffer KEY { get; private set; }
         public NormalizedPath VAULTPATH { get; private set; }
         public Dictionary<long, EncryptedFileInfo> ENCRYPTED_FILES { get; private set; }
-        public IVaultReader VAULT_READER { get; private set; }
+
 
         public static VaultSession CurrentSession = new();
         public const byte NewestVaultVersion = 0;
@@ -81,7 +77,6 @@ namespace VaultCrypt
             this.KEY = SecureBuffer.Create(PasswordHelper.KeySize);
             this.ENCRYPTED_FILES = new();
             this.VAULTPATH = NormalizedPath.From(string.Empty);
-            this.VAULT_READER = null!;
         }
 
         public void CreateSession(NormalizedPath vaultPath, IVaultReader vaultReader, ReadOnlySpan<byte> password, ReadOnlySpan<byte> salt, int iterations)
@@ -89,7 +84,6 @@ namespace VaultCrypt
             PasswordHelper.DeriveKey(password, salt, iterations, this.KEY.AsSpan);
             this.VAULTPATH = vaultPath;
             this.ENCRYPTED_FILES.Clear();
-            this.VAULT_READER = vaultReader;
         }
 
         public void RaiseEncryptedFileListUpdated()
@@ -112,44 +106,30 @@ namespace VaultCrypt
             CryptographicOperations.ZeroMemory(this.KEY.AsSpan);
             this.ENCRYPTED_FILES.Clear();
             this.VAULTPATH = NormalizedPath.From(string.Empty);
-            this.VAULT_READER = null!;
         }
 
     }
 
-    public interface IVaultRegistry
+    public static class VaultRegistry
     {
-        /// <summary>
-        /// Gets correct <see cref="IVaultReader"/>
-        /// </summary>
-        /// <param name="version">Version of the vault reader to get</param>
-        /// <returns><see cref="IVaultReader"/> with specified version</returns>
-        /// <exception cref="VaultException">Thrown when no reader for specified version can be found</exception>
-        public IVaultReader GetVaultReader(byte version);
-    }
-
-    public class VaultRegistry : IVaultRegistry
-    {
-        public static VaultRegistry Current { get; private set; } = null!;
-        private readonly Dictionary<byte, Lazy<IVaultReader>> _registry;
-        
-
-        public static VaultRegistry Initialize(IVaultSession session)
+        //Recreates the entire dictionary, because of Func<> only the requested reader gets created and not all of them
+        private static Dictionary<byte, Func<IVaultReader>> _createRegistry()
         {
-            return Current = new VaultRegistry(session);
-        }
-
-        private VaultRegistry(IVaultSession session)
-        {
-            _registry = new()
+            return new()
             {
-                {0, new Lazy<IVaultReader>(() => new VaultV0Reader(session)) }
+                {0, new Func<IVaultReader>(() => new VaultV0Reader()) }
             };
         }
 
-        public IVaultReader GetVaultReader(byte version)
+        /// <summary>
+        /// Gets correct <see cref="IVaultReader"/> for <see cref="VaultSession.CurrentSession"/>
+        /// </summary>
+        /// <param name="version">Version of the vault to get reader for</param>
+        /// <returns><see cref="IVaultReader"/> for specified vault version</returns>
+        /// <exception cref="VaultException">Thrown when no reader for specified version can be found</exception>
+        public static IVaultReader GetVaultReader(byte version)
         {
-            return _registry.TryGetValue(version, out var reader) ? reader.Value : throw new VaultOperationException(VaultException.ErrorReason.NoReader);
+            return _createRegistry().TryGetValue(version, out var reader) ? reader() : throw new VaultOperationException(VaultException.ErrorReason.NoReader);
         }
     }
 
