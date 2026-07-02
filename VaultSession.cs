@@ -284,13 +284,6 @@ namespace VaultCrypt
         /// </summary>
         public virtual ushort HeaderSize => (ushort)(1 + SaltSize + sizeof(int) + EncryptionAlgorithm.GetEncryptionAlgorithmInfo[VaultEncryptionAlgorithm].Provider().EncryptionAlgorithm.ExtraEncryptionDataSize + sizeof(ushort) + MetadataOffsetsSize);
 
-        private readonly IVaultSession _session;
-
-        protected VaultReader(IVaultSession session)
-        {
-            this._session = session;
-        }
-
         #region Vault header
         public ISecureBuffer ReadSalt(Stream stream)
         {
@@ -529,7 +522,7 @@ namespace VaultCrypt
             if (data.IsEmpty) throw new ArgumentException("Provided empty data", nameof(data));
 
             var provider = EncryptionAlgorithm.GetEncryptionAlgorithmInfo[VaultEncryptionAlgorithm].Provider();
-            return provider.EncryptionAlgorithm.EncryptBytes(data, _session.GetSlicedKey(provider.KeySize));
+            return provider.EncryptionAlgorithm.EncryptBytes(data, VaultSession.CurrentSession.GetSlicedKey(provider.KeySize));
         }
 
         private ISecureBuffer VaultDecryption(ReadOnlySpan<byte> data)
@@ -539,14 +532,14 @@ namespace VaultCrypt
             var provider = EncryptionAlgorithm.GetEncryptionAlgorithmInfo[VaultEncryptionAlgorithm].Provider();
             if (data.Length < provider.EncryptionAlgorithm.ExtraEncryptionDataSize) throw new ArgumentException("Provided data is too short", nameof(data));
 
-            return provider.EncryptionAlgorithm.DecryptBytes(data, _session.GetSlicedKey(provider.KeySize));
+            return provider.EncryptionAlgorithm.DecryptBytes(data, VaultSession.CurrentSession.GetSlicedKey(provider.KeySize));
         }
     }
 
 
     public class VaultV0Reader : VaultReader
     {
-        public VaultV0Reader(IVaultSession session) : base(session) { }
+        public VaultV0Reader() : base() { }
 
         public override byte Version => 0;
         public override byte VaultEncryptionAlgorithm => EncryptionAlgorithm.EncryptionAlgorithmInfo.AES256GCM.ID;
