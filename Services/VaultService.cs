@@ -243,8 +243,13 @@ namespace VaultCrypt.Services
                 {
                     vaultfs = await RetryHelper.TryUntilSuccessAsync(
                         tryAction: () => vaultfs = new FileStream(_session.VAULTPATH, FileMode.Open, FileAccess.Read),
-                        catchAction: () => context.ReportTempStatus(ProgressFailure.ProgressTempFailure.CreatingStreamFailed));
-                    oldVaultSize = RetryHelper.TryUntilSuccess(tryAction: () => vaultfs.Length, catchAction: () => context.ReportTempStatus(ProgressFailure.ProgressTempFailure.ReadingFromStreamFailed));
+                        catchAction: () => context.ReportTempStatus(ProgressFailure.ProgressTempFailure.CreatingStreamFailed),
+                        cancellationToken: context.CancellationToken);
+
+                    oldVaultSize = RetryHelper.TryUntilSuccess(
+                        tryAction: () => vaultfs.Length,
+                        catchAction: () => context.ReportTempStatus(ProgressFailure.ProgressTempFailure.ReadingFromStreamFailed),
+                        cancellationToken: context.CancellationToken);
                 }
                 catch (Exception)
                 {
@@ -258,7 +263,8 @@ namespace VaultCrypt.Services
                 {
                     newVaultfs = await RetryHelper.TryUntilSuccessAsync(
                         tryAction: () => newVaultfs = new FileStream(newVaultPath, FileMode.Create, FileAccess.ReadWrite, FileShare.Delete),
-                        catchAction: () => context.ReportTempStatus(ProgressFailure.ProgressTempFailure.CreatingStreamFailed));
+                        catchAction: () => context.ReportTempStatus(ProgressFailure.ProgressTempFailure.CreatingStreamFailed),
+                        cancellationToken: context.CancellationToken);
                 }
                 catch (Exception)
                 {
@@ -272,7 +278,8 @@ namespace VaultCrypt.Services
                 {
                     await RetryHelper.TryUntilSuccessAsync(
                         tryAction: () => _fileService.CopyPartOfFile(source: vaultfs!, offset: 0, length: (ulong)reader.HeaderSize, destination: newVaultfs!, destinationOffset: newVaultfs!.Seek(0, SeekOrigin.End)),
-                        catchAction: () => context.ReportTempStatus(ProgressFailure.ProgressTempFailure.WritingToFileFailed));
+                        catchAction: () => context.ReportTempStatus(ProgressFailure.ProgressTempFailure.WritingToFileFailed),
+                        cancellationToken: context.CancellationToken);
                 }
                 catch (Exception)
                 {
@@ -282,7 +289,8 @@ namespace VaultCrypt.Services
                     {
                         await RetryHelper.TryUntilSuccessAsync(
                             tryAction: () => File.Delete(newVaultPath),
-                            catchAction: () => context.ReportTempStatus(ProgressFailure.ProgressTempFailure.DeletingFileFailed));
+                            catchAction: () => context.ReportTempStatus(ProgressFailure.ProgressTempFailure.DeletingFileFailed),
+                            cancellationToken: context.CancellationToken);
                     }
                     catch (Exception)
                     {
@@ -326,7 +334,8 @@ namespace VaultCrypt.Services
                             encryptionOptions = await RetryHelper.TryUntilSuccessAsync(
                                     tryAction: () => _encryptionOptionsService.GetDecryptedFileEncryptionOptions(vaultfs, currentOffset),
                                     catchAction: () => context.ReportTempStatus(ProgressFailure.ProgressTempFailure.ReadingFromStreamFailed),
-                                    shouldRetry: ex => ex is IOException);
+                                    shouldRetry: ex => ex is IOException,
+                                    cancellationToken: context.CancellationToken);
                             fileSize = encryptionOptions.FileSize;
                             fileName = encryptionOptions.GetFileName();
                         }
@@ -360,7 +369,8 @@ namespace VaultCrypt.Services
                         {
                             await RetryHelper.TryUntilSuccessAsync(
                                 tryAction: () => _fileService.CopyPartOfFile(vaultfs, currentOffset, toRead, newVaultfs, newVaultOffsets[i]),
-                                catchAction: () => context.ReportTempStatus(ProgressFailure.ProgressTempFailure.WritingToFileFailed));
+                                catchAction: () => context.ReportTempStatus(ProgressFailure.ProgressTempFailure.WritingToFileFailed),
+                                cancellationToken: context.CancellationToken);
                         }
                         catch (Exception)
                         {
@@ -396,7 +406,8 @@ namespace VaultCrypt.Services
                 {
                     vaultFS = await RetryHelper.TryUntilSuccessAsync(
                         tryAction: () => new FileStream(_session.VAULTPATH, FileMode.Open, FileAccess.ReadWrite),
-                        catchAction: () => context.ReportTempStatus(ProgressFailure.ProgressTempFailure.ReadingFromStreamFailed));
+                        catchAction: () => context.ReportTempStatus(ProgressFailure.ProgressTempFailure.ReadingFromStreamFailed),
+                        cancellationToken: context.CancellationToken);
                 }
                 catch (Exception)
                 {
@@ -409,15 +420,17 @@ namespace VaultCrypt.Services
                 {
                     //Deleting only file in vault, set the size to empty vault file
                     await RetryHelper.TryUntilSuccessAsync(
-                        tryAction: () => vaultFS.SetLength(_session.VAULT_READER.HeaderSize),
-                        catchAction: () => context.ReportTempStatus(ProgressFailure.ProgressTempFailure.WritingToFileFailed));
+                        tryAction: () => vaultFS.SetLength(vaultReader.HeaderSize),
+                        catchAction: () => context.ReportTempStatus(ProgressFailure.ProgressTempFailure.WritingToFileFailed),
+                        cancellationToken: context.CancellationToken);
                 }
                 else if (_session.ENCRYPTED_FILES.Last().Key == offset)
                 {
                     //Deleting last file in vault, set the size to remove last file
                     await RetryHelper.TryUntilSuccessAsync(
                         tryAction: () => vaultFS.SetLength(offset),
-                        catchAction: () => context.ReportTempStatus(ProgressFailure.ProgressTempFailure.WritingToFileFailed));
+                        catchAction: () => context.ReportTempStatus(ProgressFailure.ProgressTempFailure.WritingToFileFailed),
+                        cancellationToken: context.CancellationToken);
                 }
                 else
                 {
@@ -433,7 +446,8 @@ namespace VaultCrypt.Services
                         encryptionOptions = await RetryHelper.TryUntilSuccessAsync(
                                         tryAction: () => _encryptionOptionsService.GetDecryptedFileEncryptionOptions(vaultFS, offset),
                                         catchAction: () => context.ReportTempStatus(ProgressFailure.ProgressTempFailure.ReadingFromStreamFailed),
-                                        shouldRetry: ex => ex is IOException);
+                                        shouldRetry: ex => ex is IOException,
+                                        cancellationToken: context.CancellationToken);
 
                         ulong expectedEncryptedSize = encryptionOptions.FileSize + encryptionMetadataSize;
                         length = Math.Min(encryptionOptions.FileSize + (ulong)encryptionMetadataSize, (ulong)(fileList[currentKey + 1].Key - fileList[currentKey].Key));
@@ -450,13 +464,15 @@ namespace VaultCrypt.Services
 
                     await RetryHelper.TryUntilSuccessAsync(
                         tryAction: () => _fileService.ZeroOutPartOfFile(vaultFS, offset, length),
-                        catchAction: () => context.ReportTempStatus(ProgressFailure.ProgressTempFailure.WritingToFileFailed));
+                        catchAction: () => context.ReportTempStatus(ProgressFailure.ProgressTempFailure.WritingToFileFailed),
+                        cancellationToken: context.CancellationToken);
                 }
 
                 await RetryHelper.TryUntilSuccessAsync(
-                    tryAction: () => _session.VAULT_READER.RemoveAndSaveMetadataOffsets(vaultFS, checked((ushort)fileList.FindIndex(file => file.Key == offset))),
+                    tryAction: () => vaultReader.RemoveAndSaveMetadataOffsets(vaultFS, checked((ushort)fileList.FindIndex(file => file.Key == offset))),
                     catchAction: () => context.ReportTempStatus(ProgressFailure.ProgressTempFailure.WritingToFileFailed),
-                    shouldRetry: ex => ex is not OverflowException);
+                    shouldRetry: ex => ex is not OverflowException,
+                    cancellationToken: context.CancellationToken);
 
                 context.Increment();
 

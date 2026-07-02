@@ -49,7 +49,8 @@ namespace VaultCrypt.Services
             ArgumentNullException.ThrowIfNullOrWhiteSpace(filePath);
             long fileLength = await RetryHelper.TryUntilSuccessAsync(
                 tryAction: () => new FileInfo(filePath).Length,
-                catchAction: () => context.ReportTempStatus(ProgressFailure.ProgressTempFailure.ReadingFromStreamFailed));
+                catchAction: () => context.ReportTempStatus(ProgressFailure.ProgressTempFailure.ReadingFromStreamFailed),
+                cancellationToken: context.CancellationToken);
             if (fileLength == 0) throw new VaultEncryptionException(VaultException.ErrorReason.EmptyFile);
             ArgumentNullException.ThrowIfNull(context);
 
@@ -64,18 +65,21 @@ namespace VaultCrypt.Services
 
                 await using FileStream vaultFS = await RetryHelper.TryUntilSuccessAsync(
                     tryAction: () => new FileStream(_session.VAULTPATH, FileMode.Open, FileAccess.ReadWrite),
-                    catchAction: () => context.ReportTempStatus(ProgressFailure.ProgressTempFailure.CreatingStreamFailed));
+                    catchAction: () => context.ReportTempStatus(ProgressFailure.ProgressTempFailure.CreatingStreamFailed),
+                    cancellationToken: context.CancellationToken);
 
                 await using FileStream fileFS = await RetryHelper.TryUntilSuccessAsync(
                     tryAction: () => new FileStream(filePath, FileMode.Open, FileAccess.Read),
-                    catchAction: () => context.ReportTempStatus(ProgressFailure.ProgressTempFailure.CreatingStreamFailed));
+                    catchAction: () => context.ReportTempStatus(ProgressFailure.ProgressTempFailure.CreatingStreamFailed),
+                    cancellationToken: context.CancellationToken);
 
                 //First action is saving metadata
                 context.SetTotal(1 + totalChunks);
 
                 await RetryHelper.TryUntilSuccessAsync(
-                    tryAction: () => _session.VAULT_READER.AddAndSaveMetadataOffsets(vaultFS, vaultFS.Seek(0, SeekOrigin.End)),
-                    catchAction: () => context.ReportTempStatus(ProgressFailure.ProgressTempFailure.WritingToFileFailed));
+                    tryAction: () => VaultRegistry.GetVaultReader(_session.VERSION).AddAndSaveMetadataOffsets(vaultFS, vaultFS.Seek(0, SeekOrigin.End)),
+                    catchAction: () => context.ReportTempStatus(ProgressFailure.ProgressTempFailure.WritingToFileFailed),
+                    cancellationToken: context.CancellationToken);
                 context.Increment();
 
                 using (ISecureBuffer paddedFileOptions = _encryptionOptionsService.PadAndEncryptFileEncryptionOptions(options))
@@ -83,7 +87,8 @@ namespace VaultCrypt.Services
                     //Seek to the end of file to make sure its saved at the end and not after metadata data
                     await RetryHelper.TryUntilSuccessAsync(
                         tryAction: () => { vaultFS.Seek(0, SeekOrigin.End); vaultFS.Write(paddedFileOptions.AsSpan); },
-                        catchAction: () => context.ReportTempStatus(ProgressFailure.ProgressTempFailure.WritingToFileFailed));
+                        catchAction: () => context.ReportTempStatus(ProgressFailure.ProgressTempFailure.WritingToFileFailed),
+                        cancellationToken: context.CancellationToken);
                 }
                 
                 await EncryptChunks(fileFS, vaultFS, totalChunks, concurrentChunkCount, chunkSizeInMB, provider, context);
@@ -107,7 +112,8 @@ namespace VaultCrypt.Services
 
             long originalFileSize = await RetryHelper.TryUntilSuccessAsync(
                 tryAction: () => fileFS.Length,
-                catchAction: () => context.ReportTempStatus(ProgressFailure.ProgressTempFailure.ReadingFromStreamFailed));
+                catchAction: () => context.ReportTempStatus(ProgressFailure.ProgressTempFailure.ReadingFromStreamFailed),
+                cancellationToken: context.CancellationToken);
             int bufferSize = (checked((int)Math.Min(chunkSizeInMB * 1024 * 1024, originalFileSize)));
             ISecureBuffer buffer = SecureBuffer.Create(bufferSize);
             try
@@ -123,7 +129,8 @@ namespace VaultCrypt.Services
                     {
                         bytesRead = await RetryHelper.TryUntilSuccessAsync(
                         tryAction: async () => await fileFS.ReadAsync(buffer.AsMemory),
-                        catchAction: () => context.ReportTempStatus(ProgressFailure.ProgressTempFailure.ReadingFromStreamFailed));
+                        catchAction: () => context.ReportTempStatus(ProgressFailure.ProgressTempFailure.ReadingFromStreamFailed),
+                        cancellationToken: context.CancellationToken);
                     }
                     catch (Exception)
                     {
@@ -158,7 +165,8 @@ namespace VaultCrypt.Services
                             results.TryAdd(currentIndex, encryptedChunk);
                             await RetryHelper.TryUntilSuccessAsync(
                                 tryAction: () => _fileService.WriteReadyChunk(results, ref nextToWrite, currentIndex, vaultFS, writeLock),
-                                catchAction: () => context.ReportTempStatus(ProgressFailure.ProgressTempFailure.WritingToFileFailed));
+                                catchAction: () => context.ReportTempStatus(ProgressFailure.ProgressTempFailure.WritingToFileFailed),
+                                cancellationToken: context.CancellationToken);
                         }
                         catch (Exception)
                         {

@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.IO;
@@ -49,15 +49,22 @@ namespace VaultCrypt.Services
 
             await using FileStream vaultFS = await RetryHelper.TryUntilSuccessAsync(
                 tryAction: () => new FileStream(_session.VAULTPATH, FileMode.Open, FileAccess.Read),
-                catchAction: () => context.ReportTempStatus(ProgressFailure.ProgressTempFailure.CreatingStreamFailed));
+                catchAction: () => context.ReportTempStatus(ProgressFailure.ProgressTempFailure.CreatingStreamFailed),
+                cancellationToken: context.CancellationToken);
+
             using EncryptionOptions.FileEncryptionOptions encryptionOptions = await RetryHelper.TryUntilSuccessAsync(
                 tryAction: () => _encryptionOptionsService.GetDecryptedFileEncryptionOptions(vaultFS, metadataOffset),
                 catchAction: () => context.ReportTempStatus(ProgressFailure.ProgressTempFailure.ReadingFromStreamFailed),
-                shouldRetry: ex => ex is IOException);
+                shouldRetry: ex => ex is IOException,
+                cancellationToken: context.CancellationToken);
+
             var encryptionAlgorithmProvider = EncryptionAlgorithm.GetEncryptionAlgorithmInfo[encryptionOptions.EncryptionAlgorithm].Provider();
+            
             await using FileStream fileFS = await RetryHelper.TryUntilSuccessAsync(
                 tryAction: () => new FileStream(filePath, FileMode.Create),
-                catchAction: () => context.ReportTempStatus(ProgressFailure.ProgressTempFailure.CreatingStreamFailed));
+                catchAction: () => context.ReportTempStatus(ProgressFailure.ProgressTempFailure.CreatingStreamFailed),
+                cancellationToken: context.CancellationToken);
+
             if (!encryptionOptions.IsChunked)
             {
                 try
@@ -65,11 +72,13 @@ namespace VaultCrypt.Services
                     using (ISecureBuffer decrypted = await RetryHelper.TryUntilSuccessAsync(
                         tryAction: () => DecryptInOneChunk(vaultFS, checked((int)encryptionOptions.FileSize), _session.GetSlicedKey(encryptionAlgorithmProvider.KeySize), encryptionAlgorithmProvider.EncryptionAlgorithm),
                         catchAction: () => context.ReportTempStatus(ProgressFailure.ProgressTempFailure.ReadingFromStreamFailed),
-                        shouldRetry: ex => ex is IOException))
+                        shouldRetry: ex => ex is IOException,
+                        cancellationToken: context.CancellationToken))
                     {
                         await RetryHelper.TryUntilSuccessAsync(
                             tryAction: () => fileFS.Write(decrypted.AsSpan),
-                            catchAction: () => context.ReportTempStatus(ProgressFailure.ProgressTempFailure.WritingToFileFailed));
+                            catchAction: () => context.ReportTempStatus(ProgressFailure.ProgressTempFailure.WritingToFileFailed),
+                            cancellationToken: context.CancellationToken);
                     }
                 }
                 catch (Exception)
@@ -128,7 +137,8 @@ namespace VaultCrypt.Services
                     {
                         bytesRead = await RetryHelper.TryUntilSuccessAsync(
                         tryAction: async () => { return await vaultFS.ReadAsync(buffer.AsMemory); },
-                        catchAction: () => context.ReportTempStatus(ProgressFailure.ProgressTempFailure.ReadingFromStreamFailed));
+                        catchAction: () => context.ReportTempStatus(ProgressFailure.ProgressTempFailure.ReadingFromStreamFailed),
+                        cancellationToken: context.CancellationToken);
                     }
                     catch (Exception)
                     {
@@ -165,7 +175,8 @@ namespace VaultCrypt.Services
 
                             await RetryHelper.TryUntilSuccessAsync(
                                 tryAction: () => _fileService.WriteReadyChunk(results, ref nextToWrite, currentIndex, fileFS, writeLock),
-                                catchAction: () => context.ReportTempStatus(ProgressFailure.ProgressTempFailure.WritingToFileFailed));
+                                catchAction: () => context.ReportTempStatus(ProgressFailure.ProgressTempFailure.WritingToFileFailed),
+                                cancellationToken: context.CancellationToken);
                         }
                         catch (Exception)
                         {

@@ -20,12 +20,14 @@ namespace VaultCrypt
         /// <param name="catchAction">Task to execute each time <paramref name="tryAction"/> throws, runs only if <paramref name="shouldRetry"/> returns <c>true</c></param>
         /// <param name="maxRetries">Maximum number of retries before giving up. Suggested value for visible failures is 100, for others 10</param>
         /// <param name="shouldRetry">Predicate whether <paramref name="catchAction"/> is allowed to run and restart based on exception thrown by <paramref name="tryAction"/></param>
+        /// <param name="cancellationToken">Token to check on every attempt for cancellation request</param>
         /// <returns>Return value of <typeparamref name="T"/> from <paramref name="tryAction"/></returns>
         /// <exception cref="ArgumentOutOfRangeException">Thrown when <paramref name="maxRetries"/> is set to negative or zero value</exception>
+        /// <exception cref="OperationCanceledException">Thrown when cancellation has been requested for the <paramref name="cancellationToken"/></exception>
         /// <exception cref="VaultCrypt.Exceptions.VaultOperationException">Thrown when <paramref name="tryAction"/> failed and threw <paramref name="maxRetries"/> times</exception>
         /// <exception cref="Exception">Thrown when <paramref name="tryAction"/> threw exception and <paramref name="shouldRetry"/> returned <c>false</c></exception>
         /// <exception cref="UnreachableException">Should never be thrown, indicates error in logic</exception>
-        public static async Task<T> TryUntilSuccessAsync<T>(Func<Task<T>> tryAction, Func<Task>? catchAction = null, int maxRetries = 100, Func<Exception, bool>? shouldRetry = null)
+        public static async Task<T> TryUntilSuccessAsync<T>(Func<Task<T>> tryAction, Func<Task>? catchAction = null, int maxRetries = 100, Func<Exception, bool>? shouldRetry = null, CancellationToken? cancellationToken = null)
         {
             ArgumentOutOfRangeException.ThrowIfNegativeOrZero(maxRetries);
 
@@ -33,6 +35,7 @@ namespace VaultCrypt
             await Task.Yield();
             for (int attempt = 1; attempt <= maxRetries; attempt++)
             {
+                if (cancellationToken is not null && cancellationToken.Value.IsCancellationRequested) throw new OperationCanceledException();
                 try
                 {
                     return await tryAction();
@@ -51,22 +54,22 @@ namespace VaultCrypt
             throw new UnreachableException(); //Should never reach this point
         }
 
-        /// <inheritdoc cref="TryUntilSuccessAsync{T}(Func{Task{T}}, Func{Task}?, int, Func{Exception, bool}?)"/>
-        public static async Task<T> TryUntilSuccessAsync<T>(Func<Task<T>> tryAction, Action? catchAction = null, int maxRetries = 100, Func<Exception, bool>? shouldRetry = null)
+        /// <inheritdoc cref="TryUntilSuccessAsync{T}(Func{Task{T}}, Func{Task}?, int, Func{Exception, bool}?, CancellationToken?)"/>
+        public static async Task<T> TryUntilSuccessAsync<T>(Func<Task<T>> tryAction, Action? catchAction = null, int maxRetries = 100, Func<Exception, bool>? shouldRetry = null, CancellationToken? cancellationToken = null)
         {
-            return await TryUntilSuccessAsync<T>(tryAction, catchAction: catchAction is null ? null : () => { catchAction(); return Task.CompletedTask; }, maxRetries, shouldRetry);
+            return await TryUntilSuccessAsync<T>(tryAction, catchAction: catchAction is null ? null : () => { catchAction(); return Task.CompletedTask; }, maxRetries, shouldRetry, cancellationToken);
         }
 
-        /// <inheritdoc cref="TryUntilSuccessAsync{T}(Func{Task{T}}, Func{Task}?, int, Func{Exception, bool}?)"/>
-        public static async Task<T> TryUntilSuccessAsync<T>(Func<T> tryAction, Action? catchAction = null, int maxRetries = 100, Func<Exception, bool>? shouldRetry = null)
+        /// <inheritdoc cref="TryUntilSuccessAsync{T}(Func{Task{T}}, Func{Task}?, int, Func{Exception, bool}?, CancellationToken?)"/>
+        public static async Task<T> TryUntilSuccessAsync<T>(Func<T> tryAction, Action? catchAction = null, int maxRetries = 100, Func<Exception, bool>? shouldRetry = null, CancellationToken? cancellationToken = null)
         {
-            return await TryUntilSuccessAsync<T>(() => Task.Run(tryAction), catchAction: catchAction is null ? null : () => { catchAction(); return Task.CompletedTask; }, maxRetries, shouldRetry);
+            return await TryUntilSuccessAsync<T>(() => Task.Run(tryAction), catchAction: catchAction is null ? null : () => { catchAction(); return Task.CompletedTask; }, maxRetries, shouldRetry, cancellationToken);
         }
 
-        /// <inheritdoc cref="TryUntilSuccessAsync{T}(Func{Task{T}}, Func{Task}?, int, Func{Exception, bool}?)"/>
-        public static async Task TryUntilSuccessAsync(Action tryAction, Action? catchAction = null, int maxRetries = 100, Func<Exception, bool>? shouldRetry = null)
+        /// <inheritdoc cref="TryUntilSuccessAsync{T}(Func{Task{T}}, Func{Task}?, int, Func{Exception, bool}?, CancellationToken?)"/>
+        public static async Task TryUntilSuccessAsync(Action tryAction, Action? catchAction = null, int maxRetries = 100, Func<Exception, bool>? shouldRetry = null, CancellationToken? cancellationToken = null)
         {
-            await TryUntilSuccessAsync(() => { tryAction(); return Task.CompletedTask; }, catchAction, maxRetries, shouldRetry);
+            await TryUntilSuccessAsync(() => { tryAction(); return Task.CompletedTask; }, catchAction, maxRetries, shouldRetry, cancellationToken);
         }
 
         /// <summary>
@@ -77,12 +80,14 @@ namespace VaultCrypt
         /// <param name="catchAction">Task to execute each time <paramref name="tryAction"/> throws, runs only if <paramref name="shouldRetry"/> returns <c>true</c></param>
         /// <param name="maxRetries">Maximum number of retries before giving up. Suggested value for visible failures is 100, for others 10</param>
         /// <param name="shouldRetry">Predicate whether <paramref name="catchAction"/> is allowed to run and restart based on exception thrown by <paramref name="tryAction"/></param>
+        /// <param name="cancellationToken">Token to check on every attempt for cancellation request</param>
         /// <returns>Return value of <typeparamref name="T"/> from <paramref name="tryAction"/></returns>
         /// <exception cref="ArgumentOutOfRangeException">Thrown when <paramref name="maxRetries"/> is set to negative or zero value</exception>
+        /// <exception cref="OperationCanceledException">Thrown when cancellation has been requested for the <paramref name="cancellationToken"/></exception>
         /// <exception cref="VaultCrypt.Exceptions.VaultOperationException">Thrown when <paramref name="tryAction"/> failed and threw <paramref name="maxRetries"/> times</exception>
         /// <exception cref="Exception">Thrown when <paramref name="tryAction"/> threw exception and <paramref name="shouldRetry"/> returned <c>false</c></exception>
         /// <exception cref="UnreachableException">Should never be thrown, indicates error in logic</exception>
-        public static T TryUntilSuccess<T>(Func<T> tryAction, Action? catchAction = null, int maxRetries = 100, Func<Exception, bool>? shouldRetry = null)
+        public static T TryUntilSuccess<T>(Func<T> tryAction, Action? catchAction = null, int maxRetries = 100, Func<Exception, bool>? shouldRetry = null, CancellationToken? cancellationToken = null)
         {
             ArgumentOutOfRangeException.ThrowIfNegativeOrZero(maxRetries);
 
@@ -97,6 +102,12 @@ namespace VaultCrypt
                 {
                     for (int attempt = 1; attempt <= maxRetries; attempt++)
                     {
+                        if (cancellationToken is not null && cancellationToken.Value.IsCancellationRequested)
+                        {
+                            exceptionInfo = ExceptionDispatchInfo.Capture(new OperationCanceledException());
+                            return;
+                        }
+
                         try
                         {
                             result = tryAction();
@@ -133,10 +144,10 @@ namespace VaultCrypt
             return result;
         }
 
-        /// <inheritdoc cref="TryUntilSuccess{T}(Func{T}, Action?, int, Func{Exception, bool}?)"/>
-        public static void TryUntilSuccess(Action tryAction, Action? catchAction = null, int maxRetries = 100, Func<Exception, bool>? shouldRetry = null)
+        /// <inheritdoc cref="TryUntilSuccess{T}(Func{T}, Action?, int, Func{Exception, bool}?, CancellationToken?)"/>
+        public static void TryUntilSuccess(Action tryAction, Action? catchAction = null, int maxRetries = 100, Func<Exception, bool>? shouldRetry = null, CancellationToken? cancellationToken = null)
         {
-            TryUntilSuccess<bool>(tryAction: () => { tryAction(); return true; }, catchAction, maxRetries, shouldRetry);
+            TryUntilSuccess<bool>(tryAction: () => { tryAction(); return true; }, catchAction, maxRetries, shouldRetry, cancellationToken);
         }
     }
 }

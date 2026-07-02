@@ -10,7 +10,7 @@ namespace VaultCrypt.Tests
     {
 
         [Fact]
-        async Task TryUntilSuccessAsyncReturnsOnFirstTry()
+        internal async Task TryUntilSuccessAsyncReturnsOnFirstTry()
         {
             string result = await RetryHelper.TryUntilSuccessAsync(
                 tryAction: () => Task.FromResult("Success"),
@@ -20,7 +20,7 @@ namespace VaultCrypt.Tests
         }
 
         [Fact]
-        async Task TryUntilSuccessAsyncReturnsOnSecondTry()
+        internal async Task TryUntilSuccessAsyncReturnsOnSecondTry()
         {
             int counter = 1;
             string result = await RetryHelper.TryUntilSuccessAsync(
@@ -34,13 +34,21 @@ namespace VaultCrypt.Tests
         [InlineData(int.MinValue)]
         [InlineData(-1)]
         [InlineData(0)]
-        void TryUntilSuccessAsyncThrowsOnInvalidMaxRetriesValue(int retries)
+        internal void TryUntilSuccessAsyncThrowsOnInvalidMaxRetriesValue(int retries)
         {
             Assert.ThrowsAsync<ArgumentOutOfRangeException>(() => RetryHelper.TryUntilSuccessAsync(tryAction: () => { }, maxRetries: retries));
         }
 
         [Fact]
-        void TryUntilSuccessAsyncThrowsOnMaxRetriesReached()
+        internal void TryUntilSuccessAsyncThrowsOnCancellationTokenCancelRequest()
+        {
+            CancellationTokenSource cts = new CancellationTokenSource();
+            cts.Cancel();
+            Assert.ThrowsAsync<OperationCanceledException>(() => RetryHelper.TryUntilSuccessAsync(tryAction: () => { }, cancellationToken: cts.Token));
+        }
+
+        [Fact]
+        internal void TryUntilSuccessAsyncThrowsOnMaxRetriesReached()
         {
             Assert.ThrowsAsync<VaultCrypt.Exceptions.VaultException>(() => RetryHelper.TryUntilSuccessAsync(tryAction: () => { throw new Exception(); }));
         }
@@ -49,13 +57,13 @@ namespace VaultCrypt.Tests
         [InlineData(typeof(Exception))]
         [InlineData(typeof(ArgumentNullException))]
         [InlineData(typeof(ArgumentOutOfRangeException))]
-        void TryUntilSuccessAsyncThrowsOriginalExceptionOnFalseShouldRetry(Type exceptionType)
+        internal void TryUntilSuccessAsyncThrowsOriginalExceptionOnFalseShouldRetry(Type exceptionType)
         {
             Assert.ThrowsAsync(exceptionType, () => RetryHelper.TryUntilSuccessAsync(tryAction: () => throw (Exception)Activator.CreateInstance(exceptionType)!, shouldRetry: ex => ex is not Exception));
         }
 
         [Fact]
-        void TryUntilSuccessReturnsOnFirstTry()
+        internal void TryUntilSuccessReturnsOnFirstTry()
         {
             string result = RetryHelper.TryUntilSuccess(tryAction: () => "Success");
 
@@ -63,7 +71,7 @@ namespace VaultCrypt.Tests
         }
 
         [Fact]
-        void TryUntilSuccessReturnsOnSecondTry()
+        internal void TryUntilSuccessReturnsOnSecondTry()
         {
             int counter = 1;
             string result = RetryHelper.TryUntilSuccess(
@@ -77,13 +85,21 @@ namespace VaultCrypt.Tests
         [InlineData(int.MinValue)]
         [InlineData(-1)]
         [InlineData(0)]
-        void TryUntilSuccessThrowsOnInvalidMaxRetriesValue(int retries)
+        internal void TryUntilSuccessThrowsOnInvalidMaxRetriesValue(int retries)
         {
             Assert.Throws<ArgumentOutOfRangeException>(() => RetryHelper.TryUntilSuccess(tryAction: () => { }, maxRetries: retries));
         }
 
         [Fact]
-        void TryUntilSuccessThrowsOnMaxRetriesReached()
+        internal void TryUntilSuccessThrowsOnCancellationTokenCancelRequest()
+        {
+            CancellationTokenSource cts = new CancellationTokenSource();
+            cts.Cancel();
+            Assert.Throws<OperationCanceledException>(() => RetryHelper.TryUntilSuccess(tryAction: () => { }, cancellationToken: cts.Token));
+        }
+
+        [Fact]
+        internal void TryUntilSuccessThrowsOnMaxRetriesReached()
         {
             Assert.Throws<VaultCrypt.Exceptions.VaultOperationException>(() => RetryHelper.TryUntilSuccess(tryAction: () => { throw new Exception(); }, maxRetries: 2));
         }
@@ -92,7 +108,7 @@ namespace VaultCrypt.Tests
         [InlineData(typeof(Exception))]
         [InlineData(typeof(ArgumentNullException))]
         [InlineData(typeof(ArgumentOutOfRangeException))]
-        void TryUntilSuccessThrowsOriginalExceptionOnFalseShouldRetry(Type exceptionType)
+        internal void TryUntilSuccessThrowsOriginalExceptionOnFalseShouldRetry(Type exceptionType)
         {
             Assert.Throws(exceptionType, () => RetryHelper.TryUntilSuccess(tryAction: () => throw (Exception)Activator.CreateInstance(exceptionType)!, shouldRetry: ex => ex is not Exception));
         }
