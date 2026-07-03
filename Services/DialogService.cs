@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
@@ -25,9 +25,9 @@ namespace VaultCrypt.Services
         {
             var window = new DialogWindow();
             var view = new Views.ExceptionThrown();
-            var vm = new ExceptionThrownViewModel(() => window.Close(), ex);
+            var vm = new ExceptionThrownViewModel(OKAction: () => window.Close(), passedException: ex);
             SetContent(window, view, vm);
-            window.Show();
+            window.ShowDialog();
         }
 
         //Binds window with view and view with viewmodel
