@@ -30,10 +30,11 @@ namespace VaultCrypt.Services
             window.Show();
         }
 
-        private void SetContent(Window window, UserControl view, IViewModel viewModel)
+        //Binds window with view and view with viewmodel
+        private static void SetContent(Window window, UserControl view, IViewModel viewModel)
         {
             window.Content = view;
-            window.DataContext = viewModel;
+            view.DataContext = viewModel;
         }
     }
 }
