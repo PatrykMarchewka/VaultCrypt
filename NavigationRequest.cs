@@ -49,7 +49,7 @@ namespace VaultCrypt
         public override void Request(INavigationService nav) => nav.NavigateFromProgress();
     }
 
-    public sealed record NavigateToExceptionThrownRequest(Exception ex) : NavigationRequest
+    public sealed record NavigateToExceptionThrownRequest(VaultCrypt.Exceptions.VaultException ex) : NavigationRequest
     {
         public override void Request(INavigationService nav) => nav.NavigateToExceptionThrown(ex);
     }

@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
@@ -66,7 +66,7 @@ namespace VaultCrypt.Services
         /// </summary>
         /// <param name="ex">Thrown exception to display</param>
         /// <exception cref="ArgumentNullException">Thrown when <paramref name="ex"/> is set to null</exception>
-        public void NavigateToExceptionThrown(Exception ex);
+        public void NavigateToExceptionThrown(VaultCrypt.Exceptions.VaultException ex);
 
     }
 
@@ -157,7 +157,7 @@ namespace VaultCrypt.Services
             Navigate(ViewModelState.OpenVault);
         }
 
-        public void NavigateToExceptionThrown(Exception ex)
+        public void NavigateToExceptionThrown(VaultCrypt.Exceptions.VaultException ex)
         {
             ArgumentNullException.ThrowIfNull(ex);
 

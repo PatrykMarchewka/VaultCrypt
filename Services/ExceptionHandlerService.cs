@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
@@ -9,6 +9,10 @@ namespace VaultCrypt.Services
 {
     internal interface IExceptionHandler
     {
+        /// <summary>
+        /// Handles navigation globally after exception gets thrown
+        /// </summary>
+        /// <param name="ex">Original thrown exception</param>
         public void HandleException(Exception ex);
     }
 
