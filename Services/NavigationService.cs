@@ -81,13 +81,6 @@ namespace VaultCrypt.Services
 
         public NavigationService()
         {
-            foreach (var viewModel in ViewModelState.AllViewModels)
-            {
-                if (viewModel is INavigatingViewModel navigatingModel)
-                {
-                    navigatingModel.NavigationRequested += request => this.HandleNavigation(request);
-                }
-            }
         }
 
         private event Action<IViewModel> _changeView = null!;

@@ -7,12 +7,15 @@ using VaultCrypt.Services;
 
 namespace VaultCrypt.ViewModels
 {
-    internal class ViewModelState
+    internal static class ViewModelState
     {
+        private static readonly DialogService dialogService = new DialogService();
+        private static readonly EncryptionOptionsService encryptionOptionsService = new EncryptionOptionsService();
         private static readonly FileDialogService fileDialogService = new FileDialogService();
         private static readonly FileService fileService = new FileService();
-        private static readonly EncryptionOptionsService encryptionOptionsService = new EncryptionOptionsService();
+        private static readonly NavigationService navigationService = new NavigationService();
         private static readonly SystemService systemService = new SystemService();
+        private static readonly ExceptionHandlerService exceptionHandlerService = new ExceptionHandlerService(dialogService, navigationService);
         private static readonly EncryptionService encryptionService = new EncryptionService(fileService, encryptionOptionsService, systemService);
         private static readonly DecryptionService decryptionService = new DecryptionService(fileService, encryptionOptionsService, systemService);
         private static readonly VaultService vaultService = new VaultService(fileService, encryptionOptionsService, systemService);
@@ -39,6 +42,37 @@ namespace VaultCrypt.ViewModels
                 yield return Progress;
                 yield return ExceptionThrown;
             }
+        }
+
+        private static void SubscribeToGlobalEvents()
+        {
+            RelayCommand.SubscribeToExceptionThrowEvent((ex) => exceptionHandlerService.HandleException(ex));
+            navigationService.SubscribeToChangeViewEvent((viewmodel) => MainWindow.CurrentView = viewmodel);
+        }
+
+        private static void InitializeNavigation()
+        {
+            foreach (var viewModel in ViewModelState.AllViewModels)
+            {
+                if (viewModel is INavigatingViewModel navigatingModel)
+                {
+                    navigatingModel.NavigationRequested += request => navigationService.HandleNavigation(request);
+                }
+            }
+        }
+
+        //Navigate to password input if provided valid path to vault file as argument
+        private static void ResolveArguments(string[] args)
+        {
+            if (args.Length == 1 && NormalizedPath.ValidatePath(args[0], ensureExists: true)) navigationService.NavigateToPasswordInput(NormalizedPath.From(args[0]));
+            else navigationService.NavigateToMain();
+        }
+
+        public static void OnStartup(string[] args)
+        {
+            SubscribeToGlobalEvents();
+            InitializeNavigation();
+            ResolveArguments(args);
         }
     }
 }

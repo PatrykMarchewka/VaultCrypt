@@ -11,19 +11,11 @@ namespace VaultCrypt
     /// </summary>
     public partial class App : Application
     {
-
-
         protected override void OnStartup(StartupEventArgs e)
         {
             base.OnStartup(e);
+            ViewModelState.OnStartup(e.Args);
 
-            var navigationService = new NavigationService(VaultSession.CurrentSession);
-            var dialogService = new DialogService();
-            var exceptionService = new ExceptionHandlerService(dialogService, navigationService);
-            RelayCommand.SubscribeToExceptionThrowEvent((ex) => exceptionService.HandleException(ex));
-            navigationService.ChangeView += viewmodel => ViewModelState.MainWindow.CurrentView = viewmodel;
-            if (e.Args.Length > 0) navigationService.NavigateToPasswordInput(NormalizedPath.From(e.Args[0]));
-            else navigationService.NavigateToMain();
             var window = new MainWindow
             {
                 DataContext = ViewModelState.MainWindow
@@ -34,7 +26,6 @@ namespace VaultCrypt
         protected override void OnExit(ExitEventArgs args)
         {
             VaultSession.CurrentSession.Dispose();
-            VaultSession.CurrentSession.KEY.Dispose();
             base.OnExit(args);
         }
     }
