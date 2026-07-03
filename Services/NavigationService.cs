@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
@@ -11,10 +11,6 @@ namespace VaultCrypt.Services
 {
     public interface INavigationService
     {
-        /// <summary>
-        /// Event to invoke when switching views
-        /// </summary>
-        public event Action<IViewModel> ChangeView;
         /// <summary>
         /// Used by viewmodels only to process <paramref name="request"/> and invoke navigation
         /// </summary>
@@ -72,14 +68,19 @@ namespace VaultCrypt.Services
 
     
 
-    internal class NavigationService : INavigationService
+    public class NavigationService : INavigationService
     {
-        private readonly IVaultSession _session;
+        private IVaultSession _session => VaultSession.CurrentSession;
 
-        internal NavigationService(IVaultSession session)
+        public void HandleNavigation(NavigationRequest navigationRequest)
         {
-            this._session = session;
+            ArgumentNullException.ThrowIfNull(navigationRequest);
 
+            navigationRequest.Request(this);
+        }
+
+        public NavigationService()
+        {
             foreach (var viewModel in ViewModelState.AllViewModels)
             {
                 if (viewModel is INavigatingViewModel navigatingModel)
@@ -89,16 +90,13 @@ namespace VaultCrypt.Services
             }
         }
 
-        
-
-        public void HandleNavigation(NavigationRequest navigationRequest)
+        private event Action<IViewModel> _changeView = null!;
+        public void SubscribeToChangeViewEvent(Action<IViewModel> action)
         {
-            ArgumentNullException.ThrowIfNull(navigationRequest);
-
-            navigationRequest.Request(this);
+            _changeView += action;
         }
 
-
+        //Navigates to selected viewmodel by switching view
         private void Navigate(IViewModel viewModel, object? parameters = null)
         {
             ArgumentNullException.ThrowIfNull(viewModel);
@@ -107,7 +105,7 @@ namespace VaultCrypt.Services
             {
                 nav.OnNavigatedTo(parameters);
             }
-            ChangeView?.Invoke(viewModel);
+            _changeView?.Invoke(viewModel);
         }
 
         public void NavigateToMain()
@@ -163,7 +161,7 @@ namespace VaultCrypt.Services
 
             Navigate(ViewModelState.ExceptionThrown, ex);
         }
-        public event Action<IViewModel> ChangeView = null!;
+        
     }
 
     /// <summary>
