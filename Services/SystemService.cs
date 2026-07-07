@@ -25,11 +25,10 @@ namespace VaultCrypt.Services
         /// <summary>
         /// Calculates number of chunks that can be encrypted and written to disk in parrarel at the same time based on processor threads and available RAM memory
         /// </summary>
-        /// <param name="chunked">Dictates whether file is meant to be chunked</param>
         /// <param name="chunkSizeInMB">Maximum size of each chunk</param>
-        /// <returns>Returns 1 if <paramref name="chunked"/> is set to false, otherwise 1 or higher number</returns>
+        /// <returns>Lowest number between processor threads and maximum amount of chunks fitting in RAM at the same time, returned value is always higher or equal to 1</returns>
         /// <exception cref="ArgumentOutOfRangeException">Thrown when <paramref name="chunkSizeInMB"/> is set to zero</exception>
-        public int CalculateConcurrency(bool chunked, ushort chunkSizeInMB);
+        public int CalculateConcurrency(ushort chunkSizeInMB);
     }
 
 
@@ -61,14 +60,11 @@ namespace VaultCrypt.Services
             return new FileInfo(filePath).Length;
         }
 
-        public int CalculateConcurrency(bool chunked, ushort chunkSizeInMB)
+        public int CalculateConcurrency(ushort chunkSizeInMB)
         {
-            ArgumentOutOfRangeException.ThrowIfZero(chunkSizeInMB);
-
-            if (!chunked) return 1;
-            //Cast to long to interpret the byte value as long and not an int, preventing int overflow for chunkSize >= 2048
-            int ramSpace = (int)(CheckFreeRamSpace() / ((long)chunkSizeInMB * 1024 * 1024)) / 2; //Divided by 2 to account for HDDs as they cant read and write at the same time
-            return Math.Max(1, Math.Min(Environment.ProcessorCount, ramSpace));
+            int maxConcurrentChunksInRam = (int)(CheckFreeRamSpace() / ((long)chunkSizeInMB * 1024 * 1024));
+            int concurrencyToUse = Math.Min(Environment.ProcessorCount, maxConcurrentChunksInRam);
+            return Math.Max(1, concurrencyToUse); //Ensuring returned value is 1 or higher
         }
     }
     

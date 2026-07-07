@@ -38,22 +38,16 @@ namespace VaultCrypt.Tests.Services
         }
 
         [Fact]
-        internal void CalculateConcurrencyReturnsOneForNonChunkedFile()
-        {
-            Assert.Equal(1, _service.CalculateConcurrency(false, 1));
-        }
-
-        [Fact]
         internal void CalculateConcurrencyOneOrHigherForChunkedFile()
         {
-            Assert.True(_service.CalculateConcurrency(true, 1) >= 1);
+            Assert.True(_service.CalculateConcurrency(chunkSizeInMB: 1) >= 1);
         }
 
         [Theory]
         [InlineData(0)]
         internal void CalculateConcurrencyThrowsForInvalidChunkSize(ushort chunkSize)
         {
-            Assert.Throws<ArgumentOutOfRangeException>(() => _service.CalculateConcurrency(false, chunkSize));
+            Assert.Throws<ArgumentOutOfRangeException>(() => _service.CalculateConcurrency(chunkSize));
         }
     }
 }

@@ -119,7 +119,7 @@ namespace VaultCrypt.Services
 
             var tasks = new List<Task>();
             var results = new ConcurrentDictionary<ulong, ISecureBuffer>();
-            int concurrentChunkCount = _systemService.CalculateConcurrency(true, chunkInformation.ChunkSize);
+            int concurrentChunkCount = _systemService.CalculateConcurrency(chunkInformation.ChunkSize);
             ulong nextToWrite = 0;
             ulong chunkIndex = 0;
             ISecureBuffer buffer = SecureBuffer.Create(extraData + (chunkInformation.ChunkSize * 1024 * 1024));

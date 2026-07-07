@@ -60,7 +60,7 @@ namespace VaultCrypt.Services
             {
                 var provider = algorithm.Provider();
                 ulong totalChunks = options.ChunkInformation != null ? options.ChunkInformation!.TotalChunks : 1;
-                int concurrentChunkCount = _systemService.CalculateConcurrency(options.IsChunked, chunkSizeInMB);
+                int concurrentChunkCount = options.IsChunked ? _systemService.CalculateConcurrency(chunkSizeInMB) : 1;
 
                 await using FileStream vaultFS = await RetryHelper.TryUntilSuccessAsync(
                     tryAction: () => new FileStream(_session.VAULTPATH, FileMode.Open, FileAccess.ReadWrite),
