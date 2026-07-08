@@ -43,11 +43,11 @@ namespace VaultCrypt
         /// </summary>
         /// <param name="length">Size of requested memory in bytes</param>
         /// <returns>Unmanaged memory buffer with the size of <paramref name="length"/></returns>
-        /// <exception cref="ArgumentOutOfRangeException">Thrown when <paramref name="length"/> is set to negative value or zero</exception>
+        /// <exception cref="ArgumentOutOfRangeException">Thrown when <paramref name="length"/> is negative</exception>
         /// <exception cref="PlatformNotSupportedException">Thrown when method is called on unsupported platform</exception>
         public static ISecureBuffer Create(int length)
         {
-            ArgumentOutOfRangeException.ThrowIfNegativeOrZero(length);
+            ArgumentOutOfRangeException.ThrowIfNegative(length);
 
             if (OperatingSystem.IsWindows() || OperatingSystem.IsLinux() || OperatingSystem.IsMacOS())
             {
@@ -131,12 +131,12 @@ namespace VaultCrypt
             /// Despite being paddded, the available memory to read/write is equal to requested <paramref name="length"/>
             /// </summary>
             /// <param name="length">Size in bytes of requested memory region</param>
-            /// <exception cref="ArgumentOutOfRangeException">Thrown when <paramref name="length"/> is set to negative value or zero</exception>
+            /// <exception cref="ArgumentOutOfRangeException">Thrown when <paramref name="length"/> is negative</exception>
             /// <exception cref="PlatformNotSupportedException">Thrown when the OS is not Windows, Mac or Linux</exception>
             /// <exception cref="SecurityException">Thrown when memory fails to get locked</exception>
             public SecureKeyBuffer(int length)
             {
-                ArgumentOutOfRangeException.ThrowIfNegativeOrZero(length);
+                ArgumentOutOfRangeException.ThrowIfNegative(length);
 
                 _availableLength = length;
                 int pageSize = Environment.SystemPageSize;
@@ -396,10 +396,10 @@ namespace VaultCrypt
             /// Creates new block of zeroed and unmanaged memory
             /// </summary>
             /// <param name="length">Size in bytes of memory to create</param>
-            /// <exception cref="ArgumentOutOfRangeException">Thrown when <paramref name="length"/> is set to negative or zero value</exception>
+            /// <exception cref="ArgumentOutOfRangeException">Thrown when <paramref name="length"/> is negative</exception>
             public SecureLargeBuffer(int length)
             {
-                ArgumentOutOfRangeException.ThrowIfNegativeOrZero(length);
+                ArgumentOutOfRangeException.ThrowIfNegative(length);
 
                 _length = length;
                 _pointer = NativeMemory.AllocZeroed((nuint)length);
