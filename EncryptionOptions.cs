@@ -52,7 +52,7 @@ namespace VaultCrypt
                 }
             }
 
-            public FileEncryptionOptions(byte version, string fileName, ulong fileSize, byte algorithm, bool chunked, ChunkInformation? chunkInformation) : this(version, SetFileName(fileName), fileSize, algorithm, chunked, chunkInformation) { }
+            public FileEncryptionOptions(byte version, string fileName, ulong fileSize, byte algorithm, bool chunked, ChunkInformation? chunkInformation) : this(version, PasswordHelper.StringToSecureBuffer(fileName), fileSize, algorithm, chunked, chunkInformation) { }
 
             /// <summary>
             /// Gets the filename as <see cref="string"/>
@@ -60,15 +60,7 @@ namespace VaultCrypt
             /// <returns>String with the filename</returns>
             public string GetFileName()
             {
-                return Encoding.UTF8.GetString(this.FileName.AsSpan);
-            }
-
-            private static ISecureBuffer SetFileName(string fileName)
-            {
-                var buffer = SecureBuffer.Create(Encoding.UTF8.GetByteCount(fileName));
-                Encoding.UTF8.GetBytes(fileName, buffer.AsSpan);
-
-                return buffer;
+                return Encoding.Unicode.GetString(this.FileName.AsSpan);
             }
 
             public virtual bool Equals(FileEncryptionOptions? other)
