@@ -84,20 +84,20 @@ namespace VaultCrypt
                 return hash.ToHashCode();
             }
 
-            private static void WriteFileEncryptionOptionsToSpan(FileEncryptionOptions encryptionOptions, Span<byte> span)
+            private static void WriteFileEncryptionOptionsToSpan(FileEncryptionOptions encryptionOptions, ISecureBuffer span)
             {
-                SpanWriter bufferSpan = new SpanWriter(span);
-                bufferSpan.WriteByte(encryptionOptions.Version);
-                bufferSpan.WriteUInt16(encryptionOptions.NameLength);
-                bufferSpan.WriteSpan(encryptionOptions.FileName.AsSpan);
-                bufferSpan.WriteUInt64(encryptionOptions.FileSize);
-                bufferSpan.WriteByte(encryptionOptions.EncryptionAlgorithm);
-                bufferSpan.WriteByte(encryptionOptions.IsChunked ? (byte)1 : (byte)0);
+                SecureBufferReadWrite.SecureBufferWriter writer = new SecureBufferReadWrite.SecureBufferWriter(span);
+                writer.WriteByte(encryptionOptions.Version);
+                writer.WriteUInt16(encryptionOptions.NameLength);
+                writer.WriteSpan(encryptionOptions.FileName.AsSpan);
+                writer.WriteUInt64(encryptionOptions.FileSize);
+                writer.WriteByte(encryptionOptions.EncryptionAlgorithm);
+                writer.WriteByte(encryptionOptions.IsChunked ? (byte)1 : (byte)0);
                 if (encryptionOptions.IsChunked)
                 {
                     using (ISecureBuffer chunkInfo = ChunkInformation.SerializeChunkInformation(encryptionOptions.ChunkInformation!))
                     {
-                        bufferSpan.WriteSpan(chunkInfo.AsSpan);
+                        writer.WriteSpan(chunkInfo.AsSpan);
                     }
                 }
             }
@@ -111,7 +111,7 @@ namespace VaultCrypt
                 ISecureBuffer buffer = SecureBuffer.Create(resultSize);
                 try
                 {
-                    WriteFileEncryptionOptionsToSpan(encryptionOptions, buffer.AsSpan);
+                    WriteFileEncryptionOptionsToSpan(encryptionOptions, buffer);
                     return buffer;
                 }
                 catch (Exception)
@@ -164,7 +164,7 @@ namespace VaultCrypt
             public static ISecureBuffer SerializeChunkInformation(ChunkInformation chunkInformation)
             {
                 ISecureBuffer chunkBytes = SecureBuffer.Create(14);
-                SpanWriter writer = new SpanWriter(chunkBytes.AsSpan);
+                SecureBufferReadWrite.SecureBufferWriter writer = new SecureBufferReadWrite.SecureBufferWriter(chunkBytes);
                 writer.WriteUInt16(chunkInformation.ChunkSize);
                 writer.WriteUInt64(chunkInformation.TotalChunks);
                 writer.WriteUInt32(chunkInformation.FinalChunkSize);
@@ -184,49 +184,7 @@ namespace VaultCrypt
 
         public class FileEncryptionOptionsReader
         {
-            public static FileEncryptionOptions Deserialize(ReadOnlySpan<byte> data)
-            {
-                if (data.IsEmpty) throw new ArgumentException("Provided empty data", nameof(data));
-                byte version = data[0];
-
-                return version switch
-                {
-                    0 => DeserializeV0(data),
-                    1 => DeserializeV1(data),
-                    _ => throw new VaultEncryptionOptionsOperationException(VaultException.ErrorReason.NoReader)
-                };
-            }
-
-            private static FileEncryptionOptions DeserializeV0(ReadOnlySpan<byte> data)
-            {
-                var spanReader = new SpanReader(data);
-                byte version = spanReader.ReadByte();
-                ushort nameLength = spanReader.ReadUInt16();
-                ISecureBuffer fileName = spanReader.ReadBytes(nameLength);
-                ulong fileSize = spanReader.ReadUInt64();
-                byte encryptionAlgorithm = spanReader.ReadByte();
-                bool chunked = spanReader.ReadByte() == 1 ? true : false;
-                ChunkInformation? chunkInformation = null;
-                if (chunked) chunkInformation = DeserializeChunkInformationV0(spanReader);
-                return new FileEncryptionOptions(version, fileName, fileSize, encryptionAlgorithm, chunked, chunkInformation);
-            }
-
-            private static FileEncryptionOptions DeserializeV1(ReadOnlySpan<byte> data)
-            {
-                var spanReader = new SpanReader(data);
-                byte version = spanReader.ReadByte();
-                ushort nameLength = spanReader.ReadUInt16();
-                ISecureBuffer fileName = spanReader.ReadBytes(nameLength);
-                ulong fileSize = spanReader.ReadUInt64();
-                byte encryptionAlgorithm = spanReader.ReadByte();
-                bool chunked = spanReader.ReadByte() == 1 ? true : false;
-                ChunkInformation? chunkInformation = null;
-                if (chunked) chunkInformation = DeserializeChunkInformationV1(spanReader);
-                return new FileEncryptionOptions(version, fileName, fileSize, encryptionAlgorithm, chunked, chunkInformation);
-            }
-
-
-            private static ChunkInformation DeserializeChunkInformationV0(SpanReader chunkData)
+            private static ChunkInformation DeserializeChunkInformationV0(SecureBufferReadWrite.SecureBufferReader chunkData)
             {
                 ushort chunkSize = chunkData.ReadUInt16();
                 ushort totalChunks = chunkData.ReadUInt16();
@@ -234,12 +192,53 @@ namespace VaultCrypt
                 return new ChunkInformation(chunkSize, totalChunks, finalChunkSize);
             }
 
-            private static ChunkInformation DeserializeChunkInformationV1(SpanReader chunkData)
+            private static FileEncryptionOptions DeserializeV0(ISecureBuffer data)
+            {
+                var reader = new SecureBufferReadWrite.SecureBufferReader(data);
+                byte version = reader.ReadByte();
+                ushort nameLength = reader.ReadUInt16();
+                ISecureBuffer fileName = reader.ReadBytes(nameLength);
+                ulong fileSize = reader.ReadUInt64();
+                byte encryptionAlgorithm = reader.ReadByte();
+                bool chunked = reader.ReadByte() == 1 ? true : false;
+                ChunkInformation? chunkInformation = null;
+                if (chunked) chunkInformation = DeserializeChunkInformationV0(reader);
+                return new FileEncryptionOptions(version, fileName, fileSize, encryptionAlgorithm, chunked, chunkInformation);
+            }
+
+            private static ChunkInformation DeserializeChunkInformationV1(SecureBufferReadWrite.SecureBufferReader chunkData)
             {
                 ushort chunkSize = chunkData.ReadUInt16();
                 ulong totalChunks = chunkData.ReadUInt64();
                 uint finalChunkSize = chunkData.ReadUInt32();
                 return new ChunkInformation(chunkSize, totalChunks, finalChunkSize);
+            }
+
+            private static FileEncryptionOptions DeserializeV1(ISecureBuffer data)
+            {
+                var reader = new SecureBufferReadWrite.SecureBufferReader(data);
+                byte version = reader.ReadByte();
+                ushort nameLength = reader.ReadUInt16();
+                ISecureBuffer fileName = reader.ReadBytes(nameLength);
+                ulong fileSize = reader.ReadUInt64();
+                byte encryptionAlgorithm = reader.ReadByte();
+                bool chunked = reader.ReadByte() == 1 ? true : false;
+                ChunkInformation? chunkInformation = null;
+                if (chunked) chunkInformation = DeserializeChunkInformationV1(reader);
+                return new FileEncryptionOptions(version, fileName, fileSize, encryptionAlgorithm, chunked, chunkInformation);
+            }
+
+            public static FileEncryptionOptions Deserialize(ISecureBuffer data)
+            {
+                if (data.AsSpan.IsEmpty) throw new ArgumentException("Provided empty data", nameof(data));
+                byte version = data.AsSpan[0];
+
+                return version switch
+                {
+                    0 => DeserializeV0(data),
+                    1 => DeserializeV1(data),
+                    _ => throw new VaultEncryptionOptionsOperationException(VaultException.ErrorReason.NoReader)
+                };
             }
         }
     }

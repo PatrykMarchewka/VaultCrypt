@@ -106,7 +106,7 @@ namespace VaultCrypt.Services
 
             using (ISecureBuffer decryptedMetadata = vaultReader.ReadAndDecryptData(vaultFS, metadataOffset, vaultReader.EncryptionOptionsSize))
             {
-                return EncryptionOptions.FileEncryptionOptionsReader.Deserialize(decryptedMetadata.AsSpan);
+                return EncryptionOptions.FileEncryptionOptionsReader.Deserialize(decryptedMetadata);
             }
         }
     }
