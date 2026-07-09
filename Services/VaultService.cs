@@ -179,21 +179,16 @@ namespace VaultCrypt.Services
             }
         }
 
-        /// <summary>
-        /// Populates <see cref="IVaultSession.ENCRYPTED_FILES"/> list with the information from the <paramref name="stream"/>
-        /// </summary>
-        /// <param name="stream">Vault file to read from</param>
-        /// <exception cref="ArgumentNullException">Thrown when <paramref name="stream"/> is set to null</exception>
         private void PopulateEncryptedFilesList(Stream stream)
         {
             ArgumentNullException.ThrowIfNull(stream);
 
-            long[] offsets = null!;
-            try
+            using (ISecureBuffer offsets = VaultRegistry.GetVaultReader(_session.VERSION).ReadMetadataOffsets(stream))
             {
-                offsets = VaultRegistry.GetVaultReader(_session.VERSION).ReadMetadataOffsets(stream);
-                foreach (long offset in offsets)
+                SecureBufferReadWrite.SecureBufferReader reader = new SecureBufferReadWrite.SecureBufferReader(offsets);
+                for (int i = 0; i < (offsets.AsSpan.Length / sizeof(long)); i++)
                 {
+                    long offset = reader.ReadInt64();
                     EncryptionOptions.FileEncryptionOptions fileEncryptionOptions = null!;
                     try
                     {
@@ -218,10 +213,6 @@ namespace VaultCrypt.Services
                         fileEncryptionOptions?.Dispose();
                     }
                 }
-            }
-            finally
-            {
-                if (offsets is not null) CryptographicOperations.ZeroMemory(MemoryMarshal.AsBytes(offsets.AsSpan()));
             }
         }
 
@@ -302,7 +293,8 @@ namespace VaultCrypt.Services
                 //Total is filelList.Count + 1 because last action is saving new header
                 context.SetTotal(fileListCount + 1);
 
-                long[] newVaultOffsets = new long[fileListCount];
+                ISecureBuffer newVaultOffsets = SecureBuffer.Create(fileListCount * sizeof(long));
+                SecureBufferReadWrite.SecureBufferWriter newVaultOffsetsWriter = new SecureBufferReadWrite.SecureBufferWriter(newVaultOffsets);
                 try
                 {
                     for (int i = 0; i < fileListCount; i++)
@@ -361,11 +353,12 @@ namespace VaultCrypt.Services
                         ulong fileMinimum = (ulong)(oldVaultSize - currentOffset);
                         ulong toRead = new[] { offsetMinimum, optionsMinimum, fileMinimum }.Min();
 
-                        newVaultOffsets[i] = newVaultfs.Seek(0, SeekOrigin.End);
+                        long currentFileOffsetInNewVault = newVaultfs.Seek(0, SeekOrigin.End);
+                        newVaultOffsetsWriter.WriteInt64(currentFileOffsetInNewVault);
                         try
                         {
                             await RetryHelper.TryUntilSuccessAsync(
-                                tryAction: () => _fileService.CopyPartOfFile(vaultfs, currentOffset, toRead, newVaultfs, newVaultOffsets[i]),
+                                tryAction: () => _fileService.CopyPartOfFile(vaultfs, currentOffset, toRead, newVaultfs, currentFileOffsetInNewVault),
                                 catchAction: () => context.ReportTempStatus(ProgressFailure.ProgressTempFailure.WritingToFileFailed),
                                 cancellationToken: context.CancellationToken);
                         }
@@ -379,8 +372,7 @@ namespace VaultCrypt.Services
                 finally
                 {
                     reader.SaveMetadataOffsets(newVaultfs, newVaultOffsets);
-
-                    CryptographicOperations.ZeroMemory(MemoryMarshal.AsBytes(newVaultOffsets.AsSpan()));
+                    newVaultOffsets.Dispose();
                 }
                 context.Increment();
             }

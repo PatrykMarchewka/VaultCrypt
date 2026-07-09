@@ -199,12 +199,20 @@ namespace VaultCrypt
         public ISecureBuffer PrepareVaultHeader(ReadOnlySpan<byte> salt, int iterations);
 
         /// <summary>
+        /// Encrypts <paramref name="data"/> using <see cref="VaultEncryptionAlgorithm"/>
+        /// </summary>
+        /// <param name="data">Data to encrypt</param>
+        /// <returns>Secure buffer holding encrypted information</returns>
+        /// <exception cref="ArgumentException">Thrown when <paramref name="data"/> is empty</exception>
+        public ISecureBuffer VaultEncryption(ReadOnlySpan<byte> data);
+
+        /// <summary>
         /// Reads and decrypts metadata offsets
         /// </summary>
         /// <param name="stream">Stream to vault file to read from</param>
-        /// <returns>Array of metadata offsets</returns>
+        /// <returns>Secure buffer holding decrypted metadata offsets</returns>
         /// <exception cref="ArgumentNullException">Thrown when provided <paramref name="stream"/> is set to null value</exception>
-        public long[] ReadMetadataOffsets(Stream stream);
+        public ISecureBuffer ReadMetadataOffsets(Stream stream);
 
         /// <summary>
         /// Adds <paramref name="newOffset"/> to offsets list and saves it back encrypted to <paramref name="stream"/>
@@ -230,7 +238,7 @@ namespace VaultCrypt
         /// <param name="stream">Vault file to read and write to</param>
         /// <param name="offsets">Metadata offsets to save</param>
         /// <exception cref="ArgumentNullException">Thrown when <paramref name="stream"/> or <paramref name="offsets"/> is set to null</exception>
-        public void SaveMetadataOffsets(Stream stream, long[] offsets);
+        public void SaveMetadataOffsets(Stream stream, ISecureBuffer offsets);
 
         /// <summary>
         /// Reads and decrypts <paramref name="length"/> bytes from <paramref name="stream"/> at <paramref name="offset"/> offset using <see cref="VaultEncryptionAlgorithm"/>
@@ -242,14 +250,6 @@ namespace VaultCrypt
         /// <exception cref="ArgumentNullException">Thrown when <paramref name="stream"/> is set to null</exception>
         /// <exception cref="ArgumentOutOfRangeException">Thrown when <paramref name="offset"/> is set to negative value or <paramref name="length"/> is set to negative or zero value</exception>
         public ISecureBuffer ReadAndDecryptData(Stream stream, long offset, int length);
-
-        /// <summary>
-        /// Encrypts <paramref name="data"/> using <see cref="VaultEncryptionAlgorithm"/>
-        /// </summary>
-        /// <param name="data">Data to encrypt</param>
-        /// <returns>Encrypted information</returns>
-        /// <exception cref="ArgumentException">Thrown when <paramref name="data"/> is empty</exception>
-        public ISecureBuffer VaultEncryption(ReadOnlySpan<byte> data);
     }
 
     //For new versions append the additional data at the end
@@ -338,185 +338,9 @@ namespace VaultCrypt
                 throw;
             }
         }
-
-        
         #endregion
 
         #region Metadata offsets
-        public long[] ReadMetadataOffsets(Stream stream)
-        {
-            ArgumentNullException.ThrowIfNull(stream);
-
-            ISecureBuffer decrypted = null!;
-            long[] offsets = null!;
-            try
-            {
-                decrypted = ReadMetadataOffsetsBytes(stream);
-                ushort fileCount = BinaryPrimitives.ReadUInt16LittleEndian(decrypted.AsSpan);
-
-                offsets = new long[fileCount];
-                for (int i = 0; i < fileCount; i++)
-                {
-                    int readOffset = sizeof(ushort) + (i * sizeof(long));
-                    offsets[i] = BinaryPrimitives.ReadInt64LittleEndian(decrypted.AsSpan.Slice(readOffset, sizeof(long)));
-                }
-                return offsets;
-            }
-            catch (Exception)
-            {
-                if (offsets is not null) CryptographicOperations.ZeroMemory(MemoryMarshal.AsBytes(offsets.AsSpan()));
-                throw;
-            }
-            finally
-            {
-                decrypted?.Dispose();
-            }
-
-        }
-
-        //Reads and decrypts metadata offsets as raw bytes
-        private ISecureBuffer ReadMetadataOffsetsBytes(Stream stream)
-        {
-            stream.Seek(sizeof(byte) + SaltSize + sizeof(int), SeekOrigin.Begin);
-
-            //Example: extra data (28 bytes for AES) + number of files (ushort) + max metadata offsets size
-            int bufferSize = EncryptionAlgorithm.GetEncryptionAlgorithmInfo[VaultEncryptionAlgorithm].Provider().EncryptionAlgorithm.ExtraEncryptionDataSize + sizeof(ushort) + MetadataOffsetsSize;
-            using (ISecureBuffer buffer = SecureBuffer.Create(bufferSize))
-            {
-                stream.ReadExactly(buffer.AsSpan);
-                return VaultDecryption(buffer.AsSpan);
-            }
-        }
-
-        public void AddAndSaveMetadataOffsets(Stream stream, long newOffset)
-        {
-            ArgumentNullException.ThrowIfNull(stream);
-            ArgumentOutOfRangeException.ThrowIfLessThan(newOffset, this.HeaderSize); //Prevent adding new offset belonging to header information
-
-            long[] oldOffsets = null!;
-            long[] newOffsets = null!;
-            try
-            {
-                oldOffsets = ReadMetadataOffsets(stream);
-                if (((oldOffsets.Length + 1) * sizeof(long)) > MetadataOffsetsSize)
-                {
-                    throw new VaultOperationException(VaultException.ErrorReason.FullVault);
-                }
-                newOffsets = new long[oldOffsets.Length + 1];
-                oldOffsets.AsSpan().CopyTo(newOffsets);
-                newOffsets[oldOffsets.Length] = newOffset;
-                SaveMetadataOffsets(stream, newOffsets);
-            }
-            finally
-            {
-                if (oldOffsets is not null) CryptographicOperations.ZeroMemory(MemoryMarshal.AsBytes(oldOffsets.AsSpan()));
-                if (newOffsets is not null) CryptographicOperations.ZeroMemory(MemoryMarshal.AsBytes(newOffsets.AsSpan()));
-            }
-
-        }
-
-        public void RemoveAndSaveMetadataOffsets(Stream stream, ushort itemIndex)
-        {
-            ArgumentNullException.ThrowIfNull(stream);
-
-            long[] oldOffsets = null!;
-            long[] newOffsets = null!;
-            try
-            {
-                oldOffsets = ReadMetadataOffsets(stream);
-                newOffsets = oldOffsets.Where((offset, index) => index != itemIndex).ToArray();
-                SaveMetadataOffsets(stream, newOffsets);
-            }
-            finally
-            {
-                if (oldOffsets is not null) CryptographicOperations.ZeroMemory(MemoryMarshal.AsBytes(oldOffsets.AsSpan()));
-                if (newOffsets is not null) CryptographicOperations.ZeroMemory(MemoryMarshal.AsBytes(newOffsets.AsSpan()));
-            }
-        }
-
-        //Converts offsets into ISecureBuffer holding metadata
-        private ISecureBuffer PrepareMetadataOffsets(long[] offsets)
-        {
-            //Remove all duplicates and offsets pointing to 0
-            long[] distinctOffsets = [.. offsets.Distinct().Where(offset => offset != 0)];
-            try
-            {
-                ISecureBuffer offsetsBuffer = SecureBuffer.Create(sizeof(ushort) + (distinctOffsets.Length * sizeof(long)));
-                SpanWriter writer = new SpanWriter(offsetsBuffer.AsSpan);
-                writer.WriteUInt16(checked((ushort)distinctOffsets.Length));
-                writer.WriteSpan(distinctOffsets.AsSpan());
-                return offsetsBuffer;
-            }
-            finally
-            {
-                CryptographicOperations.ZeroMemory(MemoryMarshal.AsBytes(distinctOffsets.AsSpan()));
-            }
-            
-        }
-
-        //Pads supplied metadataOffsets to match session's metadataoffset size and encrypts the entire collection
-        private ISecureBuffer PadMetadataOffsetsAndEncrypt(ISecureBuffer metadataOffsets)
-        {
-            ISecureBuffer paddedMetadataOffsets = SecureBuffer.Create(sizeof(ushort) + MetadataOffsetsSize); //2 bytes ushort for number of currently attached offsets
-            ISecureBuffer encryptedMetadataOffsets = null!;
-            try
-            {
-                metadataOffsets.AsSpan.CopyTo(paddedMetadataOffsets.AsSpan);
-                encryptedMetadataOffsets = VaultEncryption(paddedMetadataOffsets.AsSpan);
-                return encryptedMetadataOffsets;
-            }
-            catch (Exception)
-            {
-                encryptedMetadataOffsets?.Dispose();
-                throw;
-            }
-            finally
-            {
-                paddedMetadataOffsets.Dispose();
-            }
-        }
-
-        private void WriteMetadataOffsets(Stream stream, ReadOnlySpan<byte> encryptedMetadataOffsets)
-        {
-            stream.Seek(sizeof(byte) + SaltSize + sizeof(int), SeekOrigin.Begin); //1 byte for version + bytes for salt + 4 bytes for iterations
-            stream.Write(encryptedMetadataOffsets);
-        }
-
-        public void SaveMetadataOffsets(Stream stream, long[] offsets)
-        {
-            ArgumentNullException.ThrowIfNull(stream);
-            ArgumentNullException.ThrowIfNull(offsets);
-
-            ISecureBuffer offsetsBuffer = null!;
-            ISecureBuffer encryptedMetadataOffsets = null!;
-            try
-            {
-                offsetsBuffer = PrepareMetadataOffsets(offsets);
-                encryptedMetadataOffsets = PadMetadataOffsetsAndEncrypt(offsetsBuffer);
-                WriteMetadataOffsets(stream, encryptedMetadataOffsets.AsSpan);
-            }
-            finally
-            {
-                offsetsBuffer?.Dispose();
-                encryptedMetadataOffsets?.Dispose();
-            }
-        }
-        #endregion
-
-        public ISecureBuffer ReadAndDecryptData(Stream stream, long offset, int length)
-        {
-            ArgumentNullException.ThrowIfNull(stream);
-            ArgumentOutOfRangeException.ThrowIfNegative(offset);
-            ArgumentOutOfRangeException.ThrowIfNegativeOrZero(length);
-
-            using (ISecureBuffer buffer = SecureBuffer.Create(length))
-            {
-                stream.Seek(offset, SeekOrigin.Begin);
-                stream.ReadExactly(buffer.AsSpan);
-                return VaultDecryption(buffer.AsSpan);
-            }
-        }
-
         public ISecureBuffer VaultEncryption(ReadOnlySpan<byte> data)
         {
             if (data.IsEmpty) throw new ArgumentException("Provided empty data", nameof(data));
@@ -534,6 +358,146 @@ namespace VaultCrypt
 
             return provider.EncryptionAlgorithm.DecryptBytes(data, VaultSession.CurrentSession.GetSlicedKey(provider.KeySize));
         }
+
+        public ISecureBuffer ReadAndDecryptData(Stream stream, long offset, int length)
+        {
+            ArgumentNullException.ThrowIfNull(stream);
+            ArgumentOutOfRangeException.ThrowIfNegative(offset);
+            ArgumentOutOfRangeException.ThrowIfNegativeOrZero(length);
+
+            using (ISecureBuffer buffer = SecureBuffer.Create(length))
+            {
+                stream.Seek(offset, SeekOrigin.Begin);
+                stream.ReadExactly(buffer.AsSpan);
+                return VaultDecryption(buffer.AsSpan);
+            }
+        }
+
+        //Reads and decrypts metadata offsets as raw bytes
+        private ISecureBuffer ReadMetadataOffsetsBytes(Stream stream)
+        {
+            stream.Seek(sizeof(byte) + SaltSize + sizeof(int), SeekOrigin.Begin);
+            //Example: extra data (28 bytes for AES) + number of files (ushort) + max metadata offsets size
+            int bufferSize = EncryptionAlgorithm.GetEncryptionAlgorithmInfo[VaultEncryptionAlgorithm].Provider().EncryptionAlgorithm.ExtraEncryptionDataSize + sizeof(ushort) + MetadataOffsetsSize;
+            using (ISecureBuffer buffer = SecureBuffer.Create(bufferSize))
+            {
+                stream.ReadExactly(buffer.AsSpan);
+                return VaultDecryption(buffer.AsSpan);
+            }
+        }
+
+        public ISecureBuffer ReadMetadataOffsets(Stream stream)
+        {
+            ArgumentNullException.ThrowIfNull(stream);
+
+            using (ISecureBuffer decryptedOffsetBytes = ReadMetadataOffsetsBytes(stream))
+            {
+                SecureBufferReadWrite.SecureBufferReader decryptedOffsetsReader = new SecureBufferReadWrite.SecureBufferReader(decryptedOffsetBytes);
+                ushort fileCount = decryptedOffsetsReader.ReadUInt16();
+                ISecureBuffer decryptedBuffer = SecureBuffer.Create(fileCount * sizeof(long));
+                SecureBufferReadWrite.SecureBufferWriter decryptedBufferWriter = new SecureBufferReadWrite.SecureBufferWriter(decryptedBuffer);
+                for (int i = 0; i < fileCount; i++)
+                {
+                    using (ISecureBuffer readOffset = decryptedOffsetsReader.ReadBytes(sizeof(long)))
+                    {
+                        decryptedBufferWriter.WriteSpan(readOffset.AsSpan);
+                    }
+                }
+                return decryptedBuffer;
+            }
+        }
+
+        // Attaches number of offsets
+        private ISecureBuffer PrepareMetadataOffsets(ISecureBuffer offsets)
+        {
+            ArgumentNullException.ThrowIfNull(offsets);
+            if (offsets.AsSpan.IsEmpty) throw new ArgumentException("Provided no offsets", nameof(offsets));
+
+            ISecureBuffer buffer = SecureBuffer.Create(sizeof(ushort) + offsets.AsSpan.Length);
+            ushort offsetsNumber = checked((ushort)(offsets.AsSpan.Length / sizeof(long)));
+            SpanWriter writer = new SpanWriter(buffer.AsSpan);
+            writer.WriteUInt16(offsetsNumber);
+            writer.WriteSpan(offsets.AsSpan);
+            return buffer;
+        }
+
+        //Pads supplied metadataOffsets to match session's metadataoffset size and encrypts the entire collection
+        private ISecureBuffer PadMetadataOffsetsAndEncrypt(ISecureBuffer metadataOffsets)
+        {
+            ArgumentNullException.ThrowIfNull(metadataOffsets);
+            if (metadataOffsets.AsSpan.IsEmpty) throw new ArgumentException("Provided no offsets", nameof(metadataOffsets));
+            if (metadataOffsets.AsSpan.Length > MetadataOffsetsSize) throw new ArgumentOutOfRangeException("Provided offsets length is too big");
+
+
+            using (ISecureBuffer paddedMetadataOffsets = SecureBuffer.Create(sizeof(ushort) + MetadataOffsetsSize)) //2 bytes ushort for number of currently attached offsets
+            {
+                metadataOffsets.AsSpan.CopyTo(paddedMetadataOffsets.AsSpan);
+                return VaultEncryption(paddedMetadataOffsets.AsSpan);
+            }
+        }
+
+        //Writes metadataoffsets to correct point in stream
+        private void WriteMetadataOffsets(Stream stream, ReadOnlySpan<byte> encryptedMetadataOffsets)
+        {
+            stream.Seek(sizeof(byte) + SaltSize + sizeof(int), SeekOrigin.Begin); //1 byte for version + bytes for salt + 4 bytes for iterations
+            stream.Write(encryptedMetadataOffsets);
+        }
+
+        public void SaveMetadataOffsets(Stream stream, ISecureBuffer offsets)
+        {
+            ArgumentNullException.ThrowIfNull(stream);
+            ArgumentNullException.ThrowIfNull(offsets);
+            
+            using (ISecureBuffer preparedOffsets = PrepareMetadataOffsets(offsets))
+            {
+                using (ISecureBuffer encryptedMetadataOffsets = PadMetadataOffsetsAndEncrypt(preparedOffsets))
+                {
+                    WriteMetadataOffsets(stream, encryptedMetadataOffsets.AsSpan);
+                }
+            }
+        }
+
+        public void AddAndSaveMetadataOffsets(Stream stream, long newOffset)
+        {
+            ArgumentNullException.ThrowIfNull(stream);
+            ArgumentOutOfRangeException.ThrowIfLessThan(newOffset, this.HeaderSize); //Prevent adding new offset belonging to header information
+
+            using (ISecureBuffer oldOffsets = ReadMetadataOffsets(stream))
+            {
+                int newOffsetsSize = oldOffsets.AsSpan.Length + sizeof(long);
+                if (newOffsetsSize > MetadataOffsetsSize)
+                {
+                    throw new VaultOperationException(VaultException.ErrorReason.FullVault);
+                }
+                using (ISecureBuffer newOffsets = SecureBuffer.Create(newOffsetsSize))
+                {
+                    oldOffsets.AsSpan.CopyTo(newOffsets.AsSpan);
+                    BinaryPrimitives.WriteInt64LittleEndian(newOffsets.AsSpan[^sizeof(long)..], newOffset);
+                    SaveMetadataOffsets(stream, newOffsets);
+                }
+            }
+        }
+
+        public void RemoveAndSaveMetadataOffsets(Stream stream, ushort itemIndex)
+        {
+            ArgumentNullException.ThrowIfNull(stream);
+
+            using (ISecureBuffer oldOffsets = ReadMetadataOffsets(stream))
+            {
+                using (ISecureBuffer newOffsets = SecureBuffer.Create(oldOffsets.AsSpan.Length - sizeof(long)))
+                {
+                    int removedOffset = sizeof(long) * itemIndex;
+                    var leftSide = oldOffsets.AsSpan[..removedOffset];
+                    var rightSide = oldOffsets.AsSpan[(removedOffset + sizeof(long))..];
+
+                    leftSide.CopyTo(newOffsets.AsSpan);
+                    rightSide.CopyTo(newOffsets.AsSpan[leftSide.Length..]);
+
+                    SaveMetadataOffsets(stream, newOffsets);
+                }
+            }
+        }
+        #endregion
     }
 
 
