@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Buffers.Binary;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
@@ -62,6 +62,8 @@ namespace VaultCrypt.Services
 
         public int CalculateConcurrency(ushort chunkSizeInMB)
         {
+            ArgumentOutOfRangeException.ThrowIfZero(chunkSizeInMB);
+
             int maxConcurrentChunksInRam = (int)(CheckFreeRamSpace() / ((long)chunkSizeInMB * 1024 * 1024));
             int concurrencyToUse = Math.Min(Environment.ProcessorCount, maxConcurrentChunksInRam);
             return Math.Max(1, concurrencyToUse); //Ensuring returned value is 1 or higher
