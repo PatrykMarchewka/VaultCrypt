@@ -96,6 +96,20 @@ namespace VaultCrypt
                 _index += sizeof(ulong);
                 return value;
             }
+
+            /// <summary>
+            /// Reads <see cref="long"/> from data and advances index counter by eight
+            /// </summary>
+            /// <returns>ULong read from data at current index</returns>
+            /// <exception cref="InvalidOperationException">Thrown when value cannot be read as it goes outside the array</exception>
+            public long ReadInt64()
+            {
+                if (_data.Length < _index + sizeof(long)) throw new InvalidOperationException("Cannot read value from data");
+
+                long value = BinaryPrimitives.ReadInt64LittleEndian(_data.AsSpan.Slice(_index, sizeof(ulong)));
+                _index += sizeof(long);
+                return value;
+            }
         }
 
         public class SecureBufferWriter
@@ -179,6 +193,18 @@ namespace VaultCrypt
                 if (_index + sizeof(ulong) > _data.Length) throw new InvalidOperationException("Cannot write past Span length");
                 BinaryPrimitives.WriteUInt64LittleEndian(_data.AsSpan.Slice(_index), value);
                 _index += sizeof(ulong);
+            }
+
+            /// <summary>
+            /// Writes <see cref="long"/> to span and advances index by eight
+            /// </summary>
+            /// <param name="value"><see cref="long"/> to write</param>
+            /// <exception cref="InvalidOperationException">Thrown when <paramref name="value"/> cannot fit in the Span</exception>
+            public void WriteInt64(long value)
+            {
+                if (_index + sizeof(long) > _data.Length) throw new InvalidOperationException("Cannot write past Span length");
+                BinaryPrimitives.WriteInt64LittleEndian(_data.AsSpan.Slice(_index), value);
+                _index += sizeof(long);
             }
         }
     }
