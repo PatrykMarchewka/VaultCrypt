@@ -13,12 +13,14 @@ namespace VaultCrypt
     public class EncryptionOptions
     {
         /// <summary>
-        /// Record holding information about file that is either encrypted or about to be
+        /// Record holding information about encrypted file
         /// <br/>
         /// V0 = [version][nameLength][fileName][fileSize][encryptionAlgorithm][chunked][chunkInformation]
         /// <br/>
         /// V1 = [version][nameLength][fileName][fileSize][encryptionAlgorithm][chunked][chunkInformation]
         /// Change: ChunkInformation holds number of chunks as ULong instead of UShort
+        /// V2 = [version][nameLength][fileName][fileSize][encryptionAlgorithm][chunked][chunkInformation]
+        /// Change: FileName is being saved as UTF16 instead of UTF8
         /// </summary>
         public record FileEncryptionOptions : IDisposable
         {
@@ -60,7 +62,8 @@ namespace VaultCrypt
             /// <returns>String with the filename</returns>
             public string GetFileName()
             {
-                return Encoding.Unicode.GetString(this.FileName.AsSpan);
+                if (this.Version == 0 || this.Version == 1) return Encoding.UTF8.GetString(this.FileName.AsSpan);
+                else return Encoding.Unicode.GetString(this.FileName.AsSpan);
             }
 
             public virtual bool Equals(FileEncryptionOptions? other)
@@ -237,6 +240,7 @@ namespace VaultCrypt
                 {
                     0 => DeserializeV0(data),
                     1 => DeserializeV1(data),
+                    2 => DeserializeV1(data), //V2 does not change anything in serialization
                     _ => throw new VaultEncryptionOptionsOperationException(VaultException.ErrorReason.NoReader)
                 };
             }

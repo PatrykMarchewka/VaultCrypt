@@ -44,6 +44,8 @@ namespace VaultCrypt.Services
     {
         private IVaultSession _session => VaultSession.CurrentSession;
 
+        public const byte NewestFileEncryptionOptions = 2;
+
         public EncryptionOptions.FileEncryptionOptions PrepareEncryptionOptions(FileInfo fileInfo, EncryptionAlgorithm.EncryptionAlgorithmInfo algorithm, ushort chunkSizeInMB)
         {
             ArgumentNullException.ThrowIfNull(fileInfo);
@@ -74,7 +76,7 @@ namespace VaultCrypt.Services
             short extraBytes = algorithm.Provider().EncryptionAlgorithm.ExtraEncryptionDataSize;
 
             ulong encryptedFileSize = chunkInformation is null ? (fileLength + (ulong)extraBytes) : ((ulong)fileLength + ((ulong)extraBytes * chunkInformation.TotalChunks));
-            return new EncryptionOptions.FileEncryptionOptions(1, fileInfo.Name, encryptedFileSize, algorithm.ID, chunked, chunkInformation);
+            return new EncryptionOptions.FileEncryptionOptions(NewestFileEncryptionOptions, fileInfo.Name, encryptedFileSize, algorithm.ID, chunked, chunkInformation);
         }
 
 
