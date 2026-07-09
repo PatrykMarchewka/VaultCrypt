@@ -411,11 +411,10 @@ namespace VaultCrypt
         private ISecureBuffer PrepareMetadataOffsets(ISecureBuffer offsets)
         {
             ArgumentNullException.ThrowIfNull(offsets);
-            if (offsets.AsSpan.IsEmpty) throw new ArgumentException("Provided no offsets", nameof(offsets));
 
             ISecureBuffer buffer = SecureBuffer.Create(sizeof(ushort) + offsets.AsSpan.Length);
             ushort offsetsNumber = checked((ushort)(offsets.AsSpan.Length / sizeof(long)));
-            SpanWriter writer = new SpanWriter(buffer.AsSpan);
+            SecureBufferReadWrite.SecureBufferWriter writer = new SecureBufferReadWrite.SecureBufferWriter(buffer);
             writer.WriteUInt16(offsetsNumber);
             writer.WriteSpan(offsets.AsSpan);
             return buffer;
