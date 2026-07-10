@@ -52,7 +52,7 @@ namespace VaultCrypt.ViewModels
             ArgumentNullException.ThrowIfNullOrWhiteSpace(password);
 
             _passwordBuffer?.Dispose();
-            _passwordBuffer = PasswordHelper.StringToSecureBuffer(password);
+            _passwordBuffer = SecureBuffer.StringToSecureBuffer(password);
         }
 
         private void OnPropertyChanged(string name) { PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(name)); }

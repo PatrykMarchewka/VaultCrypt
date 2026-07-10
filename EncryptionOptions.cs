@@ -54,7 +54,7 @@ namespace VaultCrypt
                 }
             }
 
-            public FileEncryptionOptions(byte version, string fileName, ulong fileSize, byte algorithm, bool chunked, ChunkInformation? chunkInformation) : this(version, PasswordHelper.StringToSecureBuffer(fileName), fileSize, algorithm, chunked, chunkInformation) { }
+            public FileEncryptionOptions(byte version, string fileName, ulong fileSize, byte algorithm, bool chunked, ChunkInformation? chunkInformation) : this(version, SecureBuffer.StringToSecureBuffer(fileName), fileSize, algorithm, chunked, chunkInformation) { }
 
             /// <summary>
             /// Gets the filename as <see cref="string"/>

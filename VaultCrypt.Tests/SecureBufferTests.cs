@@ -20,13 +20,6 @@ namespace VaultCrypt.Tests
             1_048_577
         };
 
-        public static TheoryData<int> InvalidMemorySizes = new TheoryData<int>()
-        {
-            int.MinValue,
-            -1,
-            0
-        };
-
         [Theory]
         [MemberData(nameof(ExpectedValidMemorySizes))]
         internal void CreateSetsCorrectLength(int expectedMemorySize)
@@ -73,6 +66,30 @@ namespace VaultCrypt.Tests
         {
             ISecureBuffer buffer = SecureBuffer.Create(expectedMemorySize);
             Assert.True(buffer.AsSpan.IndexOfAnyExcept((byte)0) == -1);
+        }
+
+        [Fact]
+        internal void StringToSecureBufferReturnsCorrectString()
+        {
+            string expected = "Password";
+            ISecureBuffer? buffer = null;
+            try
+            {
+                buffer = SecureBuffer.StringToSecureBuffer(expected);
+                string actual = Encoding.Unicode.GetString(buffer.AsSpan);
+                Assert.Equal(expected, actual);
+            }
+            finally
+            {
+                buffer?.Dispose();
+            }
+        }
+
+        [Theory]
+        [MemberData(nameof(TestsHelper.InvalidStrings), MemberType = typeof(TestsHelper))]
+        internal void StringToSecureBufferThrowsForInvalidStrings(string invalid, Type expectedException)
+        {
+            Assert.Throws(expectedException, () => SecureBuffer.StringToSecureBuffer(invalid));
         }
     }
 }

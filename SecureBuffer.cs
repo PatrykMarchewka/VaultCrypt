@@ -71,6 +71,21 @@ namespace VaultCrypt
             throw new PlatformNotSupportedException();
         }
 
+        /// <summary>
+        /// Converts string to <see cref="ISecureBuffer"/>
+        /// </summary>
+        /// <param name="stringToConvert">String to convert</param>
+        /// <returns><see cref="ISecureBuffer"/> containing <paramref name="stringToConvert"/> in unmanaged memory type</returns>
+        public static ISecureBuffer StringToSecureBuffer(string stringToConvert)
+        {
+            ArgumentNullException.ThrowIfNullOrWhiteSpace(stringToConvert);
+
+            byte[] passwordBytes = Encoding.Unicode.GetBytes(stringToConvert); //C# uses Unicode (utf16) by default for strings
+            ISecureBuffer buffer = SecureBuffer.Create(passwordBytes.Length);
+            passwordBytes.CopyTo(buffer.AsSpan);
+            CryptographicOperations.ZeroMemory(passwordBytes);
+            return buffer;
+        }
 
         /// <summary>
         /// Class to securely manage memory that is outside GC control and cannot be written as page file to disk

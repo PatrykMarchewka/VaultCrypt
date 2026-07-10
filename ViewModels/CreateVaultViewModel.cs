@@ -112,7 +112,7 @@ namespace VaultCrypt.ViewModels
             ArgumentNullException.ThrowIfNullOrWhiteSpace(password);
 
             _passwordBuffer?.Dispose();
-            _passwordBuffer = PasswordHelper.StringToSecureBuffer(password);
+            _passwordBuffer = SecureBuffer.StringToSecureBuffer(password);
         }
 
 
