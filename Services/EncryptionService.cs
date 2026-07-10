@@ -94,6 +94,7 @@ namespace VaultCrypt.Services
             }
         }
 
+        //Reads data from file, encrypts it based on provided parameters and writes to vault
         private async Task EncryptChunks(Stream fileFS, Stream vaultFS, ulong totalChunks, int concurrentChunkCount, ushort chunkSizeInMB, EncryptionAlgorithm.IEncryptionAlgorithmProvider provider, ProgressionContext context)
         {
             ArgumentNullException.ThrowIfNull(fileFS);

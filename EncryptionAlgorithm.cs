@@ -61,6 +61,12 @@ namespace VaultCrypt
                 .ToDictionary(info => info.ID);
         }
 
+        /// <summary>
+        /// Calculates 64byte long HMAC from <paramref name="bytes"/> using hash of <paramref name="key"/> as key for HMAC
+        /// </summary>
+        /// <param name="key">Key to hash before using it to create final HMAC</param>
+        /// <param name="bytes">Parameters to use to create final HMAC</param>
+        /// <returns>64 byte final HMAC</returns>
         public static byte[] CalculateHMAC(ReadOnlySpan<byte> key, params byte[][] bytes)
         {
             byte[] hash = new byte[64];
@@ -77,6 +83,7 @@ namespace VaultCrypt
             }
         }
 
+        /// <inheritdoc cref="CalculateHMAC(ReadOnlySpan{byte}, byte[][])"/>
         public static byte[] CalculateHMAC(ReadOnlySpan<byte> key, ReadOnlySpan<byte> iv, ReadOnlySpan<byte> cipherText)
         {
             byte[] ivSeg = iv.ToArray();

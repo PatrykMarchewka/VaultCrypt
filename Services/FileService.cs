@@ -33,7 +33,7 @@ namespace VaultCrypt.Services
         /// <exception cref="ArgumentOutOfRangeException">Thrown when <paramref name="offset"/> is set to negative value or <paramref name="length"/> is set to zero</exception>
         public void ZeroOutPartOfFile(Stream stream, long offset, ulong length);
         /// <summary>
-        /// Copies part of <paramref name="source"/> into <paramref name="destination"/>
+        /// Copies <paramref name="length"/> of <paramref name="source"/> at <paramref name="offset"/> into <paramref name="destination"/> at <paramref name="destinationOffset"/>
         /// </summary>
         /// <param name="source">Stream to read from</param>
         /// <param name="offset">Offset at which to start reading</param>

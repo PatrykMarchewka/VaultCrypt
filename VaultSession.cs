@@ -12,6 +12,9 @@ using VaultCrypt.Exceptions;
 
 namespace VaultCrypt
 {
+    /// <summary>
+    /// Provides fields and methods for managing vault session
+    /// </summary>
     public interface IVaultSession : IDisposable
     {
         /// <summary>
@@ -27,7 +30,7 @@ namespace VaultCrypt
         /// </summary>
         public NormalizedPath VAULTPATH { get; }
         /// <summary>
-        /// Dictionary holding information about encrypted files and offsets to their location
+        /// Dictionary holding information about offsets to <see cref="EncryptionOptions.FileEncryptionOptions"/> and information about the file that can be displayed to users
         /// </summary>
         public Dictionary<long, EncryptedFileInfo> ENCRYPTED_FILES { get; }
         /// <summary>
@@ -51,11 +54,11 @@ namespace VaultCrypt
         /// </summary>
         public void RaiseEncryptedFileListUpdated();
         /// <summary>
-        /// Slices <see cref="KEY"/> into desired <paramref name="keySize"/>
+        /// Slices <see cref="KEY"/> into desired <paramref name="keySize"/> length
         /// </summary>
         /// <param name="keySize">Requested size of key</param>
         /// <returns>Sliced key with length equal to <paramref name="keySize"/></returns>
-        /// <exception cref="ArgumentOutOfRangeException">Thrown when requested a slice that is bigger than entire key</exception>
+        /// <exception cref="ArgumentOutOfRangeException">Thrown when <paramref name="keySize"/> is bigger than entire key, or <paramref name="keySize"/> is set to negative value or zero</exception>
         public ReadOnlySpan<byte> GetSlicedKey(int keySize);
     }
 
@@ -66,9 +69,19 @@ namespace VaultCrypt
         public NormalizedPath VAULTPATH { get; private set; }
         public Dictionary<long, EncryptedFileInfo> ENCRYPTED_FILES { get; private set; }
 
-
+        /// <summary>
+        /// Current session instance to use throughout application lifespan
+        /// </summary>
         public static VaultSession CurrentSession = new();
+        /// <summary>
+        /// Version number used when creating new vault
+        /// </summary>
         public const byte NewestVaultVersion = 0;
+        //TODO: Use it? Maybe?
+        public IVaultReader SessionReader => VaultRegistry.GetVaultReader(VERSION);
+        /// <summary>
+        /// Event to invoke when encrypted files list gets updated
+        /// </summary>
         public event Action? EncryptedFilesListUpdated;
 
         /// <summary>

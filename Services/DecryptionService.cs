@@ -94,6 +94,7 @@ namespace VaultCrypt.Services
             }
         }
 
+        //Decrypts entire file in one go when it is not chunked
         private ISecureBuffer DecryptInOneChunk(Stream vaultFS, int fileSize, ReadOnlySpan<byte> key, EncryptionAlgorithm.IEncryptionAlgorithm encryptionAlgorithm)
         {
             ArgumentNullException.ThrowIfNull(vaultFS);
@@ -108,6 +109,7 @@ namespace VaultCrypt.Services
             }
         }
 
+        //Decrypts file that is split in multiple chunks
         private async Task DecryptInMultipleChunks(Stream vaultFS, Stream fileFS, EncryptionOptions.ChunkInformation chunkInformation, short extraData, EncryptionAlgorithm.IEncryptionAlgorithmProvider provider, ProgressionContext context)
         {
             ArgumentNullException.ThrowIfNull(vaultFS);

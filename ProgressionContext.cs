@@ -154,6 +154,11 @@ namespace VaultCrypt
             DeletingFileFailed
         }
 
+        /// <summary>
+        /// Converts enum to appropriate string message
+        /// </summary>
+        /// <param name="failure">Enum to convert to string</param>
+        /// <returns>String with the error message</returns>
         public static string GetMessage(ProgressPermFailure failure) => failure switch
         {
             ProgressPermFailure.None => string.Empty,
@@ -164,6 +169,7 @@ namespace VaultCrypt
             _ => "Unknown error!"
         };
 
+        /// <inheritdoc cref="GetMessage(ProgressPermFailure)"/>
         public static string GetMessage(ProgressTempFailure failure) => failure switch
         {
             ProgressTempFailure.None => string.Empty,
