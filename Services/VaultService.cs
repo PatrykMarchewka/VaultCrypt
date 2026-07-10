@@ -305,6 +305,7 @@ namespace VaultCrypt.Services
                         if (currentOffset >= oldVaultSize)
                         {
                             //Offset points outside vault, skip it
+                            context.ReportPermStatus(ProgressFailure.ProgressPermFailure.IOOperationFailed, $"Could not get {fileList[i].Value.FileName} as it points outside vault file");
                             context.Increment();
                             continue;
                         }
@@ -331,6 +332,7 @@ namespace VaultCrypt.Services
                         catch
                         {
                             //Encryption options cant be read due to corruption, skip that offset
+                            context.ReportPermStatus(ProgressFailure.ProgressPermFailure.IOOperationFailed, $"Could not read encryption options for {fileList[i].Value.FileName} due to corruption");
                             continue;
                         }
                         finally
