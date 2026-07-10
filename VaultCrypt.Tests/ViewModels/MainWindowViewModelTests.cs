@@ -1,9 +1,8 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
-using VaultCrypt.ViewModels;
 
 namespace VaultCrypt.Tests.ViewModels
 {
@@ -30,7 +29,7 @@ namespace VaultCrypt.Tests.ViewModels
         [Fact]
         internal void CurrentViewDoesNotRaisePropertyChanged()
         {
-            IViewModel fake = new FakeViewModel();
+            var fake = new FakeViewModel();
             _viewModel.CurrentView = fake;
             int eventRaisedCount = 0;
             _viewModel.PropertyChanged += (sender, args) => { eventRaisedCount++; };
@@ -42,7 +41,7 @@ namespace VaultCrypt.Tests.ViewModels
         [Fact]
         internal void CurrentViewChangesValue()
         {
-            IViewModel expected = new FakeViewModel();
+            var expected = new FakeViewModel();
             _viewModel.CurrentView = expected;
 
             Assert.Equal(expected, _viewModel.CurrentView);

@@ -10,13 +10,7 @@ namespace VaultCrypt.Tests.Services
 {
     public class EncryptionOptionsServiceTests
     {
-        private readonly VaultCrypt.Services.EncryptionOptionsService _service;
-        private readonly VaultSession _vaultSession = (VaultSession)TestsHelper.EmptyVaultV0Information.VaultSession; //Using existing vault information to ensure VAULT_READER is set correclty
-
-        public EncryptionOptionsServiceTests()
-        {
-            _service = new VaultCrypt.Services.EncryptionOptionsService(_vaultSession);
-        }
+        private readonly VaultCrypt.Services.EncryptionOptionsService _service = new VaultCrypt.Services.EncryptionOptionsService();
 
         [Theory]
         [MemberData(nameof(TestsHelper.EncryptionAlgorithms), MemberType = typeof(TestsHelper))]
@@ -27,7 +21,7 @@ namespace VaultCrypt.Tests.Services
             {
                 using (var actualOptions = _service.PrepareEncryptionOptions(fileInfo, encryptionAlgorithm, 1))
                 {
-                    Assert.Equal(1, actualOptions.Version);
+                    Assert.Equal(VaultCrypt.Services.EncryptionOptionsService.NewestFileEncryptionOptions, actualOptions.Version);
                     Assert.Equal(fileInfo.Name, actualOptions.GetFileName());
                     Assert.Equal(32UL + (ulong)encryptionAlgorithm.Provider().EncryptionAlgorithm.ExtraEncryptionDataSize, actualOptions.FileSize);
                     Assert.Equal(encryptionAlgorithm.ID, actualOptions.EncryptionAlgorithm);
@@ -52,7 +46,7 @@ namespace VaultCrypt.Tests.Services
 
                 using (var actualOptions = _service.PrepareEncryptionOptions(fileInfo, encryptionAlgorithm, 1))
                 {
-                    Assert.Equal(1, actualOptions.Version);
+                    Assert.Equal(VaultCrypt.Services.EncryptionOptionsService.NewestFileEncryptionOptions, actualOptions.Version);
                     Assert.Equal(fileInfo.Name, actualOptions.GetFileName());
                     Assert.Equal(((ulong)fileSize + ((ulong)encryptionAlgorithm.Provider().EncryptionAlgorithm.ExtraEncryptionDataSize * actualOptions.ChunkInformation!.TotalChunks)), actualOptions.FileSize);
                     Assert.Equal(encryptionAlgorithm.ID, actualOptions.EncryptionAlgorithm);
@@ -113,7 +107,7 @@ namespace VaultCrypt.Tests.Services
                 using var options = _service.PrepareEncryptionOptions(fileInfo, encryptionAlgorithm, 1);
                 using var encrypted = _service.PadAndEncryptFileEncryptionOptions(options);
 
-                Assert.Equal(_vaultSession.VAULT_READER.EncryptionOptionsSize, encrypted.AsSpan.Length);
+                Assert.Equal(TestsHelper.GetNewestReader.EncryptionOptionsSize, encrypted.AsSpan.Length);
                 Assert.False(encrypted.AsSpan.IndexOfAnyExcept((byte)0) == -1);
             }
             finally
@@ -132,7 +126,7 @@ namespace VaultCrypt.Tests.Services
         [Fact]
         internal void EncryptAndPadFileEncryptionOptionsThrowsForTooBigOptions()
         {
-            using ISecureBuffer tooBigFileName = SecureBuffer.Create(_vaultSession.VAULT_READER.EncryptionOptionsSize + 1);
+            using ISecureBuffer tooBigFileName = SecureBuffer.Create(TestsHelper.GetNewestReader.EncryptionOptionsSize + 1);
             using var options = new EncryptionOptions.FileEncryptionOptions(0, tooBigFileName, 1, EncryptionAlgorithm.GetEncryptionAlgorithmInfo.First().Value.ID, false, null);
 
             Assert.Throws<VaultEncryptionOptionsOperationException>(() => _service.PadAndEncryptFileEncryptionOptions(options));
@@ -141,6 +135,8 @@ namespace VaultCrypt.Tests.Services
         [Fact]
         internal void GetDecryptedFileEncryptionOptionsDecryptsCorrectly()
         {
+            VaultSession.CurrentSession = TestsHelper.EmptyVaultV0Information.VaultSession; //Setting correct session to ensure decryption key matches
+
             var stream = new MemoryStream();
             stream.Write(RandomNumberGenerator.GetBytes(5000)); //Writing to stream to ensure the method works despite the stream holding more data
             //Precomputed value 

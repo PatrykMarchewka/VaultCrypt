@@ -1,5 +1,4 @@
 using System;
-using System.Buffers.Binary;
 using System.Collections.Generic;
 using System.Linq;
 using System.Reflection;
@@ -16,7 +15,7 @@ namespace VaultCrypt.Tests
     internal class TestsHelper
     {
         internal record VaultInformation(NormalizedPath Path, byte Version, byte[] Password, byte[] Salt, int Iterations, Dictionary<long, EncryptedFileInfo> EncryptedFiles) {
-            public IVaultSession VaultSession = TestsHelper.CreateFilledSessionInstance(Password, Salt, Iterations, Version, Path, EncryptedFiles);
+            public VaultSession VaultSession = TestsHelper.CreateFilledSessionInstance(Version, Password, Salt, Iterations, Path, EncryptedFiles);
         }
 
         internal static VaultSession EmptySession = (VaultSession)Activator.CreateInstance(typeof(VaultSession), nonPublic: true)!;
@@ -44,23 +43,23 @@ namespace VaultCrypt.Tests
         /// <summary>
         /// Information about empty vault with no files with it. Vault created using release v1.3.0
         /// </summary>
-        internal static VaultInformation EmptyVaultV0Information = new VaultInformation(Path: NormalizedPath.From($"{GetTestDataDirectory}\\TestData\\EmptyVault_v0.vlt"), Version: 0, Password: TestDataVaultPassword, Salt: new byte[] { 195, 219, 86, 3, 88, 131, 238, 159, 16, 13, 104, 192, 166, 92, 241, 4, 4, 10, 62, 210, 252, 198, 41, 106, 144, 238, 190, 163, 117, 175, 29, 224 }, Iterations: TestDataVaultPasswordIterations, EncryptedFiles: new Dictionary<long, EncryptedFileInfo>());
+        internal static readonly VaultInformation EmptyVaultV0Information = new VaultInformation(Path: NormalizedPath.From($"{GetTestDataDirectory}\\TestData\\EmptyVault_v0.vlt"), Version: 0, Password: TestDataVaultPassword, Salt: new byte[] { 195, 219, 86, 3, 88, 131, 238, 159, 16, 13, 104, 192, 166, 92, 241, 4, 4, 10, 62, 210, 252, 198, 41, 106, 144, 238, 190, 163, 117, 175, 29, 224 }, Iterations: TestDataVaultPasswordIterations, EncryptedFiles: new Dictionary<long, EncryptedFileInfo>());
 
         /// <summary>
         /// Information about vault with lorem ipsum and pattern files in it. Vault created using release v1.3.0
         /// </summary>
-        internal static VaultInformation FilledVaultV0Information = new VaultInformation(Path: NormalizedPath.From($"{GetTestDataDirectory}\\TestData\\FilledVault_v0.vlt"), Version: 0, Password: TestDataVaultPassword, Salt: new byte[] { 225, 243, 62, 251, 189, 149, 16, 122, 174, 149, 207, 59, 165, 47, 181, 136, 37, 180, 52, 129, 35, 9, 195, 231, 142, 42, 45, 47, 212, 165, 253, 45 }, Iterations: TestDataVaultPasswordIterations, EncryptedFiles: new Dictionary<long, EncryptedFileInfo>() { { 4163, new EncryptedFileInfo("LoremIpsum.txt", 99821, EncryptionAlgorithm.EncryptionAlgorithmInfo.AES256GCM) }, { 105008, new EncryptedFileInfo("PatternFile.txt", 18000504, EncryptionAlgorithm.EncryptionAlgorithmInfo.ChaCha20Poly1305) } });
+        internal static readonly VaultInformation FilledVaultV0Information = new VaultInformation(Path: NormalizedPath.From($"{GetTestDataDirectory}\\TestData\\FilledVault_v0.vlt"), Version: 0, Password: TestDataVaultPassword, Salt: new byte[] { 225, 243, 62, 251, 189, 149, 16, 122, 174, 149, 207, 59, 165, 47, 181, 136, 37, 180, 52, 129, 35, 9, 195, 231, 142, 42, 45, 47, 212, 165, 253, 45 }, Iterations: TestDataVaultPasswordIterations, EncryptedFiles: new Dictionary<long, EncryptedFileInfo>() { { 4163, new EncryptedFileInfo("LoremIpsum.txt", 99821, EncryptionAlgorithm.EncryptionAlgorithmInfo.AES256GCM) }, { 105008, new EncryptedFileInfo("PatternFile.txt", 18000504, EncryptionAlgorithm.EncryptionAlgorithmInfo.ChaCha20Poly1305) } });
 
 
         /// <summary>
         /// Lorem ipsum text file
         /// </summary>
-        internal static NormalizedPath LoremIpsumFilePath => NormalizedPath.From($"{GetTestDataDirectory}\\TestData\\LoremIpsum.txt");
+        internal static readonly NormalizedPath LoremIpsumFilePath = NormalizedPath.From($"{GetTestDataDirectory}\\TestData\\LoremIpsum.txt");
 
         /// <summary>
         /// 17MB text file with repeating pattern data
         /// </summary>
-        internal static NormalizedPath PatternFilePath => NormalizedPath.From($"{GetTestDataDirectory}\\TestData\\PatternFile.txt");
+        internal static readonly NormalizedPath PatternFilePath = NormalizedPath.From($"{GetTestDataDirectory}\\TestData\\PatternFile.txt");
 
         /// <summary>
         /// Tests data holding function copying vault file that returns location of the copied file and information about the vault <br/>
@@ -85,7 +84,7 @@ namespace VaultCrypt.Tests
                     Func<NormalizedPath> copyFunction = (Func<NormalizedPath>)item[0];
                     VaultInformation information = (VaultInformation)item[1];
 
-                    if (information.VaultSession.ENCRYPTED_FILES.Count == 1) data.Add(copyFunction, information);
+                    if (information.VaultSession.ENCRYPTED_FILES.Count == 0) data.Add(copyFunction, information);
                 }
 
                 return data;
@@ -172,6 +171,16 @@ namespace VaultCrypt.Tests
         }
 
         /// <summary>
+        /// Returns newest VaultReader version
+        /// </summary>
+        internal static IVaultReader GetNewestReader => new VaultV0Reader();
+
+        /// <summary>
+        /// Empty secure buffer with length of zero
+        /// </summary>
+        public static ISecureBuffer EmptySecureBuffer = SecureBuffer.Create(0);
+
+        /// <summary>
         /// Creates temporary file filled with random bytes
         /// </summary>
         /// <param name="size">Size of the file to create</param>
@@ -202,12 +211,12 @@ namespace VaultCrypt.Tests
         /// <summary>
         /// Creates instance of VaultSession and fills it with provided values or predetermined default ones using reflection to bypass private constructor and field setters
         /// </summary>
+        /// <param name="version">Version of the vault</param>
         /// <param name="key">Key to open vault, required</param>
-        /// <param name="version">Version of the vault, defaults to <see cref="VaultSession.NewestVaultVersion"/></param>
         /// <param name="vaultPath">Path to the vault, defaults to "C:\FilledSessionInstance\"</param>
         /// <param name="encryptedFiles">Encrypted files in the vault, defaults to 3 files, first corrupted at 0 offset, second called secret.pdf at 1_234 offset and last one called anotherone.mp3 at 12_345 offset</param>
         /// <returns>VaultSession filled with provided data</returns>
-        internal static VaultSession CreateFilledSessionInstance(ReadOnlySpan<byte> key, byte version = VaultSession.NewestVaultVersion, NormalizedPath? vaultPath = null, Dictionary<long, EncryptedFileInfo>? encryptedFiles = null)
+        internal static VaultSession CreateFilledSessionInstance(byte version, ReadOnlySpan<byte> key, NormalizedPath? vaultPath = null, Dictionary<long, EncryptedFileInfo>? encryptedFiles = null)
         {
             NormalizedPath vaultPathDefault = NormalizedPath.From("C:\\FilledSessionInstance\\");
             Dictionary<long, EncryptedFileInfo> encryptedFilesDefault = new()
@@ -220,10 +229,10 @@ namespace VaultCrypt.Tests
             var session = (VaultSession)Activator.CreateInstance(typeof(VaultSession), nonPublic: true)!;
             ISecureBuffer keyBuffer = SecureBuffer.Create(PasswordHelper.KeySize);
             key.CopyTo(keyBuffer.AsSpan);
+            typeof(VaultSession).GetProperty(nameof(VaultSession.VERSION))!.SetValue(session, version);
             typeof(VaultSession).GetProperty(nameof(VaultSession.KEY))!.SetValue(session, keyBuffer);
             typeof(VaultSession).GetProperty(nameof(VaultSession.VAULTPATH))!.SetValue(session, vaultPath ?? vaultPathDefault);
             typeof(VaultSession).GetProperty(nameof(VaultSession.ENCRYPTED_FILES))!.SetValue(session, encryptedFiles ?? encryptedFilesDefault);
-            typeof(VaultSession).GetProperty(nameof(VaultSession.VAULT_READER))!.SetValue(session, CreateVaultRegistry(session).GetVaultReader(version));
 
             return session;
         }
@@ -232,20 +241,20 @@ namespace VaultCrypt.Tests
         /// <param name="password">Password used to open vault, defaults to empty 16 byte array</param>
         /// <param name="salt">Salt used on password, defaults to empty 32 byte array</param>
         /// <param name="iterations">Number of iterations when deriving key, defaults to 1000</param>
-        internal static VaultSession CreateFilledSessionInstance(byte[]? password = null, byte[]? salt = null, int iterations = 1000, byte version = VaultSession.NewestVaultVersion, NormalizedPath? vaultPath = null, Dictionary<long, EncryptedFileInfo>? encryptedFiles = null)
+        internal static VaultSession CreateFilledSessionInstance(byte version = 0, byte[]? password = null, byte[]? salt = null, int iterations = 1000, NormalizedPath? vaultPath = null, Dictionary<long, EncryptedFileInfo>? encryptedFiles = null)
         {
             password ??= new byte[16];
             salt ??= new byte[32];
             ReadOnlySpan<byte> key = CreateKey(password, salt, iterations);
-            return CreateFilledSessionInstance(key, version, vaultPath, encryptedFiles);
+            return CreateFilledSessionInstance(version, key, vaultPath, encryptedFiles);
         }
 
         /// <summary>
-        /// Uses reflection to change IVaultSession.VAULTPATH
+        /// Uses reflection to change <see cref="IVaultSession.VAULTPATH"/>
         /// </summary>
         /// <param name="session">Session to change path of</param>
         /// <param name="newPath">New path to change it into</param>
-        /// <returns><paramref name="session"/> after changing IVaultSession.VAULTPATH</returns>
+        /// <returns><paramref name="session"/> after changing <see cref="IVaultSession.VAULTPATH"/></returns>
         internal static IVaultSession ChangeSessionVaultPath(IVaultSession session, NormalizedPath newPath)
         {
             session.GetType().GetProperty(nameof(IVaultSession.VAULTPATH))!.SetValue(session, newPath);
@@ -319,18 +328,6 @@ namespace VaultCrypt.Tests
             Span<byte> key = new byte[PasswordHelper.KeySize];
             PasswordHelper.DeriveKey(password ??= new byte[16], salt ??= new byte[32], iterations, key);
             return key;
-        }
-
-        /// <summary>
-        /// Creates empty instance of VaultRegistry using reflection to bypass private constructor
-        /// </summary>
-        /// <param name="session"></param>
-        /// <param name="encryptionOptionsService"></param>
-        /// <returns>New instance of VaultRegistry</returns>
-        internal static VaultRegistry CreateVaultRegistry(IVaultSession session)
-        {
-            var registryConstructor = typeof(VaultRegistry).GetConstructor(BindingFlags.Instance | BindingFlags.NonPublic, new Type[] { typeof(IVaultSession) });
-            return (VaultRegistry)registryConstructor!.Invoke(new object[] { session });
         }
     }
 }

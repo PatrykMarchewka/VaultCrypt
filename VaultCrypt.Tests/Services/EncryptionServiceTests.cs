@@ -9,26 +9,21 @@ namespace VaultCrypt.Tests.Services
 {
     public class EncryptionServiceTests
     {
-        private VaultCrypt.Services.EncryptionService _service;
+        private readonly VaultCrypt.Services.EncryptionService _service;
         private readonly VaultCrypt.Services.FileService _fileService = new VaultCrypt.Services.FileService();
-        private VaultCrypt.Services.EncryptionOptionsService _encryptionOptionsService;
-        private VaultSession _session = TestsHelper.EmptySession;
-        private VaultCrypt.Services.SystemService _systemService;
+        private readonly VaultCrypt.Services.EncryptionOptionsService _encryptionOptionsService = new VaultCrypt.Services.EncryptionOptionsService();
+        private readonly VaultCrypt.Services.SystemService _systemService = new VaultCrypt.Services.SystemService();
 
         public EncryptionServiceTests()
         {
-            _fileService = new VaultCrypt.Services.FileService();
-            _encryptionOptionsService = new VaultCrypt.Services.EncryptionOptionsService(_session);
-            _systemService = new VaultCrypt.Services.SystemService(_session);
-            _service = new VaultCrypt.Services.EncryptionService(_fileService, _encryptionOptionsService, _session, _systemService);
+            _service = new VaultCrypt.Services.EncryptionService(_fileService, _encryptionOptionsService, _systemService);
         }
 
         private void ReplaceSession(IVaultSession newSession)
         {
-            _session = (VaultSession)newSession;
-            _encryptionOptionsService = new VaultCrypt.Services.EncryptionOptionsService(_session);
-            _systemService = new VaultCrypt.Services.SystemService(_session);
-            _service = new VaultCrypt.Services.EncryptionService(_fileService, _encryptionOptionsService, _session, _systemService);
+            var copy = TestsHelper.CreateFilledSessionInstance(newSession.VERSION, newSession.KEY.AsSpan, newSession.VAULTPATH, new Dictionary<long, EncryptedFileInfo>(newSession.ENCRYPTED_FILES));
+
+            VaultSession.CurrentSession = copy;
         }
 
         
@@ -37,10 +32,12 @@ namespace VaultCrypt.Tests.Services
         [MemberData(nameof(TestsHelper.EncryptionAlgorithmsAndVaultFileCombinationsCartesian), MemberType = typeof(TestsHelper))]
         internal async Task EncryptEncryptsDataToVaultChunked(EncryptionAlgorithm.EncryptionAlgorithmInfo algorithm, Func<NormalizedPath> vaultMethod, TestsHelper.VaultInformation vaultInformation)
         {
+            IVaultReader vaultReader = VaultRegistry.GetVaultReader(vaultInformation.Version);
+
             var vaultPath = vaultMethod();
             ReplaceSession(vaultInformation.VaultSession);
             var fileByteSize = (1024 * 1024 * 5) + 1; //5MB + 1 byte
-            var expectedEncryptedByteSize = fileByteSize + vaultInformation.VaultSession.VAULT_READER.EncryptionOptionsSize + (6 * algorithm.Provider().EncryptionAlgorithm.ExtraEncryptionDataSize); //Original file + Encryption options + extra data per chunk (6 chunks, with last one being 1 byte, rest 1MB)
+            var expectedEncryptedByteSize = fileByteSize + vaultReader.EncryptionOptionsSize + (6 * algorithm.Provider().EncryptionAlgorithm.ExtraEncryptionDataSize); //Original file + Encryption options + extra data per chunk (6 chunks, with last one being 1 byte, rest 1MB)
             var fileToEncrypt = TestsHelper.CreateTemporaryFile(fileByteSize);
             try
             {
@@ -63,10 +60,12 @@ namespace VaultCrypt.Tests.Services
         [MemberData(nameof(TestsHelper.EncryptionAlgorithmsAndVaultFileCombinationsCartesian), MemberType = typeof(TestsHelper))]
         internal async Task EncryptEncryptsAndSavesToVaultNotChunked(EncryptionAlgorithm.EncryptionAlgorithmInfo algorithm, Func<NormalizedPath> vaultMethod, TestsHelper.VaultInformation vaultInformation)
         {
+            IVaultReader vaultReader = VaultRegistry.GetVaultReader(vaultInformation.Version);
+
             var vaultPath = vaultMethod();
             ReplaceSession(vaultInformation.VaultSession);
             var fileByteSize = (1024 * 1024) - 1; //1MB - 1 byte
-            var expectedEncryptedByteSize = fileByteSize + vaultInformation.VaultSession.VAULT_READER.EncryptionOptionsSize + algorithm.Provider().EncryptionAlgorithm.ExtraEncryptionDataSize;
+            var expectedEncryptedByteSize = fileByteSize + vaultReader.EncryptionOptionsSize + algorithm.Provider().EncryptionAlgorithm.ExtraEncryptionDataSize;
             var fileToEncrypt = TestsHelper.CreateTemporaryFile(fileByteSize);
             try
             {

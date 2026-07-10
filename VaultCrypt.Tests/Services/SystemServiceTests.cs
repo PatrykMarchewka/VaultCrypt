@@ -8,17 +8,13 @@ namespace VaultCrypt.Tests.Services
 {
     public class SystemServiceTests
     {
-        private readonly VaultCrypt.Services.SystemService _service;
-        private readonly VaultSession _session = (VaultSession)TestsHelper.EmptyVaultV0Information.VaultSession; //Using existing vault information to ensure VAULTPATH is set correclty
-
-        public SystemServiceTests()
-        {
-            _service = new VaultCrypt.Services.SystemService(_session);
-        }
+        private readonly VaultCrypt.Services.SystemService _service = new VaultCrypt.Services.SystemService();
 
         [Fact]
         internal void CheckFreeSpaceDoesNotThrowForValidValues()
         {
+            VaultSession.CurrentSession = TestsHelper.EmptyVaultV0Information.VaultSession;
+
             var path = TestsHelper.CreateTemporaryFile(0);
             try
             {

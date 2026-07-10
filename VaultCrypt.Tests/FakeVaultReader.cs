@@ -54,10 +54,10 @@ namespace VaultCrypt.Tests
             return 0;
         }
 
-        public long[] ReadMetadataOffsets(Stream stream)
+        public ISecureBuffer ReadMetadataOffsets(Stream stream)
         {
             ReadMetadataOffsetsWasCalled = true;
-            return new long[0];
+            return null!;
         }
 
         public ISecureBuffer ReadSalt(Stream stream)
@@ -68,7 +68,7 @@ namespace VaultCrypt.Tests
 
         public void RemoveAndSaveMetadataOffsets(Stream stream, ushort itemIndex) => RemoveAndSaveMetadataOffsetsWasCalled = true;
 
-        public void SaveMetadataOffsets(Stream stream, long[] offsets) => SaveMetadataOffsetsWasCalled = true;
+        public void SaveMetadataOffsets(Stream stream, ISecureBuffer offsets) => SaveMetadataOffsetsWasCalled = true;
 
         public ISecureBuffer VaultEncryption(ReadOnlySpan<byte> data)
         {

@@ -9,25 +9,23 @@ namespace VaultCrypt.Tests.Services
 {
     public class DecryptionServiceTests
     {
-        private VaultCrypt.Services.DecryptionService _service;
+        private readonly VaultCrypt.Services.DecryptionService _service;
         private readonly VaultCrypt.Services.FileService _fileService = new VaultCrypt.Services.FileService();
-        private VaultCrypt.Services.EncryptionOptionsService _encryptionOptionsService;
-        private VaultSession _session = TestsHelper.EmptySession;
-        private VaultCrypt.Services.SystemService _systemService;
+        private readonly VaultCrypt.Services.EncryptionOptionsService _encryptionOptionsService = new VaultCrypt.Services.EncryptionOptionsService();
+        private IVaultSession _session = TestsHelper.EmptySession;
+        private readonly VaultCrypt.Services.SystemService _systemService = new VaultCrypt.Services.SystemService();
 
         public DecryptionServiceTests()
         {
-            _encryptionOptionsService = new VaultCrypt.Services.EncryptionOptionsService(_session);
-            _systemService = new VaultCrypt.Services.SystemService(_session);
-            _service = new VaultCrypt.Services.DecryptionService(_fileService, _encryptionOptionsService, _session, _systemService);
+            _service = new VaultCrypt.Services.DecryptionService(_fileService, _encryptionOptionsService, _systemService);
         }
 
         private void ReplaceSession(IVaultSession newSession)
         {
-            _session = (VaultSession)newSession;
-            _encryptionOptionsService = new VaultCrypt.Services.EncryptionOptionsService(_session);
-            _systemService = new VaultCrypt.Services.SystemService(_session);
-            _service = new VaultCrypt.Services.DecryptionService(_fileService, _encryptionOptionsService, _session, _systemService);
+            var copy = TestsHelper.CreateFilledSessionInstance(newSession.VERSION, newSession.KEY.AsSpan, newSession.VAULTPATH, new Dictionary<long, EncryptedFileInfo>(newSession.ENCRYPTED_FILES));
+
+            _session = copy;
+            VaultSession.CurrentSession = copy;
         }
 
 

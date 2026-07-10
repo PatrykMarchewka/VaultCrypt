@@ -13,7 +13,7 @@ namespace VaultCrypt.Tests
         public EncryptionOptionsTests()
         {
             string fileName = "EncryptionOptionsTestNoChunk";
-            _fileEncryptionOptions = new EncryptionOptions.FileEncryptionOptions(0, fileName, 1234, 1, false, null);
+            _fileEncryptionOptions = new EncryptionOptions.FileEncryptionOptions(VaultCrypt.Services.EncryptionOptionsService.NewestFileEncryptionOptions, fileName, 1234, 1, false, null);
         }
 
         public void Dispose()
@@ -31,9 +31,9 @@ namespace VaultCrypt.Tests
         internal void DifferentConstructorsReturnSameData()
         {
             string fileName = "string";
-            using (ISecureBuffer fileNameBuffer = SecureBuffer.Create(Encoding.UTF8.GetByteCount(fileName)))
+            using (ISecureBuffer fileNameBuffer = SecureBuffer.Create(Encoding.Unicode.GetByteCount(fileName)))
             {
-                Encoding.UTF8.GetBytes(fileName).CopyTo(fileNameBuffer.AsSpan);
+                Encoding.Unicode.GetBytes(fileName).CopyTo(fileNameBuffer.AsSpan);
 
                 using var encryptionOptions = new EncryptionOptions.FileEncryptionOptions(0, fileNameBuffer, 1, 2, false, null);
                 using var encryptionOptions2 = new EncryptionOptions.FileEncryptionOptions(0, fileName, 1, 2, false, null);
@@ -50,7 +50,7 @@ namespace VaultCrypt.Tests
         }
 
         [Fact]
-        internal void EncryptionOptionsThrowForIncorrectChunkedFlag()
+        internal void EncryptionOptionsThrowsForIncorrectChunkedFlag()
         {
             Assert.Throws<ArgumentException>(() => new EncryptionOptions.FileEncryptionOptions(0, "fileName", 11, 1, true, null));
         }
@@ -58,13 +58,17 @@ namespace VaultCrypt.Tests
         [Fact]
         internal void EncryptionOptionsDeserializeThrowsForEmptyData()
         {
-            Assert.Throws<ArgumentException>(() => EncryptionOptions.FileEncryptionOptionsReader.Deserialize(new ReadOnlySpan<byte>()));
+            Assert.Throws<ArgumentException>(() => EncryptionOptions.FileEncryptionOptionsReader.Deserialize(TestsHelper.EmptySecureBuffer));
         }
 
         [Fact]
         internal void EncryptionOptionsDeserializeThrowsForWrongVersion()
         {
-            Assert.Throws<VaultCrypt.Exceptions.VaultEncryptionOptionsOperationException>(() => EncryptionOptions.FileEncryptionOptionsReader.Deserialize(new byte[1] { byte.MaxValue }));
+            using (ISecureBuffer buffer = SecureBuffer.Create(1))
+            {
+                buffer.AsSpan[0] = byte.MaxValue;
+                Assert.Throws<VaultCrypt.Exceptions.VaultEncryptionOptionsOperationException>(() => EncryptionOptions.FileEncryptionOptionsReader.Deserialize(buffer));
+            }
 
         }
 
@@ -73,7 +77,7 @@ namespace VaultCrypt.Tests
         {
             using (ISecureBuffer serialized = EncryptionOptions.FileEncryptionOptions.SerializeFileEncryptionOptions(_fileEncryptionOptions))
             {
-                using var deserialized = EncryptionOptions.FileEncryptionOptionsReader.Deserialize(serialized.AsSpan);
+                using var deserialized = EncryptionOptions.FileEncryptionOptionsReader.Deserialize(serialized);
 
                 Assert.Equal(_fileEncryptionOptions, deserialized);
             }
@@ -86,7 +90,7 @@ namespace VaultCrypt.Tests
 
             using (ISecureBuffer serialized = EncryptionOptions.FileEncryptionOptions.SerializeFileEncryptionOptions(_fileEncryptionOptions))
             {
-                using var deserialized = EncryptionOptions.FileEncryptionOptionsReader.Deserialize(serialized.AsSpan);
+                using var deserialized = EncryptionOptions.FileEncryptionOptionsReader.Deserialize(serialized);
 
                 Assert.Equal(_fileEncryptionOptions, deserialized);
             }
@@ -221,13 +225,17 @@ namespace VaultCrypt.Tests
         [Fact]
         internal void EncryptionOptionsReaderThrowsForEmptyData()
         {
-            Assert.Throws<ArgumentException>(() => EncryptionOptions.FileEncryptionOptionsReader.Deserialize(new ReadOnlySpan<byte>()));
+            Assert.Throws<ArgumentException>(() => EncryptionOptions.FileEncryptionOptionsReader.Deserialize(TestsHelper.EmptySecureBuffer));
         }
 
         [Fact]
         internal void EncryptionOptionsReaderThrowsForWrongVersion()
         {
-            Assert.Throws<VaultCrypt.Exceptions.VaultEncryptionOptionsOperationException>(() => EncryptionOptions.FileEncryptionOptionsReader.Deserialize(new byte[1] { byte.MaxValue }));
+            using (ISecureBuffer buffer = SecureBuffer.Create(1))
+            {
+                buffer.AsSpan[0] = byte.MaxValue;
+                Assert.Throws<VaultCrypt.Exceptions.VaultEncryptionOptionsOperationException>(() => EncryptionOptions.FileEncryptionOptionsReader.Deserialize(buffer));
+            }
         }
     }
 }

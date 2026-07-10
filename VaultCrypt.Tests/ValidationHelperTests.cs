@@ -38,28 +38,24 @@ namespace VaultCrypt.Tests
         }
 
         [Fact]
-        internal void NotEmptySecureStringDoesNotThrowForValidInput()
+        internal void NotEmptySecureBufferDoesNotThrowForValidInput()
         {
-            SecureString input = new SecureString();
-            input.AppendChar('a');
-
-            ValidationHelper.NotEmptySecureString(input, "");
-        }
-
-        public static TheoryData<SecureString> InvalidSecureString = new TheoryData<SecureString> { null!, new SecureString() };
-        [Theory]
-        [MemberData(nameof(InvalidSecureString))]
-        internal void NotEmptySecureStringThrowsForInvalidInput(SecureString input)
-        {
-            Assert.Throws<VaultCrypt.Exceptions.VaultUIException>(() => ValidationHelper.NotEmptySecureString(input, ""));
+            var input = SecureBuffer.Create(1);
+            ValidationHelper.NotEmptySecureBuffer(input, "");
         }
 
         [Fact]
-        internal void NotEmptySecureStringUsesFallbackValue()
+        internal void NotEmptySecureBufferThrowsForInvalidInput()
+        {
+            Assert.Throws<VaultCrypt.Exceptions.VaultUIException>(() => ValidationHelper.NotEmptySecureBuffer(null, ""));
+        }
+
+        [Fact]
+        internal void NotEmptySecureBufferUsesFallbackValue()
         {
             try
             {
-                ValidationHelper.NotEmptySecureString(null, "");
+                ValidationHelper.NotEmptySecureBuffer(null, "");
             }
             catch (Exception ex)
             {

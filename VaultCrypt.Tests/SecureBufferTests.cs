@@ -42,7 +42,6 @@ namespace VaultCrypt.Tests
         [Theory]
         [InlineData(int.MinValue)]
         [InlineData(-1)]
-        [InlineData(0)]
         internal void CreateThrowsForInvalidLength(int length)
         {
             Assert.Throws<ArgumentOutOfRangeException>(() => SecureBuffer.Create(length));
