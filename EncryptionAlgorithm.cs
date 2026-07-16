@@ -61,13 +61,7 @@ namespace VaultCrypt
                 .ToDictionary(info => info.ID);
         }
 
-        /// <summary>
-        /// Calculates 64byte long HMAC from <paramref name="bytes"/> using hash of <paramref name="key"/> as key for HMAC
-        /// </summary>
-        /// <param name="key">Key to hash before using it to create final HMAC</param>
-        /// <param name="bytes">Parameters to use to create final HMAC</param>
-        /// <returns>64 byte final HMAC</returns>
-        public static byte[] CalculateHMAC(ReadOnlySpan<byte> key, params byte[][] bytes)
+        private static byte[] _CalculateSHA3HMACDotNet(ReadOnlySpan<byte> key, params byte[][] bytes)
         {
             byte[] hash = new byte[64];
             try
@@ -80,6 +74,53 @@ namespace VaultCrypt
             finally
             {
                 CryptographicOperations.ZeroMemory(hash);
+            }
+        }
+
+        private static byte[] _CalculateSHA3BouncyCastle(ReadOnlySpan<byte> data)
+        {
+            var digest = new Org.BouncyCastle.Crypto.Digests.Sha3Digest(512);
+            digest.BlockUpdate(data);
+            byte[] result = new byte[digest.GetDigestSize()];
+            digest.DoFinal(result);
+            return result;
+        }
+
+        private static byte[] _CalculateSHA3HMACBouncyCastle(ReadOnlySpan<byte> key, params byte[][] bytes)
+        {
+            byte[] hash = null!;
+            try
+            {
+                hash = _CalculateSHA3BouncyCastle(key);
+                var digest = new Org.BouncyCastle.Crypto.Digests.Sha3Digest(512);
+                var hmac = new Org.BouncyCastle.Crypto.Macs.HMac(digest);
+                hmac.Init(new KeyParameter(hash));
+                foreach (var chunk in bytes) hmac.BlockUpdate(chunk);
+                byte[] result = new byte[hmac.GetMacSize()];
+                hmac.DoFinal(result);
+                return result;
+            }
+            finally
+            {
+                if (hash is not null) CryptographicOperations.ZeroMemory(hash);
+            }
+        }
+
+        /// <summary>
+        /// Calculates 64byte long HMAC from <paramref name="bytes"/> using hash of <paramref name="key"/> as key for HMAC
+        /// </summary>
+        /// <param name="key">Key to hash before using it to create final HMAC</param>
+        /// <param name="bytes">Parameters to use to create final HMAC</param>
+        /// <returns>64 byte final HMAC</returns>
+        public static byte[] CalculateHMAC(ReadOnlySpan<byte> key, params byte[][] bytes)
+        {
+            if (SHA3_512.IsSupported)
+            {
+                return _CalculateSHA3HMACDotNet(key, bytes);
+            }
+            else
+            {
+                return _CalculateSHA3HMACBouncyCastle(key, bytes);
             }
         }
 
