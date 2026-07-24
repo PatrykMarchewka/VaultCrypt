@@ -18,10 +18,10 @@ namespace VaultCrypt
             public static readonly EncryptionAlgorithmInfo AES128GCM = new(0, "AES-128-GCM", () => new AesProvider(16, new AesGcm()));
             public static readonly EncryptionAlgorithmInfo AES192GCM = new(1, "AES-192-GCM", () => new AesProvider(24, new AesGcm()));
             public static readonly EncryptionAlgorithmInfo AES256GCM = new(2, "AES-256-GCM", () => new AesProvider(32, new AesGcm()));
-            public static readonly EncryptionAlgorithmInfo AES128CCM = new(3, "AES-128-CCM", () => new AesProvider(16, new AesCcm()));
-            public static readonly EncryptionAlgorithmInfo AES192CCM = new(4, "AES-192-CCM", () => new AesProvider(24, new AesCcm()));
-            public static readonly EncryptionAlgorithmInfo AES256CCM = new(5, "AES-256-CCM", () => new AesProvider(32, new AesCcm()));
-            public static readonly EncryptionAlgorithmInfo ChaCha20Poly1305 = new(6, "ChaCha20-Poly1305", () => new ChaCha20Provider(32, new ChaCha20Poly1305()));
+            public static readonly EncryptionAlgorithmInfo AES128CCM = new(3, "AES-128-CCM", () => new AesProvider(16, new AesCcmDotNet())); //Does not work on MAC
+            public static readonly EncryptionAlgorithmInfo AES192CCM = new(4, "AES-192-CCM", () => new AesProvider(24, new AesCcmDotNet())); //Does not work on MAC
+            public static readonly EncryptionAlgorithmInfo AES256CCM = new(5, "AES-256-CCM", () => new AesProvider(32, new AesCcmDotNet())); //Does not work on MAC
+            public static readonly EncryptionAlgorithmInfo ChaCha20Poly1305 = new(6, "ChaCha20-Poly1305", () => new ChaCha20Provider(32, new ChaCha20Poly1305DotNet())); //Requires Windows 10 Build 20142+, Linux with OpenSSL 1.1.0+, MAC, or Android with API level 28+
             public static readonly EncryptionAlgorithmInfo AES128EAX = new(7, "AES-128-EAX", () => new AesProvider(16, new AesEax()));
             public static readonly EncryptionAlgorithmInfo AES192EAX = new(8, "AES-192-EAX", () => new AesProvider(24, new AesEax()));
             public static readonly EncryptionAlgorithmInfo AES256EAX = new(9, "AES-256-EAX", () => new AesProvider(32, new AesEax()));
@@ -47,6 +47,10 @@ namespace VaultCrypt
             public static readonly EncryptionAlgorithmInfo Camelia192CTR = new(29, "Camelia-192-CTR", () => new CameliaProvider(24, new CameliaCtr()));
             public static readonly EncryptionAlgorithmInfo Camelia256CTR = new(30, "Camelia-256-CTR", () => new CameliaProvider(32, new CameliaCtr()));
             public static readonly EncryptionAlgorithmInfo XSalsa20 = new(31, "XSalsa20", () => new XSalsa20Provider(32, new XSalsa20()));
+            public static readonly EncryptionAlgorithmInfo AES128CCMBC = new(32, "AES-128-CCM (BC)", () => new AesProvider(16, new AesCcmBouncyCastle()));
+            public static readonly EncryptionAlgorithmInfo AES192CCMBC = new(33, "AES-192-CCM (BC)", () => new AesProvider(24, new AesCcmBouncyCastle()));
+            public static readonly EncryptionAlgorithmInfo AES256CCMBC = new(34, "AES-256-CCM (BC)", () => new AesProvider(32, new AesCcmBouncyCastle()));
+            public static readonly EncryptionAlgorithmInfo ChaCha20Poly1305BC = new(35, "ChaCha20-Poly1305 (BC)", () => new ChaCha20Provider(32, new ChaCha20Poly1305BouncyCastle()));
 
             public override string ToString() => Name;
         }
@@ -241,7 +245,7 @@ namespace VaultCrypt
 
 
 
-        private class AesCcm : AESAlgorithm
+        private class AesCcmDotNet : AESAlgorithm
         {
             public short ExtraEncryptionDataSize => 28;
             public EncryptedOutputOrder EncryptedOutputOrder => EncryptedOutputOrder.IV_Tag_Data;
@@ -297,7 +301,97 @@ namespace VaultCrypt
             }
         }
 
-        private class ChaCha20Poly1305 : ChaCha20Algorithm
+        //BouncyCastle implementation of AES-CCM, added because .NET version does not work on Mac without OpenSSL installed
+        /*
+         * On macOS, the system libraries don't support AES-CCM for third-party code, so the AesCcm class uses OpenSSL for support.
+         * Users on macOS need to obtain an appropriate copy of OpenSSL (libcrypto) for this type to function, and it must be in a path that the system would load a library from by default.
+         * We recommend that you install OpenSSL from a package manager such as Homebrew.
+         * 
+         * The libcrypto.0.9.7.dylib and libcrypto.0.9.8.dylib libraries included in macOS are from earlier versions of OpenSSL and will not be used.
+         * The libcrypto.35.dylib, libcrypto.41.dylib, and libcrypto.42.dylib libraries are from LibreSSL and will not be used.
+         */
+        private class AesCcmBouncyCastle : AESAlgorithm
+        {
+            //BouncyCastle uses IV set to L = 15 − IV, by setting IV to 11 bytes the max encryption size for one block is 4GB
+            public short ExtraEncryptionDataSize => 27;
+
+            public EncryptedOutputOrder EncryptedOutputOrder => EncryptedOutputOrder.IV_Data_Tag;
+
+            public ISecureBuffer EncryptBytes(ReadOnlySpan<byte> data, ReadOnlySpan<byte> key)
+            {
+                if (data.IsEmpty) throw new ArgumentException("Provided empty data", nameof(data));
+                if (key.IsEmpty) throw new ArgumentException("Provided empty key", nameof(key));
+
+                byte[] iv = new byte[11];
+                byte authenticationLength = 16;
+                ISecureBuffer encrypted = SecureBuffer.Create(iv.Length + authenticationLength + data.Length);
+
+                Span<byte> output = encrypted.AsSpan.Slice(iv.Length, authenticationLength + data.Length);
+                try
+                {
+                    RandomNumberGenerator.Fill(iv);
+                    var cipher = new CcmBlockCipher(new AesEngine());
+                    var parameters = new AeadParameters(new KeyParameter(key), authenticationLength * 8, iv);
+                    cipher.Init(true, parameters);
+                    int length = cipher.ProcessBytes(data, output);
+                    cipher.DoFinal(output.Slice(length));
+                    iv.AsSpan().CopyTo(encrypted.AsSpan);
+                    return encrypted;
+                }
+                catch (Exception)
+                {
+                    encrypted.Dispose();
+                    throw;
+                }
+                finally
+                {
+                    CryptographicOperations.ZeroMemory(iv);
+                }
+            }
+
+            public ISecureBuffer DecryptBytes(ReadOnlySpan<byte> data, ReadOnlySpan<byte> key)
+            {
+                if (data.IsEmpty) throw new ArgumentException("Provided empty data", nameof(data));
+                if (key.IsEmpty) throw new ArgumentException("Provided empty key", nameof(key));
+
+                ReadOnlySpan<byte> iv = data.Slice(0, 11);
+                int authenticationLength = 16;
+                ReadOnlySpan<byte> encryptedDataWithTag = data.Slice(11);
+
+                ISecureBuffer encryptedDataWithTagCopy = SecureBuffer.Create(encryptedDataWithTag.Length);
+                ISecureBuffer decryptedWithTag = SecureBuffer.Create(encryptedDataWithTag.Length);
+                ISecureBuffer decrypted = SecureBuffer.Create(encryptedDataWithTag.Length - authenticationLength);
+                byte[] ivBytes = iv.ToArray();
+                try
+                {
+                    encryptedDataWithTag.CopyTo(encryptedDataWithTagCopy.AsSpan); //Temporarily storing encryptedData in order to be able to modify it
+
+                    var cipher = new CcmBlockCipher(new AesEngine());
+                    var parameters = new AeadParameters(new KeyParameter(key), authenticationLength * 8, ivBytes);
+                    cipher.Init(false, parameters);
+                    int length = cipher.ProcessBytes(encryptedDataWithTagCopy.AsSpan, decryptedWithTag.AsSpan);
+                    cipher.DoFinal(decryptedWithTag.AsSpan);
+
+                    decryptedWithTag.AsSpan[..^authenticationLength].CopyTo(decrypted.AsSpan);
+                    return decrypted;
+                }
+                catch (Exception)
+                {
+                    decrypted.Dispose();
+                    throw;
+                }
+                finally
+                {
+                    decryptedWithTag.Dispose();
+                    encryptedDataWithTagCopy.Dispose();
+                    CryptographicOperations.ZeroMemory(ivBytes);
+                }
+            }
+
+            
+        }
+
+        private class ChaCha20Poly1305DotNet : ChaCha20Algorithm
         {
             public short ExtraEncryptionDataSize => 28;
             public EncryptedOutputOrder EncryptedOutputOrder => EncryptedOutputOrder.IV_Tag_Data;
@@ -349,6 +443,81 @@ namespace VaultCrypt
                 {
                     decrypted.Dispose();
                     throw;
+                }
+            }
+        }
+
+        //BouncyCastle implementation of ChaCha20-Poly1305, added because .NET version does not work on Linux without OpenSSL installed and on Android <9
+        private class ChaCha20Poly1305BouncyCastle : ChaCha20Algorithm
+        {
+            public short ExtraEncryptionDataSize => 28;
+            public EncryptedOutputOrder EncryptedOutputOrder => EncryptedOutputOrder.IV_Data_Tag;
+
+            public ISecureBuffer EncryptBytes(ReadOnlySpan<byte> data, ReadOnlySpan<byte> key)
+            {
+                if (data.IsEmpty) throw new ArgumentException("Provided empty data", nameof(data));
+                if (key.IsEmpty) throw new ArgumentException("Provided empty key", nameof(key));
+
+                byte[] iv = new byte[12];
+                byte authenticationLength = 16;
+                ISecureBuffer encrypted = SecureBuffer.Create(iv.Length + data.Length + authenticationLength);
+
+                Span<byte> output = encrypted.AsSpan.Slice(iv.Length, data.Length + authenticationLength);
+                try
+                {
+                    RandomNumberGenerator.Fill(iv);
+                    var cipher = new Org.BouncyCastle.Crypto.Modes.ChaCha20Poly1305();
+                    var parameters = new AeadParameters(new KeyParameter(key), authenticationLength * 8, iv);
+                    cipher.Init(true, parameters);
+                    int length = cipher.ProcessBytes(data, output);
+                    cipher.DoFinal(output.Slice(length));
+                    iv.AsSpan().CopyTo(encrypted.AsSpan);
+                    return encrypted;
+                }
+                catch (Exception)
+                {
+                    encrypted.Dispose();
+                    throw;
+                }
+                finally
+                {
+                    CryptographicOperations.ZeroMemory(iv);
+                }
+            }
+
+            public ISecureBuffer DecryptBytes(ReadOnlySpan<byte> data, ReadOnlySpan<byte> key)
+            {
+                if (data.IsEmpty) throw new ArgumentException("Provided empty data", nameof(data));
+                if (key.IsEmpty) throw new ArgumentException("Provided empty key", nameof(key));
+
+                ReadOnlySpan<byte> iv = data.Slice(0, 12);
+                byte authenticationLength = 16;
+                ReadOnlySpan<byte> encryptedData = data[12..];
+
+                ISecureBuffer decryptedWithTag = SecureBuffer.Create(encryptedData.Length);
+                ISecureBuffer decrypted = SecureBuffer.Create(encryptedData.Length - authenticationLength);
+                byte[] ivBytes = iv.ToArray();
+                try
+                {
+                    var cipher = new Org.BouncyCastle.Crypto.Modes.ChaCha20Poly1305();
+                    var parameters = new AeadParameters(new KeyParameter(key), authenticationLength * 8, ivBytes);
+                    cipher.Init(false, parameters);
+                    int length = cipher.ProcessBytes(encryptedData, decryptedWithTag.AsSpan);
+                    cipher.DoFinal(decryptedWithTag.AsSpan.Slice(length));
+
+                    decryptedWithTag.AsSpan[..^authenticationLength].CopyTo(decrypted.AsSpan);
+                    return decrypted;
+                }
+                catch (Exception)
+                {
+
+                    decrypted.Dispose();
+                    throw;
+                }
+                finally
+                {
+                    decryptedWithTag.Dispose();
+                    CryptographicOperations.ZeroMemory(ivBytes);
                 }
             }
         }
