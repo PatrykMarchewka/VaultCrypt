@@ -289,20 +289,33 @@ namespace VaultCrypt.Tests
         public override Type _expectedMismatchedTagException => typeof(AuthenticationTagMismatchException);
     }
 
-    public class AESCCMAlgorithmTests : EncryptionAlgorithmTests<AESCCMAlgorithmTests>, IEncryptionAlgorithmTests
+    public class AESCCMDotNetAlgorithmTests : EncryptionAlgorithmTests<AESCCMDotNetAlgorithmTests>, IEncryptionAlgorithmTests
     {
-        //[IV 12 bytes][Authentication 16 bytes][Data]
+        //.NET [IV 12 bytes][Authentication 16 bytes][Data]
         public override TheoryData<EncryptionAlgorithm.IEncryptionAlgorithmProvider> _providers => new TheoryData<EncryptionAlgorithm.IEncryptionAlgorithmProvider>()
         {
             {EncryptionAlgorithm.EncryptionAlgorithmInfo.AES128CCM.Provider() },
             {EncryptionAlgorithm.EncryptionAlgorithmInfo.AES192CCM.Provider() },
-            {EncryptionAlgorithm.EncryptionAlgorithmInfo.AES256CCM.Provider() }
+            {EncryptionAlgorithm.EncryptionAlgorithmInfo.AES256CCM.Provider() },
         };
 
         public override Type _expectedMismatchedTagException => typeof(AuthenticationTagMismatchException);
     }
 
-    public class AESEAXAlgorithmTests : EncryptionAlgorithmTests<AESCCMAlgorithmTests>, IEncryptionAlgorithmTests
+    public class AESCCMBouncyCastleAlgorithmTests : EncryptionAlgorithmTests<AESCCMBouncyCastleAlgorithmTests>, IEncryptionAlgorithmTests
+    {
+        //BC [IV 11 bytes][Data][Authentication 16 bytes]
+        public override TheoryData<EncryptionAlgorithm.IEncryptionAlgorithmProvider> _providers => new TheoryData<EncryptionAlgorithm.IEncryptionAlgorithmProvider>()
+        {
+            {EncryptionAlgorithm.EncryptionAlgorithmInfo.AES128CCMBC.Provider() },
+            {EncryptionAlgorithm.EncryptionAlgorithmInfo.AES192CCMBC.Provider() },
+            {EncryptionAlgorithm.EncryptionAlgorithmInfo.AES256CCMBC.Provider() }
+        };
+
+        public override Type _expectedMismatchedTagException => typeof(Org.BouncyCastle.Crypto.InvalidCipherTextException);
+    }
+
+    public class AESEAXAlgorithmTests : EncryptionAlgorithmTests<AESEAXAlgorithmTests>, IEncryptionAlgorithmTests
     {
         //[IV 12 bytes][Authentication 16 bytes][Data]
         public override TheoryData<EncryptionAlgorithm.IEncryptionAlgorithmProvider> _providers => new TheoryData<EncryptionAlgorithm.IEncryptionAlgorithmProvider>()
@@ -312,20 +325,31 @@ namespace VaultCrypt.Tests
             {EncryptionAlgorithm.EncryptionAlgorithmInfo.AES256EAX.Provider() }
         };
 
-        public override Type _expectedMismatchedTagException => typeof(AuthenticationTagMismatchException);
+        public override Type _expectedMismatchedTagException => typeof(Org.BouncyCastle.Crypto.InvalidCipherTextException);
     }
     #endregion
 
     #region ChaCha20
-    public class ChaCha20Poly1305AlgorithmTests : EncryptionAlgorithmTests<ChaCha20Poly1305AlgorithmTests>, IEncryptionAlgorithmTests
+    public class ChaCha20Poly1305DotNetAlgorithmTests : EncryptionAlgorithmTests<ChaCha20Poly1305DotNetAlgorithmTests>, IEncryptionAlgorithmTests
     {
-        //[IV 12 bytes][Authentication 16 bytes][Data]
+        //.NET [IV 12 bytes][Authentication 16 bytes][Data]
         public override TheoryData<EncryptionAlgorithm.IEncryptionAlgorithmProvider> _providers => new TheoryData<EncryptionAlgorithm.IEncryptionAlgorithmProvider>()
         {
-            { EncryptionAlgorithm.EncryptionAlgorithmInfo.ChaCha20Poly1305.Provider()}
+            { EncryptionAlgorithm.EncryptionAlgorithmInfo.ChaCha20Poly1305.Provider() }
         };
 
         public override Type _expectedMismatchedTagException => typeof(AuthenticationTagMismatchException);
+    }
+
+    public class ChaCha20Poly1305BouncyCastleAlgorithmTests : EncryptionAlgorithmTests<ChaCha20Poly1305BouncyCastleAlgorithmTests>, IEncryptionAlgorithmTests
+    {
+        //BC [IV 12 bytes][Data][Authentication 16 bytes]
+        public override TheoryData<EncryptionAlgorithm.IEncryptionAlgorithmProvider> _providers => new TheoryData<EncryptionAlgorithm.IEncryptionAlgorithmProvider>()
+        {
+            { EncryptionAlgorithm.EncryptionAlgorithmInfo.ChaCha20Poly1305BC.Provider() }
+        };
+
+        public override Type _expectedMismatchedTagException => typeof(Org.BouncyCastle.Crypto.InvalidCipherTextException);
     }
     #endregion
 
