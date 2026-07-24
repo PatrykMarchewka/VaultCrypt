@@ -57,12 +57,38 @@ namespace VaultCrypt
 
         public static readonly IReadOnlyDictionary<byte, EncryptionAlgorithmInfo> GetEncryptionAlgorithmInfo = _BuildDictionary();
 
+        private static Dictionary<byte, EncryptionAlgorithmInfo> _FilterDictionary(Dictionary<byte, EncryptionAlgorithmInfo> dictionary)
+        {
+            if (!System.Security.Cryptography.AesGcm.IsSupported)
+            {
+                //AES-GCM from .NET is not supported
+                dictionary.Remove(0);
+                dictionary.Remove(1);
+                dictionary.Remove(2);
+            }
+            if (!System.Security.Cryptography.AesCcm.IsSupported)
+            {
+                //AES-CCM from .NET is not supported
+                dictionary.Remove(3);
+                dictionary.Remove(4);
+                dictionary.Remove(5);
+            }
+            if (!System.Security.Cryptography.ChaCha20Poly1305.IsSupported)
+            {
+                //ChaCha20-Poly1305 from .NET is not supported
+                dictionary.Remove(6);
+            }
+            return dictionary;
+        }
+
         private static IReadOnlyDictionary<byte, EncryptionAlgorithmInfo> _BuildDictionary()
         {
-            return typeof(EncryptionAlgorithmInfo).GetFields(System.Reflection.BindingFlags.Public | System.Reflection.BindingFlags.Static)
+            var dictionary = typeof(EncryptionAlgorithmInfo).GetFields(System.Reflection.BindingFlags.Public | System.Reflection.BindingFlags.Static)
                 .Where(info => info.FieldType == typeof(EncryptionAlgorithmInfo))
                 .Select(info => (EncryptionAlgorithmInfo)info.GetValue(null)!) //Null because there is no instance, its a static field
                 .ToDictionary(info => info.ID);
+            dictionary = _FilterDictionary(dictionary);
+            return dictionary;
         }
 
         private static byte[] _CalculateSHA3HMACDotNet(ReadOnlySpan<byte> key, params byte[][] bytes)
