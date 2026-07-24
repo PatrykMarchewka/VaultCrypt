@@ -58,6 +58,13 @@ namespace VaultCrypt.Services
                 shouldRetry: ex => ex is IOException,
                 cancellationToken: context.CancellationToken);
 
+
+            //If encryption algorithm is not in the dictionary it means it's not supported on the current system
+            if (!EncryptionAlgorithm.GetEncryptionAlgorithmInfo.TryGetValue(encryptionOptions.EncryptionAlgorithm,out _))
+            {
+                throw new VaultUIException("Required encryption algorithm is not available on this system");
+            }
+
             var encryptionAlgorithmProvider = EncryptionAlgorithm.GetEncryptionAlgorithmInfo[encryptionOptions.EncryptionAlgorithm].Provider();
             
             await using FileStream fileFS = await RetryHelper.TryUntilSuccessAsync(
