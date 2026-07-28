@@ -443,7 +443,7 @@ namespace VaultCrypt
         }
 
         // Attaches number of offsets
-        private ISecureBuffer PrepareMetadataOffsets(ISecureBuffer offsets)
+        private static ISecureBuffer PrepareMetadataOffsets(ISecureBuffer offsets)
         {
             ArgumentNullException.ThrowIfNull(offsets);
 

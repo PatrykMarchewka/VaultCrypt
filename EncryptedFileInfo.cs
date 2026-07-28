@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
@@ -19,7 +19,7 @@ namespace VaultCrypt
             this.EncryptionAlgorithm = algorithmInfo?.Name ?? "Unknown";
         }
 
-        private string FormatSize(ulong fileSize)
+        private static string FormatSize(ulong fileSize)
         {
             string[] sizes = { "B", "KB", "MB", "GB", "TB", "PB", "EB" };
             decimal copy = fileSize;

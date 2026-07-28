@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Buffers.Binary;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
@@ -36,6 +36,14 @@ namespace VaultCrypt.Services
     {
         private IVaultSession _session => VaultSession.CurrentSession;
 
+        private static long GetTotalBytes(NormalizedPath filePath)
+        {
+            ArgumentNullException.ThrowIfNull(filePath);
+            if (!File.Exists(filePath)) throw new ArgumentException($"Cant find the file at {filePath}");
+
+            return new FileInfo(filePath).Length;
+        }
+
         public void CheckFreeSpace(NormalizedPath filePath)
         {
             ArgumentNullException.ThrowIfNullOrWhiteSpace(filePath);
@@ -47,17 +55,9 @@ namespace VaultCrypt.Services
             }
         }
 
-        private long CheckFreeRamSpace()
+        private static long CheckFreeRamSpace()
         {
             return (GC.GetGCMemoryInfo().HighMemoryLoadThresholdBytes - GC.GetGCMemoryInfo().MemoryLoadBytes);
-        }
-
-        private long GetTotalBytes(NormalizedPath filePath)
-        {
-            ArgumentNullException.ThrowIfNull(filePath);
-            if (!File.Exists(filePath)) throw new ArgumentException($"Cant find the file at {filePath}");
-
-            return new FileInfo(filePath).Length;
         }
 
         public int CalculateConcurrency(ushort chunkSizeInMB)

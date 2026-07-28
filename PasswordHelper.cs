@@ -7,7 +7,7 @@ using System.Threading.Tasks;
 
 namespace VaultCrypt
 {
-    public class PasswordHelper
+    public static class PasswordHelper
     {
         public const int KeySize = 128;
 

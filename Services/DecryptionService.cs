@@ -99,7 +99,7 @@ namespace VaultCrypt.Services
         }
 
         //Decrypts entire file in one go when it is not chunked
-        private ISecureBuffer DecryptInOneChunk(Stream vaultFS, int fileSize, ReadOnlySpan<byte> key, EncryptionAlgorithm.IEncryptionAlgorithm encryptionAlgorithm)
+        private static ISecureBuffer DecryptInOneChunk(Stream vaultFS, int fileSize, ReadOnlySpan<byte> key, EncryptionAlgorithm.IEncryptionAlgorithm encryptionAlgorithm)
         {
             ArgumentNullException.ThrowIfNull(vaultFS);
             ArgumentOutOfRangeException.ThrowIfNegativeOrZero(fileSize);
