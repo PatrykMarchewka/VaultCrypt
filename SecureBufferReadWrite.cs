@@ -12,9 +12,9 @@ namespace VaultCrypt
      * Holds Reader/Writer classes for easy way of reading/writing to ISecureBuffer without a need to keep track of index cursor
      * Class instead of ref struct in order to allow usage in async code
      */
-    public class SecureBufferReadWrite
+    public sealed class SecureBufferReadWrite
     {
-        public class SecureBufferReader
+        public sealed class SecureBufferReader
         {
             private ISecureBuffer _data;
             private int _index;
@@ -112,7 +112,7 @@ namespace VaultCrypt
             }
         }
 
-        public class SecureBufferWriter
+        public sealed class SecureBufferWriter
         {
             private ISecureBuffer _data;
             private int _index;

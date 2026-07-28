@@ -10,7 +10,7 @@ using VaultCrypt.Exceptions;
 
 namespace VaultCrypt
 {
-    public class EncryptionOptions
+    public sealed class EncryptionOptions
     {
         /// <summary>
         /// Record holding information about encrypted file
@@ -185,7 +185,7 @@ namespace VaultCrypt
 
         
 
-        public class FileEncryptionOptionsReader
+        public sealed class FileEncryptionOptionsReader
         {
             private static ChunkInformation DeserializeChunkInformationV0(SecureBufferReadWrite.SecureBufferReader chunkData)
             {

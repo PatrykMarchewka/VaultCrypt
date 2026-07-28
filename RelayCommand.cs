@@ -8,7 +8,7 @@ using System.Windows.Input;
 
 namespace VaultCrypt
 {
-    public class RelayCommand : ICommand
+    public sealed class RelayCommand : ICommand
     {
         private readonly Action<object?>? _execute;
         private readonly Func<object?, Task>? _asyncExecute;

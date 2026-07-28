@@ -40,7 +40,7 @@ namespace VaultCrypt.Services
         public EncryptionOptions.FileEncryptionOptions GetDecryptedFileEncryptionOptions(Stream vaultFS, long metadataOffset);
     }
 
-    public class EncryptionOptionsService : IEncryptionOptionsService
+    public sealed class EncryptionOptionsService : IEncryptionOptionsService
     {
         private IVaultSession _session => VaultSession.CurrentSession;
 

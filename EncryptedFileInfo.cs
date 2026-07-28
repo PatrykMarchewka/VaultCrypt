@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
@@ -6,7 +6,7 @@ using System.Threading.Tasks;
 
 namespace VaultCrypt
 {
-    public class EncryptedFileInfo
+    public sealed class EncryptedFileInfo
     {
         public string FileName { get; init; }
         public string FileSize { get; init; }

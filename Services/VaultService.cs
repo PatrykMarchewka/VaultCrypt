@@ -52,7 +52,7 @@ namespace VaultCrypt.Services
         public void RefreshEncryptedFilesList(Stream vaultFS);
     }
 
-    public class VaultService : IVaultService
+    public sealed class VaultService : IVaultService
     {
         private readonly IFileService _fileService;
         private IVaultSession _session => VaultSession.CurrentSession;

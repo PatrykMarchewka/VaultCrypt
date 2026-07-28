@@ -32,7 +32,7 @@ namespace VaultCrypt.Services
     }
 
 
-    public class SystemService : ISystemService
+    public sealed class SystemService : ISystemService
     {
         private IVaultSession _session => VaultSession.CurrentSession;
 

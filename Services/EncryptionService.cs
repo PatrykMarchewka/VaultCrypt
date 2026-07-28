@@ -27,7 +27,7 @@ namespace VaultCrypt.Services
         public Task Encrypt(EncryptionAlgorithm.EncryptionAlgorithmInfo algorithm, ushort chunkSizeInMB, NormalizedPath filePath, ProgressionContext context);
     }
 
-    public class EncryptionService : IEncryptionService
+    public sealed class EncryptionService : IEncryptionService
     {
         private readonly IFileService _fileService;
         private readonly IEncryptionOptionsService _encryptionOptionsService;

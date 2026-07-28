@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
@@ -68,7 +68,7 @@ namespace VaultCrypt.Services
 
     
 
-    public class NavigationService : INavigationService
+    public sealed class NavigationService : INavigationService
     {
         private IVaultSession _session => VaultSession.CurrentSession;
 

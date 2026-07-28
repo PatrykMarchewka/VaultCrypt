@@ -45,7 +45,7 @@ namespace VaultCrypt.Services
         public void CopyPartOfFile(Stream source, long offset, ulong length, Stream destination, long destinationOffset);
     }
 
-    public class FileService : IFileService
+    public sealed class FileService : IFileService
     {
         public void WriteReadyChunk(ConcurrentDictionary<ulong, ISecureBuffer> results, ref ulong nextToWrite, ulong currentIndex, Stream fileFS, object lockObject)
         {

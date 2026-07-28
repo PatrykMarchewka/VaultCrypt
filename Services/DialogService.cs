@@ -19,7 +19,7 @@ namespace VaultCrypt.Services
     }
 
 
-    internal class DialogService : IDialogService
+    internal sealed class DialogService : IDialogService
     {
         public void ShowErrorWindow(Exception ex)
         {

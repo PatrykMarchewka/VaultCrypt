@@ -34,7 +34,7 @@ namespace VaultCrypt
     }
 
 
-    public class SecureBuffer
+    public sealed class SecureBuffer
     {
         private SecureBuffer() { } //Private constructor to avoid accidental call by new()
 
@@ -96,7 +96,7 @@ namespace VaultCrypt
         /// MacOS: 64-256KB <br/>
         /// For compatibility the buffer should not be created for memory over 32KB
         /// </summary>
-        private unsafe class SecureKeyBuffer : ISecureBuffer
+        private sealed unsafe class SecureKeyBuffer : ISecureBuffer
         {
             private void* _pointer;
             private int _disposed; //0 = alive, 1 = disposed, any other value should be treated as an error. Required to be int to use with Interlocked for atomic operation
@@ -364,7 +364,7 @@ namespace VaultCrypt
         /// <summary>
         /// Class to securely manage memory that is outside GC control, intended for memory that is not suitable for <see cref="SecureBuffer.SecureKeyBuffer"/>
         /// </summary>
-        private unsafe class SecureLargeBuffer : ISecureBuffer
+        private sealed unsafe class SecureLargeBuffer : ISecureBuffer
         {
             private void* _pointer;
             private int _disposed; //0 = alive, 1 = disposed, any other value should be treated as an error. Required to be int to use with Interlocked for atomic operation

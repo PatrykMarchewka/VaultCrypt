@@ -25,7 +25,7 @@ namespace VaultCrypt.Services
         public Task Decrypt(long metadataOffset, NormalizedPath filePath, ProgressionContext context);
     }
 
-    public class DecryptionService : IDecryptionService
+    public sealed class DecryptionService : IDecryptionService
     {
         private readonly IFileService _fileService;
         private readonly IEncryptionOptionsService _encryptionOptionsService;

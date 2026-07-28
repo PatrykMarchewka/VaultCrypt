@@ -7,7 +7,7 @@ using System.Threading.Tasks;
 
 namespace VaultCrypt
 {
-    public class ProgressionContext : IDisposable
+    public sealed class ProgressionContext : IDisposable
     {
         private ulong _completed;
         public ulong Completed => _completed;

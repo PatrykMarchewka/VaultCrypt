@@ -31,7 +31,7 @@ namespace VaultCrypt.Services
     }
 
 
-    public class FileDialogService : IFileDialogService
+    public sealed class FileDialogService : IFileDialogService
     {
         public string? OpenFile(string title, bool allFiles)
         {

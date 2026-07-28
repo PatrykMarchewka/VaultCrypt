@@ -62,7 +62,7 @@ namespace VaultCrypt
         public ReadOnlySpan<byte> GetSlicedKey(int keySize);
     }
 
-    public class VaultSession : IVaultSession
+    public sealed class VaultSession : IVaultSession
     {
         public byte VERSION { get; private set; }
         public ISecureBuffer KEY { get; private set; }
@@ -513,7 +513,7 @@ namespace VaultCrypt
     }
 
 
-    public class VaultV0Reader : VaultReader
+    public sealed class VaultV0Reader : VaultReader
     {
         public VaultV0Reader() : base() { }
 

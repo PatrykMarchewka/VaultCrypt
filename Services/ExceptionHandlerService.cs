@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
@@ -16,7 +16,7 @@ namespace VaultCrypt.Services
         public void HandleException(Exception ex);
     }
 
-    internal class ExceptionHandlerService(IDialogService dialogService, INavigationService navigationService) : IExceptionHandler
+    internal sealed class ExceptionHandlerService(IDialogService dialogService, INavigationService navigationService) : IExceptionHandler
     {
         private readonly IDialogService dialogService = dialogService;
         private readonly INavigationService navigationService = navigationService;

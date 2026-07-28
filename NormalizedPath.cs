@@ -7,7 +7,7 @@ using System.Threading.Tasks;
 
 namespace VaultCrypt
 {
-    public class NormalizedPath
+    public sealed class NormalizedPath
     {
         public string Value { get; }
         private NormalizedPath(string path)

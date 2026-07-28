@@ -47,32 +47,32 @@ namespace VaultCrypt.Exceptions
         };
     }
 
-    public class VaultEncryptionException : VaultException
+    public sealed class VaultEncryptionException : VaultException
     {
         public VaultEncryptionException(ErrorReason reason, Exception? innerException = null) : base("Encryption failed", reason, innerException) { }
     }
 
-    public class VaultDecryptionException : VaultException
+    public sealed class VaultDecryptionException : VaultException
     {
         public VaultDecryptionException(ErrorReason reason, Exception? innerException = null) : base("Decryption failed", reason, innerException) { }
     }
 
-    public class VaultEncryptionOptionsOperationException : VaultException
+    public sealed class VaultEncryptionOptionsOperationException : VaultException
     {
         public VaultEncryptionOptionsOperationException(ErrorReason reason, Exception? innerException = null) : base("Encryption options operation failed", reason, innerException) { }
     }
 
-    public class VaultSystemCheckException : VaultException
+    public sealed class VaultSystemCheckException : VaultException
     {
         public VaultSystemCheckException(ErrorReason reason, Exception? innerException = null) : base("System check failed", reason, innerException) { }
     }
 
-    public class VaultOperationException : VaultException
+    public sealed class VaultOperationException : VaultException
     {
         public VaultOperationException(ErrorReason reason, Exception? innerException = null) : base("Vault operation failed", reason, innerException) { }
     }
 
-    public class VaultIOOperationException : VaultException
+    public sealed class VaultIOOperationException : VaultException
     {
         public VaultIOOperationException(ErrorReason reason, Exception? innerException = null) : base("Writing to file failed", reason, innerException) { }
     }

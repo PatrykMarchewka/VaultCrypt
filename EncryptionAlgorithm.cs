@@ -11,7 +11,7 @@ using VaultCrypt.Exceptions;
 
 namespace VaultCrypt
 {
-    public class EncryptionAlgorithm
+    public sealed class EncryptionAlgorithm
     {
         public sealed record EncryptionAlgorithmInfo(byte ID, string Name, Func<IEncryptionAlgorithmProvider> Provider)
         {
@@ -213,7 +213,7 @@ namespace VaultCrypt
         private interface XSalsa20Algorithm : IEncryptionAlgorithm;
 
 
-        private class AesGcm : AESAlgorithm
+        private sealed class AesGcm : AESAlgorithm
         {
             public short ExtraEncryptionDataSize => 28;
             public EncryptedOutputOrder EncryptedOutputOrder => EncryptedOutputOrder.IV_Tag_Data;
@@ -271,7 +271,7 @@ namespace VaultCrypt
 
 
 
-        private class AesCcmDotNet : AESAlgorithm
+        private sealed class AesCcmDotNet : AESAlgorithm
         {
             public short ExtraEncryptionDataSize => 28;
             public EncryptedOutputOrder EncryptedOutputOrder => EncryptedOutputOrder.IV_Tag_Data;
@@ -336,7 +336,7 @@ namespace VaultCrypt
          * The libcrypto.0.9.7.dylib and libcrypto.0.9.8.dylib libraries included in macOS are from earlier versions of OpenSSL and will not be used.
          * The libcrypto.35.dylib, libcrypto.41.dylib, and libcrypto.42.dylib libraries are from LibreSSL and will not be used.
          */
-        private class AesCcmBouncyCastle : AESAlgorithm
+        private sealed class AesCcmBouncyCastle : AESAlgorithm
         {
             //BouncyCastle uses IV set to L = 15 − IV, by setting IV to 11 bytes the max encryption size for one block is 4GB
             public short ExtraEncryptionDataSize => 27;
@@ -417,7 +417,7 @@ namespace VaultCrypt
             
         }
 
-        private class ChaCha20Poly1305DotNet : ChaCha20Algorithm
+        private sealed class ChaCha20Poly1305DotNet : ChaCha20Algorithm
         {
             public short ExtraEncryptionDataSize => 28;
             public EncryptedOutputOrder EncryptedOutputOrder => EncryptedOutputOrder.IV_Tag_Data;
@@ -474,7 +474,7 @@ namespace VaultCrypt
         }
 
         //BouncyCastle implementation of ChaCha20-Poly1305, added because .NET version does not work on Linux without OpenSSL installed and on Android <9
-        private class ChaCha20Poly1305BouncyCastle : ChaCha20Algorithm
+        private sealed class ChaCha20Poly1305BouncyCastle : ChaCha20Algorithm
         {
             public short ExtraEncryptionDataSize => 28;
             public EncryptedOutputOrder EncryptedOutputOrder => EncryptedOutputOrder.IV_Data_Tag;
@@ -548,7 +548,7 @@ namespace VaultCrypt
             }
         }
 
-        private class AesEax : AESAlgorithm
+        private sealed class AesEax : AESAlgorithm
         {
             public short ExtraEncryptionDataSize => 28;
             public EncryptedOutputOrder EncryptedOutputOrder => EncryptedOutputOrder.IV_Data_Tag;
@@ -621,7 +621,7 @@ namespace VaultCrypt
             }
         }
 
-        private class TwofishCtr : TwoFishAlgorithm
+        private sealed class TwofishCtr : TwoFishAlgorithm
         {
             public short ExtraEncryptionDataSize => 76;
             public EncryptedOutputOrder EncryptedOutputOrder => EncryptedOutputOrder.IV_Data_Tag;
@@ -701,7 +701,7 @@ namespace VaultCrypt
             }
         }
 
-        private class ThreefishCtr : ThreeFishAlgorithm
+        private sealed class ThreefishCtr : ThreeFishAlgorithm
         {
             public ThreefishCtr(int blockSizeInBits)
             {
@@ -786,7 +786,7 @@ namespace VaultCrypt
             }
         }
 
-        private class SerpentGcm : SerpentAlgorithm
+        private sealed class SerpentGcm : SerpentAlgorithm
         {
             public short ExtraEncryptionDataSize => 28;
             public EncryptedOutputOrder EncryptedOutputOrder => EncryptedOutputOrder.IV_Data_Tag;
@@ -857,7 +857,7 @@ namespace VaultCrypt
             }
         }
 
-        private class SerpentCtr : SerpentAlgorithm
+        private sealed class SerpentCtr : SerpentAlgorithm
         {
             public short ExtraEncryptionDataSize => 76;
             public EncryptedOutputOrder EncryptedOutputOrder => EncryptedOutputOrder.IV_Data_Tag;
@@ -934,7 +934,7 @@ namespace VaultCrypt
             }
         }
 
-        private class CameliaGcm : CameliaAlgorithm
+        private sealed class CameliaGcm : CameliaAlgorithm
         {
             public short ExtraEncryptionDataSize => 28;
             public EncryptedOutputOrder EncryptedOutputOrder => EncryptedOutputOrder.IV_Data_Tag;
@@ -1005,7 +1005,7 @@ namespace VaultCrypt
             }
         }
 
-        private class CameliaOcb : CameliaAlgorithm
+        private sealed class CameliaOcb : CameliaAlgorithm
         {
             public short ExtraEncryptionDataSize => 28;
             public EncryptedOutputOrder EncryptedOutputOrder => EncryptedOutputOrder.IV_Data_Tag;
@@ -1076,7 +1076,7 @@ namespace VaultCrypt
             }
         }
 
-        private class CameliaCtr : CameliaAlgorithm
+        private sealed class CameliaCtr : CameliaAlgorithm
         {
             public short ExtraEncryptionDataSize => 76;
             public EncryptedOutputOrder EncryptedOutputOrder => EncryptedOutputOrder.IV_Data_Tag;
@@ -1153,7 +1153,7 @@ namespace VaultCrypt
             }
         }
 
-        private class XSalsa20 : XSalsa20Algorithm
+        private sealed class XSalsa20 : XSalsa20Algorithm
         {
             public short ExtraEncryptionDataSize => 88;
             public EncryptedOutputOrder EncryptedOutputOrder => EncryptedOutputOrder.IV_Data_Tag;
@@ -1243,7 +1243,7 @@ namespace VaultCrypt
             public IEncryptionAlgorithm EncryptionAlgorithm { get; }
         }
 
-        private class AesProvider : IEncryptionAlgorithmProvider
+        private sealed class AesProvider : IEncryptionAlgorithmProvider
         {
             public byte KeySize { get; }
 
@@ -1260,7 +1260,7 @@ namespace VaultCrypt
             }
         }
 
-        private class ChaCha20Provider : IEncryptionAlgorithmProvider
+        private sealed class ChaCha20Provider : IEncryptionAlgorithmProvider
         {
             public byte KeySize { get; }
 
@@ -1277,7 +1277,7 @@ namespace VaultCrypt
             }
         }
 
-        private class TwofishProvider : IEncryptionAlgorithmProvider
+        private sealed class TwofishProvider : IEncryptionAlgorithmProvider
         {
             public byte KeySize { get; }
 
@@ -1294,7 +1294,7 @@ namespace VaultCrypt
             }
         }
 
-        private class ThreefishProvider : IEncryptionAlgorithmProvider
+        private sealed class ThreefishProvider : IEncryptionAlgorithmProvider
         {
             public byte KeySize { get; }
 
@@ -1311,7 +1311,7 @@ namespace VaultCrypt
             }
         }
 
-        private class SerpentProvider : IEncryptionAlgorithmProvider
+        private sealed class SerpentProvider : IEncryptionAlgorithmProvider
         {
             public byte KeySize { get; }
 
@@ -1328,7 +1328,7 @@ namespace VaultCrypt
             }
         }
 
-        private class CameliaProvider : IEncryptionAlgorithmProvider
+        private sealed class CameliaProvider : IEncryptionAlgorithmProvider
         {
             public byte KeySize { get; }
 
@@ -1345,7 +1345,7 @@ namespace VaultCrypt
             }
         }
 
-        private class XSalsa20Provider : IEncryptionAlgorithmProvider
+        private sealed class XSalsa20Provider : IEncryptionAlgorithmProvider
         {
             public byte KeySize { get; }
 
