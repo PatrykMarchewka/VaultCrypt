@@ -237,6 +237,7 @@ namespace VaultCrypt.Services
                     oldVaultSize = RetryHelper.TryUntilSuccess(
                         tryAction: () => vaultfs.Length,
                         catchAction: () => context.ReportTempStatus(ProgressFailure.ProgressTempFailure.ReadingFromStreamFailed),
+                        shouldRetry: ex => ex is IOException,
                         cancellationToken: context.CancellationToken);
                 }
                 catch (Exception)
@@ -267,6 +268,7 @@ namespace VaultCrypt.Services
                     await RetryHelper.TryUntilSuccessAsync(
                         tryAction: () => _fileService.CopyPartOfFile(source: vaultfs!, offset: 0, length: (ulong)reader.HeaderSize, destination: newVaultfs!, destinationOffset: newVaultfs!.Seek(0, SeekOrigin.End)),
                         catchAction: () => context.ReportTempStatus(ProgressFailure.ProgressTempFailure.WritingToFileFailed),
+                        shouldRetry: ex => ex is not (ArgumentException or VaultOperationException),
                         cancellationToken: context.CancellationToken);
                 }
                 catch (Exception)
@@ -278,6 +280,7 @@ namespace VaultCrypt.Services
                         await RetryHelper.TryUntilSuccessAsync(
                             tryAction: () => File.Delete(newVaultPath),
                             catchAction: () => context.ReportTempStatus(ProgressFailure.ProgressTempFailure.DeletingFileFailed),
+                            shouldRetry: ex => ex is IOException,
                             cancellationToken: context.CancellationToken);
                     }
                     catch (Exception)
@@ -362,6 +365,7 @@ namespace VaultCrypt.Services
                             await RetryHelper.TryUntilSuccessAsync(
                                 tryAction: () => _fileService.CopyPartOfFile(vaultfs, currentOffset, toRead, newVaultfs, currentFileOffsetInNewVault),
                                 catchAction: () => context.ReportTempStatus(ProgressFailure.ProgressTempFailure.WritingToFileFailed),
+                                shouldRetry: ex => ex is not ArgumentException,
                                 cancellationToken: context.CancellationToken);
                         }
                         catch (Exception)
@@ -414,6 +418,7 @@ namespace VaultCrypt.Services
                     await RetryHelper.TryUntilSuccessAsync(
                         tryAction: () => vaultFS.SetLength(vaultReader.HeaderSize),
                         catchAction: () => context.ReportTempStatus(ProgressFailure.ProgressTempFailure.WritingToFileFailed),
+                        shouldRetry: ex => ex is IOException,
                         cancellationToken: context.CancellationToken);
                 }
                 else if (_session.ENCRYPTED_FILES.Last().Key == offset)
@@ -422,6 +427,7 @@ namespace VaultCrypt.Services
                     await RetryHelper.TryUntilSuccessAsync(
                         tryAction: () => vaultFS.SetLength(offset),
                         catchAction: () => context.ReportTempStatus(ProgressFailure.ProgressTempFailure.WritingToFileFailed),
+                        shouldRetry: ex => ex is IOException,
                         cancellationToken: context.CancellationToken);
                 }
                 else
@@ -457,13 +463,14 @@ namespace VaultCrypt.Services
                     await RetryHelper.TryUntilSuccessAsync(
                         tryAction: () => _fileService.ZeroOutPartOfFile(vaultFS, offset, length),
                         catchAction: () => context.ReportTempStatus(ProgressFailure.ProgressTempFailure.WritingToFileFailed),
+                        shouldRetry: ex => ex is not ArgumentException,
                         cancellationToken: context.CancellationToken);
                 }
 
                 await RetryHelper.TryUntilSuccessAsync(
                     tryAction: () => vaultReader.RemoveAndSaveMetadataOffsets(vaultFS, checked((ushort)fileList.FindIndex(file => file.Key == offset))),
                     catchAction: () => context.ReportTempStatus(ProgressFailure.ProgressTempFailure.WritingToFileFailed),
-                    shouldRetry: ex => ex is not OverflowException,
+                    shouldRetry: ex => ex is not (OverflowException or ArgumentException),
                     cancellationToken: context.CancellationToken);
 
                 context.Increment();

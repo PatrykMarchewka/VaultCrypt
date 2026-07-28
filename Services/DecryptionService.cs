@@ -182,6 +182,7 @@ namespace VaultCrypt.Services
                             await RetryHelper.TryUntilSuccessAsync(
                                 tryAction: () => _fileService.WriteReadyChunk(results, ref nextToWrite, currentIndex, fileFS, writeLock),
                                 catchAction: () => context.ReportTempStatus(ProgressFailure.ProgressTempFailure.WritingToFileFailed),
+                                shouldRetry: ex => ex is not (ArgumentException or VaultOperationException),
                                 cancellationToken: context.CancellationToken);
                         }
                         catch (Exception)

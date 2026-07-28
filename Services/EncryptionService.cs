@@ -75,6 +75,7 @@ namespace VaultCrypt.Services
                 await RetryHelper.TryUntilSuccessAsync(
                     tryAction: () => VaultRegistry.GetVaultReader(_session.VERSION).AddAndSaveMetadataOffsets(vaultFS, vaultFS.Seek(0, SeekOrigin.End)),
                     catchAction: () => context.ReportTempStatus(ProgressFailure.ProgressTempFailure.WritingToFileFailed),
+                    shouldRetry: ex => ex is not (ArgumentException or VaultOperationException),
                     cancellationToken: context.CancellationToken);
                 context.Increment();
 
@@ -84,6 +85,7 @@ namespace VaultCrypt.Services
                     await RetryHelper.TryUntilSuccessAsync(
                         tryAction: () => { vaultFS.Seek(0, SeekOrigin.End); vaultFS.Write(paddedFileOptions.AsSpan); },
                         catchAction: () => context.ReportTempStatus(ProgressFailure.ProgressTempFailure.WritingToFileFailed),
+                        shouldRetry: ex => ex is IOException,
                         cancellationToken: context.CancellationToken);
                 }
                 
@@ -110,6 +112,7 @@ namespace VaultCrypt.Services
             long originalFileSize = await RetryHelper.TryUntilSuccessAsync(
                 tryAction: () => fileFS.Length,
                 catchAction: () => context.ReportTempStatus(ProgressFailure.ProgressTempFailure.ReadingFromStreamFailed),
+                shouldRetry: ex => ex is IOException,
                 cancellationToken: context.CancellationToken);
             int bufferSize = (checked((int)Math.Min(chunkSizeInMB * 1024 * 1024, originalFileSize)));
             ISecureBuffer buffer = SecureBuffer.Create(bufferSize);
@@ -163,6 +166,7 @@ namespace VaultCrypt.Services
                             await RetryHelper.TryUntilSuccessAsync(
                                 tryAction: () => _fileService.WriteReadyChunk(results, ref nextToWrite, currentIndex, vaultFS, writeLock),
                                 catchAction: () => context.ReportTempStatus(ProgressFailure.ProgressTempFailure.WritingToFileFailed),
+                                shouldRetry: ex => ex is not (ArgumentException or VaultOperationException),
                                 cancellationToken: context.CancellationToken);
                         }
                         catch (Exception)
