@@ -62,10 +62,7 @@ namespace VaultCrypt.Services
                 ulong totalChunks = options.ChunkInformation != null ? options.ChunkInformation!.TotalChunks : 1;
                 int concurrentChunkCount = options.IsChunked ? _systemService.CalculateConcurrency(chunkSizeInMB) : 1;
 
-                await using FileStream vaultFS = await RetryHelper.TryUntilSuccessAsync(
-                    tryAction: () => new FileStream(_session.VAULTPATH, FileMode.Open, FileAccess.ReadWrite),
-                    catchAction: () => context.ReportTempStatus(ProgressFailure.ProgressTempFailure.CreatingStreamFailed),
-                    cancellationToken: context.CancellationToken);
+                await using FileStream vaultFS = await _session.OpenVaultStream(context, context.CancellationToken);
 
                 await using FileStream fileFS = await RetryHelper.TryUntilSuccessAsync(
                     tryAction: () => new FileStream(filePath, FileMode.Open, FileAccess.Read),

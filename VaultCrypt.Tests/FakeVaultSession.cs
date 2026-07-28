@@ -14,6 +14,7 @@ namespace VaultCrypt.Tests
         public bool CreateSessionWasCalled = false;
         public bool RaiseEncryptedFileListUpdatedWasCalled = false;
         public bool GetSlicedKeyWasCalled = false;
+        public bool OpenVaultStreamWasCalled = false;
         public bool DisposeWasCalled = false;
         private FakeVaultSession() { }
 
@@ -54,6 +55,12 @@ namespace VaultCrypt.Tests
         {
             GetSlicedKeyWasCalled = true;
             return new byte[0];
+        }
+
+        public Task<FileStream> OpenVaultStream(ProgressionContext? progressionContext, CancellationToken? cancellationToken)
+        {
+            OpenVaultStreamWasCalled = true;
+            return null!;
         }
 
         public void Dispose() => DisposeWasCalled = true;

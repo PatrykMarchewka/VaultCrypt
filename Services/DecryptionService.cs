@@ -47,10 +47,7 @@ namespace VaultCrypt.Services
             ArgumentNullException.ThrowIfNullOrWhiteSpace(filePath);
             ArgumentNullException.ThrowIfNull(context);
 
-            await using FileStream vaultFS = await RetryHelper.TryUntilSuccessAsync(
-                tryAction: () => new FileStream(_session.VAULTPATH, FileMode.Open, FileAccess.Read),
-                catchAction: () => context.ReportTempStatus(ProgressFailure.ProgressTempFailure.CreatingStreamFailed),
-                cancellationToken: context.CancellationToken);
+            await using FileStream vaultFS = await _session.OpenVaultStream(context, context.CancellationToken);
 
             using EncryptionOptions.FileEncryptionOptions encryptionOptions = await RetryHelper.TryUntilSuccessAsync(
                 tryAction: () => _encryptionOptionsService.GetDecryptedFileEncryptionOptions(vaultFS, metadataOffset),

@@ -60,6 +60,14 @@ namespace VaultCrypt
         /// <returns>Sliced key with length equal to <paramref name="keySize"/></returns>
         /// <exception cref="ArgumentOutOfRangeException">Thrown when <paramref name="keySize"/> is bigger than entire key, or <paramref name="keySize"/> is set to negative value or zero</exception>
         public ReadOnlySpan<byte> GetSlicedKey(int keySize);
+
+        /// <summary>
+        /// Opens a new disposable readonly <see cref="FileStream"/> pointing to <see cref="VaultSession.VAULTPATH"/>
+        /// </summary>
+        /// <param name="context">Optional context to display <see cref="ProgressFailure.ProgressTempFailure"/> incase of failure</param>
+        /// <param name="cancellationToken">Optional token to allow cancelling operation </param>
+        /// <returns><see cref="FileStream"/> pointing to <see cref="VaultSession.VAULTPATH"/></returns>
+        public Task<FileStream> OpenVaultStream(ProgressionContext? context = null, CancellationToken? cancellationToken = null);
     }
 
     public sealed class VaultSession : IVaultSession
@@ -118,6 +126,20 @@ namespace VaultCrypt
             ArgumentOutOfRangeException.ThrowIfNegativeOrZero(keySize);
             if (keySize > PasswordHelper.KeySize) throw new ArgumentOutOfRangeException("Requested bigger slice than the length of entire key");
             return this.KEY.AsSpan[..keySize];
+        }
+
+        public async Task<FileStream> OpenVaultStream(ProgressionContext? context = null, CancellationToken? cancellationToken = null)
+        {
+            Action? catchAction = null;
+            if(context is not null)
+            {
+                catchAction = () => context.ReportTempStatus(ProgressFailure.ProgressTempFailure.CreatingStreamFailed);
+            }
+
+            return await RetryHelper.TryUntilSuccessAsync(
+                tryAction: () => new FileStream(this.VAULTPATH, FileMode.Open, FileAccess.Read),
+                catchAction: catchAction,
+                cancellationToken: cancellationToken);
         }
 
         /// <summary>
