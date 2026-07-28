@@ -9,47 +9,47 @@ using VaultCrypt.Services;
 namespace VaultCrypt
 {
 
-    public abstract record NavigationRequest
+    public abstract class NavigationRequest
     {
         public abstract void Request(INavigationService nav);
     }
 
-    public sealed record NavigateToMainRequest : NavigationRequest
+    public sealed class NavigateToMainRequest : NavigationRequest
     {
         public override void Request(INavigationService nav) => nav.NavigateToMain();
     }
 
-    public sealed record NavigateToCreateVaultRequest : NavigationRequest
+    public sealed class NavigateToCreateVaultRequest : NavigationRequest
     {
         public override void Request(INavigationService nav) => nav.NavigateToCreateVault();
     }
 
-    public sealed record NavigateToOpenVaultRequest(ISecureBuffer password, NormalizedPath vaultPath) : NavigationRequest
+    public sealed class NavigateToOpenVaultRequest(ISecureBuffer password, NormalizedPath vaultPath) : NavigationRequest
     {
         public override void Request(INavigationService nav) => nav.NavigateToOpenVault(password, vaultPath);
     }
 
-    public sealed record NavigateToPasswordInputRequest(NormalizedPath vaultPath) : NavigationRequest
+    public sealed class NavigateToPasswordInputRequest(NormalizedPath vaultPath) : NavigationRequest
     {
         public override void Request(INavigationService nav) => nav.NavigateToPasswordInput(vaultPath);
     }
 
-    public sealed record NavigateToEncryptFileRequest(NormalizedPath filePath) : NavigationRequest
+    public sealed class NavigateToEncryptFileRequest(NormalizedPath filePath) : NavigationRequest
     {
         public override void Request(INavigationService nav) => nav.NavigateToEncryptFile(filePath);
     }
 
-    public sealed record NavigateToProgressRequest(ProgressionContext context) : NavigationRequest
+    public sealed class NavigateToProgressRequest(ProgressionContext context) : NavigationRequest
     {
         public override void Request(INavigationService nav) => nav.NavigateToProgress(context);
     }
 
-    public sealed record NavigateFromProgressRequest : NavigationRequest
+    public sealed class NavigateFromProgressRequest : NavigationRequest
     {
         public override void Request(INavigationService nav) => nav.NavigateFromProgress();
     }
 
-    public sealed record NavigateToExceptionThrownRequest(VaultCrypt.Exceptions.VaultException ex) : NavigationRequest
+    public sealed class NavigateToExceptionThrownRequest(VaultCrypt.Exceptions.VaultException ex) : NavigationRequest
     {
         public override void Request(INavigationService nav) => nav.NavigateToExceptionThrown(ex);
     }
