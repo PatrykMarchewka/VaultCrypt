@@ -3,7 +3,6 @@ using System.Buffers.Binary;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
-using System.Runtime.InteropServices;
 using System.Security.Cryptography;
 using System.Text;
 using System.Threading.Tasks;
@@ -62,7 +61,7 @@ namespace VaultCrypt
         public ReadOnlySpan<byte> GetSlicedKey(int keySize);
 
         /// <summary>
-        /// Opens a new disposable readonly <see cref="FileStream"/> pointing to <see cref="VaultSession.VAULTPATH"/>
+        /// Opens a new disposable readonly <see cref="FileStream"/> pointing to <see cref="VaultSession.VAULTPATH"/>. Execution is wrapped around <see cref="RetryHelper.TryUntilSuccessAsync{T}(Func{T}, Action?, int, Func{Exception, bool}?, CancellationToken?)"/>
         /// </summary>
         /// <param name="context">Optional context to display <see cref="ProgressFailure.ProgressTempFailure"/> incase of failure</param>
         /// <param name="cancellationToken">Optional token to allow cancelling operation </param>

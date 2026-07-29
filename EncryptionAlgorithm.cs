@@ -15,6 +15,7 @@ namespace VaultCrypt
     {
         public sealed record EncryptionAlgorithmInfo(byte ID, string Name, Func<IEncryptionAlgorithmProvider> Provider)
         {
+            //https://learn.microsoft.com/en-us/dotnet/standard/security/cross-platform-cryptography
             public static readonly EncryptionAlgorithmInfo AES128GCM = new(0, "AES-128-GCM", () => new AesProvider(16, new AesGcm()));
             public static readonly EncryptionAlgorithmInfo AES192GCM = new(1, "AES-192-GCM", () => new AesProvider(24, new AesGcm()));
             public static readonly EncryptionAlgorithmInfo AES256GCM = new(2, "AES-256-GCM", () => new AesProvider(32, new AesGcm()));

@@ -2,10 +2,10 @@ using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
-using System.Runtime.InteropServices;
 using System.Security.Cryptography;
 using System.Text;
 using System.Threading.Tasks;
+using VaultCrypt.Exceptions;
 
 namespace VaultCrypt.Services
 {
@@ -222,8 +222,8 @@ namespace VaultCrypt.Services
 
             _systemService.CheckFreeSpace(_session.VAULTPATH);
 
-            FileStream vaultfs = null!;
             long oldVaultSize;
+            FileStream vaultfs = null!;
             FileStream newVaultfs = null!;
             try
             {
@@ -247,7 +247,7 @@ namespace VaultCrypt.Services
                     return;
                 }
 
-                string newVaultPath = _session.VAULTPATH.Value[..^4] + "_TRIMMED.vlt"; //Remove the last 4 characters from original vault path (.vlt) before adding new text
+                string newVaultPath = _session.VAULTPATH.Value[.._session.VAULTPATH.Value.LastIndexOf('.')] + "_TRIMMED.vlt"; //Remove the extension with the dot from vault path (.vlt) before adding new text
                 try
                 {
                     newVaultfs = await RetryHelper.TryUntilSuccessAsync(
@@ -266,7 +266,7 @@ namespace VaultCrypt.Services
                 try
                 {
                     await RetryHelper.TryUntilSuccessAsync(
-                        tryAction: () => _fileService.CopyPartOfFile(source: vaultfs!, offset: 0, length: (ulong)reader.HeaderSize, destination: newVaultfs!, destinationOffset: newVaultfs!.Seek(0, SeekOrigin.End)),
+                        tryAction: () => _fileService.CopyPartOfFile(source: vaultfs, offset: 0, length: (ulong)reader.HeaderSize, destination: newVaultfs, destinationOffset: newVaultfs.Seek(0, SeekOrigin.End)),
                         catchAction: () => context.ReportTempStatus(ProgressFailure.ProgressTempFailure.WritingToFileFailed),
                         shouldRetry: ex => ex is not (ArgumentException or VaultOperationException),
                         cancellationToken: context.CancellationToken);
@@ -433,12 +433,11 @@ namespace VaultCrypt.Services
                 else
                 {
                     //Deleting file that isn't last or only, zero out the block
-                    var encryptionMetadataSize = vaultReader.EncryptionOptionsSize;
                     int currentKey = fileList.FindIndex(file => file.Key == offset);
                     ulong offsetDistance = (ulong)(fileList[currentKey + 1].Key - fileList[currentKey].Key);
                     EncryptionOptions.FileEncryptionOptions encryptionOptions = null!;
                     //Calculate length incase of partially written file
-                    ulong length = 0;
+                    ulong length;
                     try
                     {
                         encryptionOptions = await RetryHelper.TryUntilSuccessAsync(
@@ -447,8 +446,8 @@ namespace VaultCrypt.Services
                                         shouldRetry: ex => ex is IOException,
                                         cancellationToken: context.CancellationToken);
 
-                        ulong expectedEncryptedSize = encryptionOptions.FileSize + encryptionMetadataSize;
-                        length = Math.Min(encryptionOptions.FileSize + (ulong)encryptionMetadataSize, (ulong)(fileList[currentKey + 1].Key - fileList[currentKey].Key));
+                        ulong expectedEncryptedSize = encryptionOptions.FileSize + vaultReader.EncryptionOptionsSize;
+                        length = Math.Min(encryptionOptions.FileSize + (ulong)vaultReader.EncryptionOptionsSize, (ulong)(fileList[currentKey + 1].Key - fileList[currentKey].Key));
                     }
                     catch (Exception)
                     {

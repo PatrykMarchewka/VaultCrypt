@@ -29,6 +29,7 @@ namespace VaultCrypt
         /// <param name="salt">Salt to attach to password before deriving the key from</param>
         /// <param name="iterations">Number of iterations when deriving</param>
         /// <param name="destination">Destination to place derived key into</param>
+        /// <exception cref="ArgumentOutOfRangeException">Thrown when <paramref name="destination"/> is smaller than <see cref="PasswordHelper.KeySize"/></exception>
         public static void DeriveKey(ReadOnlySpan<byte> password, ReadOnlySpan<byte> salt, int iterations, Span<byte> destination)
         {
             ArgumentOutOfRangeException.ThrowIfLessThan(destination.Length, KeySize);

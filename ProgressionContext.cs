@@ -119,7 +119,7 @@ namespace VaultCrypt
         {
             if(failure.Equals(ProgressFailure.ProgressTempFailure.None)) throw new ArgumentException("Cannot report message with failure state being set to none", nameof(failure));
 
-            string preparedTempMessage = $"{ProgressFailure.GetMessage(failure)} Retrying...";
+            string preparedTempMessage = $"{ProgressFailure.GetMessage(failure)}. Retrying...";
             Progress?.Report(new ProgressReported(tempMessage: preparedTempMessage));
         }
 

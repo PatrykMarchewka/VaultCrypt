@@ -16,12 +16,6 @@ namespace VaultCrypt
             if (string.IsNullOrWhiteSpace(input)) throw new VaultUIException($"{fieldName} cannot be empty");
         }
 
-        public static void NotEmptySecureString(SecureString? input, string fieldName)
-        {
-            if (string.IsNullOrWhiteSpace(fieldName)) fieldName = "[Unknown field]";
-            if (input is null || input.Length == 0) throw new VaultUIException($"{fieldName} cannot be empty");
-        }
-
         public static void NotEmptySecureBuffer(ISecureBuffer? input, string fieldName)
         {
             if (string.IsNullOrWhiteSpace(fieldName)) fieldName = "[Unknown field]";

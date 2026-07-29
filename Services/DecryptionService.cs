@@ -39,7 +39,6 @@ namespace VaultCrypt.Services
             this._systemService = systemService;
         }
 
-
         public async Task Decrypt(long metadataOffset, NormalizedPath filePath, ProgressionContext context)
         {
             IVaultReader reader = VaultRegistry.GetVaultReader(_session.VERSION);
@@ -54,7 +53,6 @@ namespace VaultCrypt.Services
                 catchAction: () => context.ReportTempStatus(ProgressFailure.ProgressTempFailure.ReadingFromStreamFailed),
                 shouldRetry: ex => ex is IOException,
                 cancellationToken: context.CancellationToken);
-
 
             //If encryption algorithm is not in the dictionary it means it's not supported on the current system
             if (!EncryptionAlgorithm.GetEncryptionAlgorithmInfo.TryGetValue(encryptionOptions.EncryptionAlgorithm,out _))
@@ -142,9 +140,9 @@ namespace VaultCrypt.Services
                     try
                     {
                         bytesRead = await RetryHelper.TryUntilSuccessAsync(
-                        tryAction: async () => { return await vaultFS.ReadAsync(buffer.AsMemory); },
-                        catchAction: () => context.ReportTempStatus(ProgressFailure.ProgressTempFailure.ReadingFromStreamFailed),
-                        cancellationToken: context.CancellationToken);
+                            tryAction: async () => { return await vaultFS.ReadAsync(buffer.AsMemory); },
+                            catchAction: () => context.ReportTempStatus(ProgressFailure.ProgressTempFailure.ReadingFromStreamFailed),
+                            cancellationToken: context.CancellationToken);
                     }
                     catch (Exception)
                     {

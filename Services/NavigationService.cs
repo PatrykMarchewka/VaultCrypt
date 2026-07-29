@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
@@ -77,10 +77,6 @@ namespace VaultCrypt.Services
             ArgumentNullException.ThrowIfNull(navigationRequest);
 
             navigationRequest.Request(this);
-        }
-
-        public NavigationService()
-        {
         }
 
         private event Action<IViewModel> _changeView = null!;

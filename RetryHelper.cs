@@ -73,7 +73,7 @@ namespace VaultCrypt
         }
 
         /// <summary>
-        /// Synchronous version of <see cref="TryUntilSuccessAsync{T}(Func{Task{T}}, Func{Task}?, int, Func{Exception, bool}?)"/>
+        /// Synchronous version of <see cref="TryUntilSuccessAsync{T}(Func{Task{T}}, Func{Task}?, int, Func{Exception, bool}?, CancellationToken?)"/>
         /// </summary>
         /// <typeparam name="T">Type to return</typeparam>
         /// <param name="tryAction">Task to execute</param>

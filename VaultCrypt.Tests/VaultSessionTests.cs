@@ -476,25 +476,18 @@ namespace VaultCrypt.Tests
             stream.Write(streamPrefix);
 
             byte[] expectedDecrypted = new byte[150] { 211, 191, 37, 169, 152, 160, 206, 194, 25, 54, 2, 52, 222, 92, 111, 14, 210, 235, 167, 62, 87, 134, 57, 24, 244, 82, 187, 58, 62, 148, 128, 64, 58, 9, 145, 113, 214, 32, 109, 164, 73, 69, 169, 151, 220, 98, 194, 113, 26, 18, 49, 44, 224, 147, 225, 129, 246, 214, 21, 235, 160, 9, 68, 233, 51, 142, 162, 145, 227, 221, 126, 181, 122, 112, 121, 173, 54, 185, 251, 144, 31, 4, 196, 221, 175, 84, 202, 177, 95, 82, 122, 26, 173, 117, 47, 1, 91, 166, 177, 48, 229, 141, 207, 25, 125, 47, 58, 161, 101, 255, 128, 17, 70, 158, 41, 101, 0, 0, 89, 164, 222, 147, 253, 127, 70, 131, 228, 183, 235, 151, 10, 80, 54, 112, 131, 77, 247, 74, 135, 198, 158, 201, 178, 87, 227, 220, 196, 164, 156, 11 };
-            ISecureBuffer actualEncrypted = null!;
-            ISecureBuffer actualDecrypted = null!;
-            try
+            using (ISecureBuffer actualEncrypted = Reader.VaultEncryption(expectedDecrypted))
             {
-                actualEncrypted = Reader.VaultEncryption(expectedDecrypted);
                 stream.Write(actualEncrypted.AsSpan);
 
                 //Random values to fill the end of stream in order to simulate actual vault
                 byte[] streamSuffix = new byte[50] { 191, 46, 28, 27, 17, 194, 77, 222, 167, 159, 70, 200, 231, 102, 161, 146, 167, 122, 112, 57, 30, 92, 6, 238, 208, 245, 68, 53, 148, 60, 196, 6, 204, 167, 171, 77, 229, 204, 161, 16, 149, 91, 141, 35, 136, 90, 43, 221, 168, 127 };
                 stream.Write(streamSuffix);
 
-                actualDecrypted = Reader.ReadAndDecryptData(stream, streamPrefix.Length, actualEncrypted.AsSpan.Length);
-
-                Assert.True(actualDecrypted.AsSpan.SequenceEqual(expectedDecrypted));
-            }
-            finally
-            {
-                actualEncrypted?.Dispose();
-                actualDecrypted?.Dispose();
+                using (ISecureBuffer actualDecrypted = Reader.ReadAndDecryptData(stream, streamPrefix.Length, actualEncrypted.AsSpan.Length))
+                {
+                    Assert.True(actualDecrypted.AsSpan.SequenceEqual(expectedDecrypted));
+                }
             }
         }
     }

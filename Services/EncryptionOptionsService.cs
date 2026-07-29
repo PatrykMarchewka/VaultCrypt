@@ -75,7 +75,7 @@ namespace VaultCrypt.Services
             }
             short extraBytes = algorithm.Provider().EncryptionAlgorithm.ExtraEncryptionDataSize;
 
-            ulong encryptedFileSize = chunkInformation is null ? (fileLength + (ulong)extraBytes) : ((ulong)fileLength + ((ulong)extraBytes * chunkInformation.TotalChunks));
+            ulong encryptedFileSize = chunkInformation is null ? (fileLength + (ulong)extraBytes) : (fileLength + ((ulong)extraBytes * chunkInformation.TotalChunks));
             return new EncryptionOptions.FileEncryptionOptions(NewestFileEncryptionOptions, fileInfo.Name, encryptedFileSize, algorithm.ID, chunked, chunkInformation);
         }
 

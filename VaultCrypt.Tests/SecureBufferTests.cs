@@ -72,16 +72,10 @@ namespace VaultCrypt.Tests
         internal void StringToSecureBufferReturnsCorrectString()
         {
             string expected = "Password";
-            ISecureBuffer? buffer = null;
-            try
+            using (ISecureBuffer buffer = SecureBuffer.StringToSecureBuffer(expected))
             {
-                buffer = SecureBuffer.StringToSecureBuffer(expected);
                 string actual = Encoding.Unicode.GetString(buffer.AsSpan);
                 Assert.Equal(expected, actual);
-            }
-            finally
-            {
-                buffer?.Dispose();
             }
         }
 
