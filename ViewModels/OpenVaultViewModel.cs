@@ -49,6 +49,7 @@ namespace VaultCrypt.ViewModels
                 OnPropertyChanged(nameof(SelectedFile));
 
                 (DecryptFileCommand as RelayCommand)!.RaiseCanExecuteChanged();
+                (ValidateFileCommand as RelayCommand)!.RaiseCanExecuteChanged();
                 (DeleteFileCommand as RelayCommand)!.RaiseCanExecuteChanged();
             }
         }
@@ -56,6 +57,7 @@ namespace VaultCrypt.ViewModels
         public ICommand GoBackCommand { get; }
         public ICommand AddNewFileCommand { get; }
         public ICommand DecryptFileCommand { get; }
+        public ICommand ValidateFileCommand { get; }
         public ICommand DeleteFileCommand { get; }
         public ICommand TrimCommand { get; }
 
@@ -75,6 +77,7 @@ namespace VaultCrypt.ViewModels
             GoBackCommand = new RelayCommand(_ => GoBack());
             AddNewFileCommand = new RelayCommand(_ => AddNewFile());
             DecryptFileCommand = new RelayCommand(async _ => await DecryptFile(), _ => SelectedFile != null);
+            ValidateFileCommand = new RelayCommand(async _ => await ValidateFile(), _ => SelectedFile != null);
             DeleteFileCommand = new RelayCommand(async _ => await DeleteFile(), _ => SelectedFile != null);
             TrimCommand = new RelayCommand(async _ => await Trim());
 
@@ -118,6 +121,13 @@ namespace VaultCrypt.ViewModels
                 NavigationRequested?.Invoke(new NavigateToProgressRequest(context));
                 await _decryptionService.Decrypt(SelectedFile!.Value.Key, NormalizedPath.From(file), context);
             }
+        }
+
+        public async Task ValidateFile()
+        {
+            var context = new ProgressionContext();
+            NavigationRequested?.Invoke(new NavigateToProgressRequest(context));
+            await _decryptionService.Validate(SelectedFile!.Value.Key, context);
         }
 
         public async Task DeleteFile()

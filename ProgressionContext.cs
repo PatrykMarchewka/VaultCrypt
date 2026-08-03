@@ -142,7 +142,8 @@ namespace VaultCrypt
             ChunkDecryptFailed,
             FileMetadataDecryptFailed,
             UnexpectedEndOfStream,
-            IOOperationFailed
+            IOOperationFailed,
+            ValidationFailed
         }
 
         public enum ProgressTempFailure
@@ -166,6 +167,7 @@ namespace VaultCrypt
             ProgressPermFailure.FileMetadataDecryptFailed => "Failed to decrypt metadata for file",
             ProgressPermFailure.UnexpectedEndOfStream => "Unexpected end of stream",
             ProgressPermFailure.IOOperationFailed => "I/O operation failed",
+            ProgressPermFailure.ValidationFailed => "Validation failed",
             _ => "Unknown error!"
         };
 

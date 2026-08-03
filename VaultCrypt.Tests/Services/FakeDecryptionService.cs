@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
@@ -9,7 +9,14 @@ namespace VaultCrypt.Tests.Services
 {
     internal class FakeDecryptionService : IDecryptionService
     {
+        public bool ValidateWasCalled = false;
         public bool DecryptWasCalled = false;
+
+        public Task Validate(long metadataOffset, ProgressionContext context)
+        {
+            ValidateWasCalled = true;
+            return Task.CompletedTask;
+        }
         public Task Decrypt(long metadataOffset, NormalizedPath filePath, ProgressionContext context)
         {
             DecryptWasCalled = true;

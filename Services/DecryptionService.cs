@@ -13,6 +13,14 @@ namespace VaultCrypt.Services
     public interface IDecryptionService
     {
         /// <summary>
+        /// Reads data from vault at <paramref name="metadataOffset"/>, decrypts it and reports if decryption was successful
+        /// </summary>
+        /// <param name="metadataOffset">Offset to <see cref="EncryptionOptions.FileEncryptionOptions"/></param>
+        /// <param name="context">Context to display progression</param>
+        /// <returns></returns>
+        public Task Validate(long metadataOffset, ProgressionContext context);
+
+        /// <summary>
         /// Reads data from vault at <paramref name="metadataOffset"/>, decrypts it and saves at <paramref name="filePath"/>
         /// </summary>
         /// <param name="metadataOffset">Offset to <see cref="EncryptionOptions.FileEncryptionOptions"/></param>
@@ -39,11 +47,13 @@ namespace VaultCrypt.Services
             this._systemService = systemService;
         }
 
-        public async Task Decrypt(long metadataOffset, NormalizedPath filePath, ProgressionContext context)
+        public async Task Validate(long metadataOffset, ProgressionContext context)
         {
+            ArgumentOutOfRangeException.ThrowIfNegativeOrZero(metadataOffset);
+            ArgumentNullException.ThrowIfNull(context);
+
             IVaultReader reader = VaultRegistry.GetVaultReader(_session.VERSION);
-            ArgumentOutOfRangeException.ThrowIfLessThan(metadataOffset, reader.HeaderSize); //Decrypt should never be called on offset that is part of metadata
-            ArgumentNullException.ThrowIfNullOrWhiteSpace(filePath);
+            ArgumentOutOfRangeException.ThrowIfLessThan(metadataOffset, reader.HeaderSize); //Validate should never be called on offset that is part of metadata
             ArgumentNullException.ThrowIfNull(context);
 
             await using FileStream vaultFS = await _session.OpenVaultStream(context, context.CancellationToken);
@@ -55,46 +65,74 @@ namespace VaultCrypt.Services
                 cancellationToken: context.CancellationToken);
 
             //If encryption algorithm is not in the dictionary it means it's not supported on the current system
-            if (!EncryptionAlgorithm.GetEncryptionAlgorithmInfo.TryGetValue(encryptionOptions.EncryptionAlgorithm,out _))
+            if (!EncryptionAlgorithm.GetEncryptionAlgorithmInfo.TryGetValue(encryptionOptions.EncryptionAlgorithm, out _))
             {
                 throw new VaultUIException("Required encryption algorithm is not available on this system");
             }
 
             var encryptionAlgorithmProvider = EncryptionAlgorithm.GetEncryptionAlgorithmInfo[encryptionOptions.EncryptionAlgorithm].Provider();
-            
-            await using FileStream fileFS = await RetryHelper.TryUntilSuccessAsync(
-                tryAction: () => new FileStream(filePath, FileMode.Create),
-                catchAction: () => context.ReportTempStatus(ProgressFailure.ProgressTempFailure.CreatingStreamFailed),
-                cancellationToken: context.CancellationToken);
 
-            if (!encryptionOptions.IsChunked)
+            if (encryptionOptions.IsChunked)
             {
+                context.SetTotal(encryptionOptions.ChunkInformation!.TotalChunks);
+                int chunkSizeInBytes = checked((int)(encryptionOptions.ChunkInformation!.ChunkSize * 1024 * 1024));
+
+                for (ulong i = 1; i < encryptionOptions.ChunkInformation.TotalChunks; i++)
+                {
+                    context.CancellationToken.ThrowIfCancellationRequested();
+
+                    try
+                    {
+                        await Task.Run(() =>
+                        {
+                            using (ISecureBuffer decrypted = DecryptInOneChunk(vaultFS, checked((int)(encryptionAlgorithmProvider.EncryptionAlgorithm.ExtraEncryptionDataSize + chunkSizeInBytes)), _session.GetSlicedKey(encryptionAlgorithmProvider.KeySize), encryptionAlgorithmProvider.EncryptionAlgorithm))
+                            {
+                            }
+                        });
+                        context.Increment();
+                    }
+                    catch (EndOfStreamException)
+                    {
+                        context.ReportPermStatus(ProgressFailure.ProgressPermFailure.ValidationFailed, $"Failed to read past chunk {i}, end of file");
+                        context.ForceFinish();
+                        return;
+                    }
+                    catch (Exception)
+                    {
+                        context.ReportPermStatus(ProgressFailure.ProgressPermFailure.ValidationFailed, $"Failed to validate chunk {i}");
+                    }
+                }
+                //Processing final chunk
                 try
                 {
-                    using (ISecureBuffer decrypted = await RetryHelper.TryUntilSuccessAsync(
-                        tryAction: () => DecryptInOneChunk(vaultFS, checked((int)encryptionOptions.FileSize), _session.GetSlicedKey(encryptionAlgorithmProvider.KeySize), encryptionAlgorithmProvider.EncryptionAlgorithm),
-                        catchAction: () => context.ReportTempStatus(ProgressFailure.ProgressTempFailure.ReadingFromStreamFailed),
-                        shouldRetry: ex => ex is IOException,
-                        cancellationToken: context.CancellationToken))
+                    using (ISecureBuffer decrypted = DecryptInOneChunk(vaultFS, checked((int)(encryptionAlgorithmProvider.EncryptionAlgorithm.ExtraEncryptionDataSize + encryptionOptions.ChunkInformation.FinalChunkSize)), _session.GetSlicedKey(encryptionAlgorithmProvider.KeySize), encryptionAlgorithmProvider.EncryptionAlgorithm))
                     {
-                        await RetryHelper.TryUntilSuccessAsync(
-                            tryAction: () => fileFS.Write(decrypted.AsSpan),
-                            catchAction: () => context.ReportTempStatus(ProgressFailure.ProgressTempFailure.WritingToFileFailed),
-                            cancellationToken: context.CancellationToken);
                     }
                 }
                 catch (Exception)
                 {
-                    context.ReportPermStatus(ProgressFailure.ProgressPermFailure.ChunkDecryptFailed, 1);
+                    context.ReportPermStatus(ProgressFailure.ProgressPermFailure.ValidationFailed, $"Failed to validate last chunk");
                 }
-                context.Increment();
+                context.ForceFinish();
             }
             else
             {
-                context.SetTotal(encryptionOptions.ChunkInformation!.TotalChunks);
-                await DecryptInMultipleChunks(vaultFS, fileFS, encryptionOptions.ChunkInformation!, encryptionAlgorithmProvider.EncryptionAlgorithm.ExtraEncryptionDataSize, encryptionAlgorithmProvider, context);
+                try
+                {
+                    using (ISecureBuffer decrypted = DecryptInOneChunk(vaultFS, checked((int)encryptionOptions.FileSize), _session.GetSlicedKey(encryptionAlgorithmProvider.KeySize), encryptionAlgorithmProvider.EncryptionAlgorithm))
+                    {
+                        context.ForceFinish();
+                    }
+                }
+                catch (Exception)
+                {
+                    context.ReportPermStatus(ProgressFailure.ProgressPermFailure.ValidationFailed, "Failed to validate file");
+                }
+                context.ForceFinish();
             }
         }
+
+        
 
         //Decrypts entire file in one go when it is not chunked
         private static ISecureBuffer DecryptInOneChunk(Stream vaultFS, int fileSize, ReadOnlySpan<byte> key, EncryptionAlgorithm.IEncryptionAlgorithm encryptionAlgorithm)
@@ -191,6 +229,7 @@ namespace VaultCrypt.Services
                         try
                         {
                             decryptedChunk = provider.EncryptionAlgorithm.DecryptBytes(currentChunk.AsSpan, _session.KEY.AsSpan[..provider.KeySize]);
+
                             results.TryAdd(currentIndex, decryptedChunk);
 
                             await RetryHelper.TryUntilSuccessAsync(
@@ -222,6 +261,62 @@ namespace VaultCrypt.Services
                     result.Dispose();
                 }
                 results.Clear();
+            }
+        }
+
+        public async Task Decrypt(long metadataOffset, NormalizedPath filePath, ProgressionContext context)
+        {
+            IVaultReader reader = VaultRegistry.GetVaultReader(_session.VERSION);
+            ArgumentOutOfRangeException.ThrowIfLessThan(metadataOffset, reader.HeaderSize); //Decrypt should never be called on offset that is part of metadata
+            ArgumentNullException.ThrowIfNullOrWhiteSpace(filePath);
+            ArgumentNullException.ThrowIfNull(context);
+
+            await using FileStream vaultFS = await _session.OpenVaultStream(context, context.CancellationToken);
+
+            using EncryptionOptions.FileEncryptionOptions encryptionOptions = await RetryHelper.TryUntilSuccessAsync(
+                tryAction: () => _encryptionOptionsService.GetDecryptedFileEncryptionOptions(vaultFS, metadataOffset),
+                catchAction: () => context.ReportTempStatus(ProgressFailure.ProgressTempFailure.ReadingFromStreamFailed),
+                shouldRetry: ex => ex is IOException,
+                cancellationToken: context.CancellationToken);
+
+            //If encryption algorithm is not in the dictionary it means it's not supported on the current system
+            if (!EncryptionAlgorithm.GetEncryptionAlgorithmInfo.TryGetValue(encryptionOptions.EncryptionAlgorithm, out _))
+            {
+                throw new VaultUIException("Required encryption algorithm is not available on this system");
+            }
+
+            var encryptionAlgorithmProvider = EncryptionAlgorithm.GetEncryptionAlgorithmInfo[encryptionOptions.EncryptionAlgorithm].Provider();
+
+            await using FileStream fileFS = await RetryHelper.TryUntilSuccessAsync(
+                tryAction: () => new FileStream(filePath, FileMode.Create),
+                catchAction: () => context.ReportTempStatus(ProgressFailure.ProgressTempFailure.CreatingStreamFailed),
+                cancellationToken: context.CancellationToken);
+
+            if (!encryptionOptions.IsChunked)
+            {
+                try
+                {
+                    using (ISecureBuffer decrypted = await RetryHelper.TryUntilSuccessAsync(
+                        tryAction: () => DecryptInOneChunk(vaultFS, checked((int)encryptionOptions.FileSize), _session.GetSlicedKey(encryptionAlgorithmProvider.KeySize), encryptionAlgorithmProvider.EncryptionAlgorithm),
+                        catchAction: () => context.ReportTempStatus(ProgressFailure.ProgressTempFailure.ReadingFromStreamFailed),
+                        shouldRetry: ex => ex is IOException,
+                        cancellationToken: context.CancellationToken))
+                    {
+                        await RetryHelper.TryUntilSuccessAsync(
+                            tryAction: () => fileFS.Write(decrypted.AsSpan),
+                            catchAction: () => context.ReportTempStatus(ProgressFailure.ProgressTempFailure.WritingToFileFailed),
+                            cancellationToken: context.CancellationToken);
+                    }
+                }
+                catch (Exception)
+                {
+                    context.ReportPermStatus(ProgressFailure.ProgressPermFailure.ChunkDecryptFailed, 1);
+                }
+                context.Increment();
+            }
+            else
+            {
+                await DecryptInMultipleChunks(vaultFS, fileFS, encryptionOptions.ChunkInformation!, encryptionAlgorithmProvider.EncryptionAlgorithm.ExtraEncryptionDataSize, encryptionAlgorithmProvider, context);
             }
         }
     }

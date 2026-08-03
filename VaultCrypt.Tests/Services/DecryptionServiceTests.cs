@@ -28,7 +28,20 @@ namespace VaultCrypt.Tests.Services
             VaultSession.CurrentSession = copy;
         }
 
+        [Theory]
+        [InlineData(long.MinValue)]
+        [InlineData(-1)]
+        [InlineData(0)]
+        internal void ValidateThrowsForInvalidOffset(long metadataOffset)
+        {
+            Assert.ThrowsAsync<ArgumentOutOfRangeException>(async () => await _service.Validate(metadataOffset, new ProgressionContext()));
+        }
 
+        [Fact]
+        internal void ValidateThrowsForInvalidContext()
+        {
+            Assert.ThrowsAsync<ArgumentNullException>(async () => await _service.Validate(long.MaxValue, null!));
+        }
 
         [Theory]
         [MemberData(nameof(TestsHelper.FilledVaultFileCombinations), MemberType = typeof(TestsHelper))]

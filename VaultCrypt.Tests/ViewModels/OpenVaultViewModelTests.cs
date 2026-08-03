@@ -184,6 +184,20 @@ namespace VaultCrypt.Tests.ViewModels
         }
 
         [Fact]
+        internal void SelectedFileValidateCommandCanExecuteChanges()
+        {
+            int eventRaisedCount = 0;
+            (_viewModel.ValidateFileCommand as RelayCommand)!.CanExecuteChanged += (sender, args) => { eventRaisedCount++; };
+            _viewModel.SelectedFile = new KeyValuePair<long, EncryptedFileInfo>(1, new EncryptedFileInfo("SelectedFileValidateCommandCanExecuteChanges test", 0));
+            Assert.Equal(1, eventRaisedCount);
+            Assert.True(_viewModel.ValidateFileCommand.CanExecute(null));
+
+            _viewModel.SelectedFile = null;
+            Assert.Equal(2, eventRaisedCount);
+            Assert.False(_viewModel.ValidateFileCommand.CanExecute(null));
+        }
+
+        [Fact]
         internal void SelectedFileDeleteCommandCanExecuteChanges()
         {
             int eventRaisedCount = 0;
@@ -295,6 +309,16 @@ namespace VaultCrypt.Tests.ViewModels
             _viewModel.NavigationRequested += (request) => { eventRaisedCount++; };
             await _viewModel.DecryptFile();
             Assert.Equal(0, eventRaisedCount);
+        }
+
+        [Fact]
+        internal async void ValidateRaisesNavigationReqeust()
+        {
+            _viewModel.SelectedFile = new KeyValuePair<long, EncryptedFileInfo>(0, new EncryptedFileInfo(null, 0, null));
+
+            int eventRaisedCount = 0;
+            _viewModel.NavigationRequested += (request) => { eventRaisedCount++; };
+            await _viewModel.ValidateFile();
         }
 
         [Fact]

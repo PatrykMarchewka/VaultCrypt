@@ -53,6 +53,7 @@
         <StackPanel Grid.Row="3" Grid.ColumnSpan="3" Orientation="Horizontal">
             <Button Content="Add new file" Command="{Binding AddNewFileCommand}"/>
             <Button Content="Decrypt file" Command="{Binding DecryptFileCommand}"/>
+            <Button Content="Validate file" Command="{Binding ValidateFileCommand}"/>
             <Button Content="Delete file from vault" Command="{Binding DeleteFileCommand}"/>
             <Button Content="Trim unused space" Command="{Binding TrimCommand}"/>
         </StackPanel>
