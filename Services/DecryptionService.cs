@@ -127,8 +127,10 @@ namespace VaultCrypt.Services
             ulong nextToWrite = 0;
             ulong chunkIndex = 0;
             ISecureBuffer buffer = SecureBuffer.Create(extraData + (chunkInformation.ChunkSize * 1024 * 1024));
+            int finalChunkLength = checked((int)(extraData + chunkInformation.FinalChunkSize)); //Size of the encrypted final chunk
             try
             {
+                context.SetTotal(chunkInformation.TotalChunks);
                 object writeLock = new object();
                 while (chunkIndex < chunkInformation.TotalChunks)
                 {
@@ -136,7 +138,14 @@ namespace VaultCrypt.Services
                     int bytesRead = 0;
                     ulong currentIndex = chunkIndex++;
 
-                    
+                    //+1 to compensate for 1-based indexing of TotalChunks
+                    if ((currentIndex + 1) == chunkInformation.TotalChunks)
+                    {
+                        //Last chunk is usually smaller than full one, dispose the old one and create new buffer to avoid reading too much
+                        buffer.Dispose();
+                        buffer = SecureBuffer.Create(finalChunkLength);
+                    }
+
                     try
                     {
                         bytesRead = await RetryHelper.TryUntilSuccessAsync(
@@ -146,12 +155,19 @@ namespace VaultCrypt.Services
                     }
                     catch (Exception)
                     {
-                        //Exception intentionally ignored
+                        bytesRead = -1;
                     }
 
-                    if(bytesRead == 0)
+                    if (bytesRead == -1)
                     {
-                        //Failed to read from stream or unexpected end of stream reached, waiting for all tasks to finish in order to decrypt as much as we can
+                        //Failed to read from stream due to exception that isn't EOS, skip this chunk
+                        context.ReportPermStatus(ProgressFailure.ProgressPermFailure.IOOperationFailed, $"Cant read chunk #{currentIndex}");
+                        context.Increment();
+                        continue;
+                    }
+                    else if (bytesRead == 0)
+                    {
+                        //Unexpected end of stream reached, waiting for all tasks to finish in order to decrypt as much as we can
                         await Task.WhenAll(tasks);
                         context.ReportPermStatus(ProgressFailure.ProgressPermFailure.UnexpectedEndOfStream, $"Cant read past chunk #{currentIndex}");
                         context.ForceFinish();
