@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.ComponentModel;
 using System.Linq;
+using System.Reflection;
 using System.Text;
 using System.Threading.Tasks;
 using System.Windows.Input;
@@ -15,6 +16,8 @@ namespace VaultCrypt.ViewModels
 
         public ICommand CreateVaultCommand { get; }
         public ICommand OpenVaultCommand { get; }
+
+        public string ApplicationVersion => Assembly.GetExecutingAssembly().GetCustomAttribute<AssemblyInformationalVersionAttribute>()?.InformationalVersion ?? "Unknown version";
 
         public MainViewViewModel(IFileDialogService fileDialogService)
         {
