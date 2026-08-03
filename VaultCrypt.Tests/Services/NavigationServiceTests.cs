@@ -21,7 +21,7 @@ namespace VaultCrypt.Tests.Services
         internal void NavigateToMainDisposesProperly()
         {
             //Setting current sesion to ensure fields are not default
-            VaultSession.CurrentSession = TestsHelper.EmptyVaultV0Information.VaultSession;
+            VaultSession.CurrentSession = TestsHelper.CreateFilledSessionInstance();
             Assert.NotEqual(string.Empty, VaultSession.CurrentSession.VAULTPATH);
 
             _navigationService.NavigateToMain();
@@ -33,7 +33,7 @@ namespace VaultCrypt.Tests.Services
         public static TheoryData<ISecureBuffer, Type> InvalidBuffers = new TheoryData<ISecureBuffer, Type>()
         {
             {null!, typeof(ArgumentNullException) },
-            {TestsHelper.EmptySecureBuffer, typeof(ArgumentException) }
+            {SecureBuffer.Create(0), typeof(ArgumentException) }
         };
 
         [Theory]

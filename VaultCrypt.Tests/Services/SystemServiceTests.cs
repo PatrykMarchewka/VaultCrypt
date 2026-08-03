@@ -18,7 +18,7 @@ namespace VaultCrypt.Tests.Services
             var path = TestsHelper.CreateTemporaryFile(0);
             try
             {
-                _service.CheckFreeSpace(NormalizedPath.From(path));
+                _service.CheckFreeSpace(path);
             }
             finally
             {
