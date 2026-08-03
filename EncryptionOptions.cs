@@ -24,13 +24,40 @@ namespace VaultCrypt
         /// </summary>
         public record FileEncryptionOptions : IDisposable
         {
-            public byte Version { get; private set; } //Fixed 1 byte, version of the FileEncryptionOptions
-            public ushort NameLength { get; private set; } //Fixed 2 bytes, length of fileName text
-            public ISecureBuffer FileName { get; private set; } //Varying length (read from nameLength), file name with extension!
-            public ulong FileSize { get; private set; } //Fixed 8 bytes, Size in bytes of encrypted file, with extra encryption metadata
-            public byte EncryptionAlgorithm { get; private set; } //Fixed 1 byte, Encryption algorithm ID
-            public bool IsChunked { get; private set; } //Fixed 1 byte, Whether file is chunked or not
-            public ChunkInformation? ChunkInformation { get; private set; } //Fixed 14 bytes (2 bytes chunk size + 8 bytes total chunks count + 4 bytes final chunk size)
+            /// <summary>
+            /// Fixed 1 byte, version of the FileEncryptionOptions
+            /// </summary>
+            public byte Version { get; private set; }
+
+            /// <summary>
+            /// Fixed 2 bytes, length of fileName text
+            /// </summary>
+            public ushort NameLength { get; private set; }
+
+            /// <summary>
+            /// Varying length (read from nameLength), file name with extension!
+            /// </summary>
+            public ISecureBuffer FileName { get; private set; }
+            
+            /// <summary>
+            /// Fixed 8 bytes, Size in bytes of encrypted file, with extra encryption metadata
+            /// </summary>
+            public ulong FileSize { get; private set; }
+
+            /// <summary>
+            /// Fixed 1 byte, Encryption algorithm ID
+            /// </summary>
+            public byte EncryptionAlgorithm { get; private set; }
+
+            /// <summary>
+            /// Fixed 1 byte, Whether file is chunked or not
+            /// </summary>
+            public bool IsChunked { get; private set; }
+
+            /// <summary>
+            /// Fixed 14 bytes (2 bytes chunk size + 8 bytes total chunks count + 4 bytes final chunk size)
+            /// </summary>
+            public ChunkInformation? ChunkInformation { get; private set; }
 
             public FileEncryptionOptions(byte version, ISecureBuffer fileName, ulong fileSize, byte algorithm, bool chunked, ChunkInformation? chunkInformation)
             {
@@ -105,6 +132,11 @@ namespace VaultCrypt
                 }
             }
 
+            /// <summary>
+            /// Serializes <paramref name="encryptionOptions"/> into <see cref="ISecureBuffer"/>
+            /// </summary>
+            /// <param name="encryptionOptions">Encryption options to serialize</param>
+            /// <returns><see cref="ISecureBuffer"/> holding information from <paramref name="encryptionOptions"/></returns>
             public static ISecureBuffer SerializeFileEncryptionOptions(FileEncryptionOptions encryptionOptions)
             {
                 ArgumentNullException.ThrowIfNull(encryptionOptions);
@@ -152,11 +184,25 @@ namespace VaultCrypt
 
         public record ChunkInformation : IDisposable
         {
-            public ushort ChunkSize { get; private set; } //Fixed 2 bytes, Chunk sizes in MB, without the extra encryption metadata
-            public ulong TotalChunks { get; private set; } //Fixed 8 bytes, Number of chunks counting from 1
-            public uint FinalChunkSize { get; private set; } //Fixed 4 bytes, Size in bytes of last chunk, without the extra encryption metadata
+            /// <summary>
+            /// Chunk sizes in MB, without the extra encryption metadata. Fixed 2 bytes size
+            /// </summary>
+            public ushort ChunkSize { get; private set; }
 
-            public const int ChunkInformationSize = (sizeof(ushort) + sizeof(ulong) + sizeof(uint)); //Size of ChunkInformation in bytes
+            /// <summary>
+            /// Number of chunks counting from 1. Fixed 8 bytes size
+            /// </summary>
+            public ulong TotalChunks { get; private set; }
+
+            /// <summary>
+            /// Size in bytes of last chunk, without the extra encryption metadata. Fixed 4 bytes size
+            /// </summary>
+            public uint FinalChunkSize { get; private set; }
+
+            /// <summary>
+            /// Size of <see cref="ChunkInformation"/> in bytes
+            /// </summary>
+            public const int ChunkInformationSize = (sizeof(ushort) + sizeof(ulong) + sizeof(uint));
             public ChunkInformation(ushort chunkSize, ulong totalChunks, uint finalChunkSize)
             {
                 this.ChunkSize = chunkSize;
@@ -164,6 +210,11 @@ namespace VaultCrypt
                 this.FinalChunkSize = finalChunkSize;
             }
 
+            /// <summary>
+            /// Converts <see cref="ChunkInformation"/> into <see cref="ISecureBuffer"/>
+            /// </summary>
+            /// <param name="chunkInformation">Chunk information to serialize</param>
+            /// <returns><see cref="ISecureBuffer"/> holding information about chunks</returns>
             public static ISecureBuffer SerializeChunkInformation(ChunkInformation chunkInformation)
             {
                 ISecureBuffer chunkBytes = SecureBuffer.Create(14);
@@ -231,6 +282,13 @@ namespace VaultCrypt
                 return new FileEncryptionOptions(version, fileName, fileSize, encryptionAlgorithm, chunked, chunkInformation);
             }
 
+            /// <summary>
+            /// Converts <see cref="ISecureBuffer"/> holding information about chunks into <see cref="ChunkInformation"/>
+            /// </summary>
+            /// <param name="data">Data to deserialize</param>
+            /// <returns><see cref="ChunkInformation"/> object with the information from <paramref name="data"/></returns>
+            /// <exception cref="ArgumentException">Thrown when <paramref name="data"/> is too short</exception>
+            /// <exception cref="VaultEncryptionOptionsOperationException">Thrown when there is no reader for provided version field</exception>
             public static FileEncryptionOptions Deserialize(ISecureBuffer data)
             {
                 if (data.AsSpan.IsEmpty) throw new ArgumentException("Provided empty data", nameof(data));
