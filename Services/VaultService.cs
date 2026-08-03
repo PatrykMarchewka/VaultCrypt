@@ -179,6 +179,38 @@ namespace VaultCrypt.Services
             }
         }
 
+        private void AddFileEncryptionOptionsToEncryptedFilesList(EncryptionOptions.FileEncryptionOptions fileEncryptionOptions, long offset)
+        {
+            try
+            {
+                _session.ENCRYPTED_FILES.Add(offset, new EncryptedFileInfo(fileEncryptionOptions.GetFileName(), fileEncryptionOptions.FileSize, EncryptionAlgorithm.GetEncryptionAlgorithmInfo[fileEncryptionOptions.EncryptionAlgorithm]));
+            }
+            catch (ArgumentException)
+            {
+                //Dictionary entry with the same key already exists, replace it
+                _session.ENCRYPTED_FILES[offset] = new EncryptedFileInfo(fileEncryptionOptions.GetFileName(), fileEncryptionOptions.FileSize, EncryptionAlgorithm.GetEncryptionAlgorithmInfo[fileEncryptionOptions.EncryptionAlgorithm]);
+            }
+        }
+
+        private void DecryptFileEncryptionOptionsAndAddToEncryptedFilesList(Stream stream, long offset)
+        {
+            EncryptionOptions.FileEncryptionOptions fileEncryptionOptions = null!;
+            try
+            {
+                fileEncryptionOptions = _encryptionOptionsService.GetDecryptedFileEncryptionOptions(stream, offset);
+                AddFileEncryptionOptionsToEncryptedFilesList(fileEncryptionOptions, offset);
+
+            }
+            catch (Exception)
+            {
+                _session.ENCRYPTED_FILES.Add(offset, new EncryptedFileInfo(null, 0, null));
+            }
+            finally
+            {
+                fileEncryptionOptions?.Dispose();
+            }
+        }
+
         private void PopulateEncryptedFilesList(Stream stream)
         {
             ArgumentNullException.ThrowIfNull(stream);
@@ -189,29 +221,7 @@ namespace VaultCrypt.Services
                 for (int i = 0; i < (offsets.AsSpan.Length / sizeof(long)); i++)
                 {
                     long offset = reader.ReadInt64();
-                    EncryptionOptions.FileEncryptionOptions fileEncryptionOptions = null!;
-                    try
-                    {
-                        fileEncryptionOptions = _encryptionOptionsService.GetDecryptedFileEncryptionOptions(stream, offset);
-                        try
-                        {
-                            _session.ENCRYPTED_FILES.Add(offset, new EncryptedFileInfo(fileEncryptionOptions.GetFileName(), fileEncryptionOptions.FileSize, EncryptionAlgorithm.GetEncryptionAlgorithmInfo[fileEncryptionOptions.EncryptionAlgorithm]));
-                        }
-                        catch (ArgumentException)
-                        {
-                            //Dictionary entry with the same key already exists, replace it
-                            _session.ENCRYPTED_FILES[offset] = new EncryptedFileInfo(fileEncryptionOptions.GetFileName(), fileEncryptionOptions.FileSize, EncryptionAlgorithm.GetEncryptionAlgorithmInfo[fileEncryptionOptions.EncryptionAlgorithm]);
-                        }
-
-                    }
-                    catch (Exception)
-                    {
-                        _session.ENCRYPTED_FILES.Add(offset, new EncryptedFileInfo(null, 0, null));
-                    }
-                    finally
-                    {
-                        fileEncryptionOptions?.Dispose();
-                    }
+                    DecryptFileEncryptionOptionsAndAddToEncryptedFilesList(stream, offset);
                 }
             }
         }

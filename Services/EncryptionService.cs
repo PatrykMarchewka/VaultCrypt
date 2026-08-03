@@ -46,16 +46,15 @@ namespace VaultCrypt.Services
             ArgumentNullException.ThrowIfNull(algorithm);
             ArgumentOutOfRangeException.ThrowIfZero(chunkSizeInMB);
             ArgumentNullException.ThrowIfNullOrWhiteSpace(filePath);
-            long fileLength = await RetryHelper.TryUntilSuccessAsync(
-                tryAction: () => new FileInfo(filePath).Length,
+            FileInfo fileInfo = await RetryHelper.TryUntilSuccessAsync(
+                tryAction: () => new FileInfo(filePath),
                 catchAction: () => context.ReportTempStatus(ProgressFailure.ProgressTempFailure.ReadingFromStreamFailed),
                 cancellationToken: context.CancellationToken);
-            if (fileLength == 0) throw new VaultEncryptionException(VaultException.ErrorReason.EmptyFile);
+            if (fileInfo.Length == 0) throw new VaultEncryptionException(VaultException.ErrorReason.EmptyFile);
             ArgumentNullException.ThrowIfNull(context);
 
             _systemService.CheckFreeSpace(filePath);
 
-            FileInfo fileInfo = new FileInfo(filePath);
             using (EncryptionOptions.FileEncryptionOptions options = _encryptionOptionsService.PrepareEncryptionOptions(fileInfo, algorithm, chunkSizeInMB))
             {
                 var provider = algorithm.Provider();
@@ -93,6 +92,7 @@ namespace VaultCrypt.Services
             }
         }
 
+        //TODO: Make it more into SRP, remove some of the try/catches into its own small methods
         //Reads data from file, encrypts it based on provided parameters and writes to vault
         private async Task EncryptChunks(Stream fileFS, Stream vaultFS, ulong totalChunks, int concurrentChunkCount, ushort chunkSizeInMB, EncryptionAlgorithm.IEncryptionAlgorithmProvider provider, ProgressionContext context)
         {
