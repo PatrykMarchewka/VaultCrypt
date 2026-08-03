@@ -61,7 +61,7 @@ namespace VaultCrypt
         public ReadOnlySpan<byte> GetSlicedKey(int keySize);
 
         /// <summary>
-        /// Opens a new disposable readonly <see cref="FileStream"/> pointing to <see cref="VaultSession.VAULTPATH"/>. Execution is wrapped around <see cref="RetryHelper.TryUntilSuccessAsync{T}(Func{T}, Action?, int, Func{Exception, bool}?, CancellationToken?)"/>
+        /// Opens a new disposable <see cref="FileStream"/> pointing to <see cref="VaultSession.VAULTPATH"/>. Execution is wrapped around <see cref="RetryHelper.TryUntilSuccessAsync{T}(Func{T}, Action?, int, Func{Exception, bool}?, CancellationToken?)"/>
         /// </summary>
         /// <param name="context">Optional context to display <see cref="ProgressFailure.ProgressTempFailure"/> incase of failure</param>
         /// <param name="cancellationToken">Optional token to allow cancelling operation </param>
@@ -136,7 +136,7 @@ namespace VaultCrypt
             }
 
             return await RetryHelper.TryUntilSuccessAsync(
-                tryAction: () => new FileStream(this.VAULTPATH, FileMode.Open, FileAccess.Read),
+                tryAction: () => new FileStream(this.VAULTPATH, FileMode.Open, FileAccess.ReadWrite),
                 catchAction: catchAction,
                 cancellationToken: cancellationToken);
         }
