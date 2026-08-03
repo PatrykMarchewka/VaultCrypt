@@ -35,8 +35,8 @@ namespace VaultCrypt.Tests.ViewModels
             {7, "128MB", 128 },
             {8, "256MB", 256 },
             {9, "512MB", 512 },
-            {10, "1024MB", 1024 },
-            {11, "2048MB", 2048 }
+            {10, "1GB", 1024 },
+            {11, "2GB", 2047 } //2047 on purpose, see EncryptFileViewmodel for more info
         };
 
         [Fact]

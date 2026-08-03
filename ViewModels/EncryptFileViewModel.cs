@@ -25,8 +25,8 @@ namespace VaultCrypt.ViewModels
             new(Name: "128MB", SizeInMB: 128),
             new(Name: "256MB", SizeInMB: 256),
             new(Name: "512MB", SizeInMB: 512),
-            new(Name: "1024MB", SizeInMB: 1024),
-            new(Name: "2048MB", SizeInMB: 2048)
+            new(Name: "1GB", SizeInMB: 1024),
+            new(Name: "2GB", SizeInMB: 2047) //2047 because 2048 is max int32 and we also need to encrypt extra data (like IV) which usually is around 30bytes extra
             ];
 
         private ChunkSizePreset _selectedPreset = null!;
