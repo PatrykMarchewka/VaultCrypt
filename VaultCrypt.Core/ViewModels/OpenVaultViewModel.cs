@@ -5,7 +5,6 @@ using System.IO;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
-using System.Windows.Data;
 using System.Windows.Input;
 using VaultCrypt.Services;
 
@@ -20,8 +19,8 @@ namespace VaultCrypt.ViewModels
 
         private ISecureBuffer _passwordBuffer = null!;
         private NormalizedPath _vaultPath = null!;
-        public ICollectionView EncryptedFilesCollectionView { get; private set; } = null!;
 
+        public CollectionManager<KeyValuePair<long, EncryptedFileInfo>> EncryptedFilesCollectionView { get; private init; }
 
         public string VaultName { get; private set; } = null!;
 
@@ -73,7 +72,7 @@ namespace VaultCrypt.ViewModels
             this._vaultService = vaultService;
             this._decryptionService = decryptionService;
             this._session = session;
-            EncryptedFilesCollectionView = CollectionViewSource.GetDefaultView(_session.ENCRYPTED_FILES);
+            EncryptedFilesCollectionView = new CollectionManager<KeyValuePair<long, EncryptedFileInfo>>(_session.ENCRYPTED_FILES);
             GoBackCommand = new RelayCommand(_ => GoBack());
             AddNewFileCommand = new RelayCommand(_ => AddNewFile());
             DecryptFileCommand = new RelayCommand(async _ => await DecryptFile(), _ => SelectedFile != null);
