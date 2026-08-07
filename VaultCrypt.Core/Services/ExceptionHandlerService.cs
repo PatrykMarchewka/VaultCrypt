@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
@@ -33,7 +33,7 @@ namespace VaultCrypt.Services
                     break;
                 case OperationCanceledException ocEx:
                     navigationService.NavigateToExceptionThrown(new VaultOperationException(VaultException.ErrorReason.OperationCancelled));
-                        break;
+                    break;
                 default:
                     navigationService.NavigateToExceptionThrown(new VaultOperationException(VaultException.ErrorReason.Other, ex));
                     break;
