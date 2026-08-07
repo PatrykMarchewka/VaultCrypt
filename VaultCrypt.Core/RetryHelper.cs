@@ -5,7 +5,6 @@ using System.Linq;
 using System.Runtime.ExceptionServices;
 using System.Text;
 using System.Threading.Tasks;
-using System.Windows.Threading;
 
 namespace VaultCrypt
 {
@@ -91,18 +90,18 @@ namespace VaultCrypt
         {
             ArgumentOutOfRangeException.ThrowIfNegativeOrZero(maxRetries);
 
-            var frame = new DispatcherFrame();
             ExceptionDispatchInfo? exceptionInfo = null;
             T result = default!;
             bool isResultSet = false;
 
-            async void Run()
+            //New thread running on the background and not UI
+            Thread thread = new Thread(() =>
             {
                 try
                 {
                     for (int attempt = 1; attempt <= maxRetries; attempt++)
                     {
-                        if (cancellationToken is not null && cancellationToken.Value.IsCancellationRequested)
+                        if (cancellationToken?.IsCancellationRequested == true)
                         {
                             exceptionInfo = ExceptionDispatchInfo.Capture(new OperationCanceledException());
                             return;
@@ -127,22 +126,24 @@ namespace VaultCrypt
                                 return;
                             }
                             catchAction?.Invoke();
-                            await Task.Delay(1000);
+                            Thread.Sleep(1000);
                         }
                     }
                 }
-                finally
+                catch (Exception ex)
                 {
-                    frame.Continue = false;
+                    exceptionInfo = ExceptionDispatchInfo.Capture(ex);
                 }
-            }
+            });
 
-            Run();
-            Dispatcher.PushFrame(frame);
+            thread.IsBackground = true; //ensures task is killed if process exits
+            thread.Start();
+            thread.Join(); //wait for thread to finish, ensuring sync execution
+
             exceptionInfo?.Throw();
-            if (!isResultSet) throw new UnreachableException();
-            return result;
+            return isResultSet ? result : throw new UnreachableException();
         }
+
 
         /// <inheritdoc cref="TryUntilSuccess{T}(Func{T}, Action?, int, Func{Exception, bool}?, CancellationToken?)"/>
         public static void TryUntilSuccess(Action tryAction, Action? catchAction = null, int maxRetries = 100, Func<Exception, bool>? shouldRetry = null, CancellationToken? cancellationToken = null)
