@@ -102,11 +102,11 @@ namespace VaultCrypt.Tests.ViewModels
         {
             _viewModel.EncryptedFilesCollectionView.Filter = null;
             //Asserts that changing FilteredText calls Filter method by ensuring that the filtered text matches no hits  
-            Assert.False(_viewModel.EncryptedFilesCollectionView.IsEmpty);
+            Assert.True(_viewModel.EncryptedFilesCollectionView.Items.Any());
             string text = "IMPOSSIBLEITEMTHATWILLNEVERAPPEARINTESTS";
             _viewModel.FilteredText = text;
 
-            Assert.True(_viewModel.EncryptedFilesCollectionView.IsEmpty);
+            Assert.False(_viewModel.EncryptedFilesCollectionView.Items.Any());
         }
 
         [Fact]
@@ -114,13 +114,13 @@ namespace VaultCrypt.Tests.ViewModels
         {
             _viewModel.EncryptedFilesCollectionView.Filter = null;
             //Asserts that changing FilteredText calls Filter method by ensuring that the filtered text matches every hit
-            Assert.False(_viewModel.EncryptedFilesCollectionView.IsEmpty);
+            Assert.True(_viewModel.EncryptedFilesCollectionView.Items.Any());
             string text = "";
             _viewModel.FilteredText = text;
 
             var filtered = fakeVaultSession.ENCRYPTED_FILES.Where(fileInfo => fileInfo.Value.FileName.Contains(text, StringComparison.OrdinalIgnoreCase));
 
-            Assert.Equal(_viewModel.EncryptedFilesCollectionView.Cast<object>().Count(), filtered.Count());
+            Assert.Equal(_viewModel.EncryptedFilesCollectionView.Items.Count(), filtered.Count());
         }
 
         [Fact]
@@ -128,13 +128,13 @@ namespace VaultCrypt.Tests.ViewModels
         {
             _viewModel.EncryptedFilesCollectionView.Filter = null;
             //Asserts that changing FilteredText calls Filter method by ensuring that the filtered text matches single hit
-            Assert.False(_viewModel.EncryptedFilesCollectionView.IsEmpty);
+            Assert.True(_viewModel.EncryptedFilesCollectionView.Items.Any());
             string text = "TEST";
             _viewModel.FilteredText = text;
 
             var filtered = fakeVaultSession.ENCRYPTED_FILES.Where(fileInfo => fileInfo.Value.FileName.Contains(text, StringComparison.OrdinalIgnoreCase));
 
-            Assert.Equal(_viewModel.EncryptedFilesCollectionView.Cast<object>().Count(), filtered.Count());
+            Assert.Equal(_viewModel.EncryptedFilesCollectionView.Items.Count(), filtered.Count());
         }
 
 
@@ -361,7 +361,7 @@ namespace VaultCrypt.Tests.ViewModels
             string text = "IMPOSSIBLEITEMTHATWILLNEVERAPPEARINTESTS";
             _viewModel.Filter(text);
 
-            Assert.True(_viewModel.EncryptedFilesCollectionView.IsEmpty);
+            Assert.False(_viewModel.EncryptedFilesCollectionView.Items.Any());
         }
 
         [Fact]
@@ -372,7 +372,7 @@ namespace VaultCrypt.Tests.ViewModels
 
             var filtered = fakeVaultSession.ENCRYPTED_FILES.Where(fileInfo => fileInfo.Value.FileName.Contains(text, StringComparison.OrdinalIgnoreCase));
 
-            Assert.Equal(_viewModel.EncryptedFilesCollectionView.Cast<object>().Count(), filtered.Count());
+            Assert.Equal(_viewModel.EncryptedFilesCollectionView.Items.Count(), filtered.Count());
         }
 
         [Fact]
@@ -383,7 +383,7 @@ namespace VaultCrypt.Tests.ViewModels
 
             var filtered = fakeVaultSession.ENCRYPTED_FILES.Where(fileInfo => fileInfo.Value.FileName.Contains(text, StringComparison.OrdinalIgnoreCase));
 
-            Assert.Equal(_viewModel.EncryptedFilesCollectionView.Cast<object>().Count(), filtered.Count());
+            Assert.Equal(_viewModel.EncryptedFilesCollectionView.Items.Count(), filtered.Count());
         }
 
         [Fact]
