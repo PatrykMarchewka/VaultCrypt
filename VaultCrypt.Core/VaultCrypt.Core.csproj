@@ -1,12 +1,9 @@
 <Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
-    <OutputType>WinExe</OutputType>
-    <TargetFramework>net8.0-windows</TargetFramework>
+    <TargetFramework>net8.0</TargetFramework>
     <Nullable>enable</Nullable>
     <ImplicitUsings>enable</ImplicitUsings>
-    <UseWPF>true</UseWPF>
-    <ApplicationIcon>Properties\VaultCryptLogo.ico</ApplicationIcon>
 	<AssemblyName>VaultCrypt</AssemblyName>
 	<RootNamespace>VaultCrypt</RootNamespace>
 	<Version>1.4.0</Version>
@@ -19,19 +16,8 @@
 	<Description>VaultCrypt is a desktop application allowing you to encrypt and store multiple files inside a single portable vault.</Description>
 	<AllowUnsafeBlocks>true</AllowUnsafeBlocks>
   </PropertyGroup>
-
-  <ItemGroup>
-    <Content Include="Properties\VaultCryptLogo.ico" />
-  </ItemGroup>
-
   <ItemGroup>
     <PackageReference Include="BouncyCastle.Cryptography" Version="2.6.2" />
   </ItemGroup>
 
-	<ItemGroup>
-		<Compile Remove="VaultCrypt.Tests\**" />
-		<EmbeddedResource Remove="VaultCrypt.Tests\**" />
-		<None Remove="VaultCrypt.Tests\**" />
-		<Page Remove="VaultCrypt.Tests\**" />
-	</ItemGroup>
 </Project>
