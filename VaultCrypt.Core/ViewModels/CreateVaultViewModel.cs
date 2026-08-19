@@ -78,9 +78,9 @@ namespace VaultCrypt.ViewModels
             CreateVaultCommand = new RelayCommand(_ => CreateVault());
         }
 
-        public void SelectFolder()
+        public async Task SelectFolder()
         {
-            string? path = _fileDialogService.OpenFolder("Select folder");
+            string? path = await _fileDialogService.OpenFolder("Select folder");
 
             if (path != null)
             {

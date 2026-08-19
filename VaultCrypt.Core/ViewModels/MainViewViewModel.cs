@@ -28,9 +28,9 @@ namespace VaultCrypt.ViewModels
             OpenVaultCommand = new RelayCommand(_ => SelectVaultFile());
         }
 
-        public void SelectVaultFile()
+        public async Task SelectVaultFile()
         {
-            var dialog = _fileDialogService.OpenFile("Select vault file", false);
+            var dialog = await _fileDialogService.OpenFile("Select vault file", false);
             if (dialog != null)
             {
                 NavigationRequested?.Invoke(new NavigateToPasswordInputRequest(NormalizedPath.From(dialog)));

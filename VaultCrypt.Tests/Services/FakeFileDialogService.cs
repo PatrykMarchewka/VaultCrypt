@@ -11,10 +11,10 @@ namespace VaultCrypt.Tests.Services
     {
         public string? ReturnValue { get; set; }
 
-        public string? OpenFile(string title, bool allFiles) => ReturnValue;
+        public Task<string?> OpenFile(string title, bool allFiles) => Task.FromResult(ReturnValue);
 
-        public string? OpenFolder(string title) => ReturnValue;
+        public Task<string?> OpenFolder(string title) => Task.FromResult(ReturnValue);
 
-        public string? SaveFile(string fileName) => ReturnValue;
+        public Task<string?> SaveFile(string fileName) => Task.FromResult(ReturnValue);
     }
 }

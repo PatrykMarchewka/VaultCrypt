@@ -101,9 +101,9 @@ namespace VaultCrypt.ViewModels
             NavigationRequested?.Invoke(new NavigateToMainRequest());
         }
 
-        public void AddNewFile()
+        public async Task AddNewFile()
         {
-            var dialog = _fileDialogService.OpenFile("Select file to encrypt", true);
+            var dialog = await _fileDialogService.OpenFile("Select file to encrypt", true);
 
             if (dialog != null)
             {
@@ -113,7 +113,7 @@ namespace VaultCrypt.ViewModels
 
         public async Task DecryptFile()
         {
-            var file = _fileDialogService.SaveFile(SelectedFile!.Value.Value.FileName);
+            var file = await _fileDialogService.SaveFile(SelectedFile!.Value.Value.FileName);
             if (file != null)
             {
                 var context = new ProgressionContext();
