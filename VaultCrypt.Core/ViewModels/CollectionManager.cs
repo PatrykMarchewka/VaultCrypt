@@ -25,8 +25,6 @@ public sealed class CollectionManager<T>(IEnumerable<T> source) : INotifyPropert
         Sort is null ? items : items.OrderBy(item => item, Comparer<T>.Create(Sort));
     private IEnumerable<T> ApplyFilter(IEnumerable<T> items) => Filter is null ? items : items.Where(Filter);
 
-    public bool IsEmpty => source.Any();
-
     public event PropertyChangedEventHandler? PropertyChanged;
 
     private void OnPropertyChanged([CallerMemberName] string? propertyName = null)
