@@ -5,6 +5,8 @@ using System.Reflection;
 using System.Security.Cryptography;
 using System.Text;
 using System.Threading.Tasks;
+using VaultCrypt.Tests.Services;
+using VaultCrypt.ViewModels;
 
 namespace VaultCrypt.Tests
 {
@@ -328,6 +330,14 @@ namespace VaultCrypt.Tests
             Span<byte> key = new byte[PasswordHelper.KeySize];
             PasswordHelper.DeriveKey(password ??= new byte[16], salt ??= new byte[32], iterations, key);
             return key;
+        }
+
+        /// <summary>
+        /// Initializes services and viewmodels, using <see cref="FakeDialogService"/> and <see cref="FakeFileDialogService"/>
+        /// </summary>
+        internal static void StartServicesAndCreateViewModels()
+        {
+            ViewModelState.OnStartup(null, new FakeDialogService(), new FakeFileDialogService());
         }
     }
 }
