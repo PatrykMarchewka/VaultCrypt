@@ -13,7 +13,7 @@ using System.Windows.Media.Imaging;
 using System.Windows.Navigation;
 using System.Windows.Shapes;
 
-namespace VaultCrypt.Views
+namespace VaultCrypt.WPF.Views
 {
     /// <summary>
     /// Logika interakcji dla klasy Progress.xaml

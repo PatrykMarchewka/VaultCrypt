@@ -14,14 +14,14 @@ using System.Windows.Navigation;
 using System.Windows.Shapes;
 using VaultCrypt.ViewModels;
 
-namespace VaultCrypt.Views
+namespace VaultCrypt.WPF.Views
 {
     /// <summary>
-    /// Logika interakcji dla klasy OpenVault.xaml
+    /// Logika interakcji dla klasy MainView.xaml
     /// </summary>
-    public partial class OpenVault : UserControl
+    public partial class MainView : UserControl
     {
-        public OpenVault()
+        public MainView()
         {
             InitializeComponent();
         }

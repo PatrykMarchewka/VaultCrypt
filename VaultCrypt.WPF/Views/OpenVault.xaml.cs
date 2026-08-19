@@ -12,15 +12,16 @@ using System.Windows.Media;
 using System.Windows.Media.Imaging;
 using System.Windows.Navigation;
 using System.Windows.Shapes;
+using VaultCrypt.ViewModels;
 
-namespace VaultCrypt.Views
+namespace VaultCrypt.WPF.Views
 {
     /// <summary>
-    /// Logika interakcji dla klasy ExceptionThrown.xaml
+    /// Logika interakcji dla klasy OpenVault.xaml
     /// </summary>
-    public partial class ExceptionThrown : UserControl
+    public partial class OpenVault : UserControl
     {
-        public ExceptionThrown()
+        public OpenVault()
         {
             InitializeComponent();
         }

@@ -14,16 +14,25 @@ using System.Windows.Navigation;
 using System.Windows.Shapes;
 using VaultCrypt.ViewModels;
 
-namespace VaultCrypt.Views
+namespace VaultCrypt.WPF.Views
 {
     /// <summary>
-    /// Logika interakcji dla klasy MainView.xaml
+    /// Logika interakcji dla klasy CreateVault.xaml
     /// </summary>
-    public partial class MainView : UserControl
+    public partial class CreateVault : UserControl
     {
-        public MainView()
+        public CreateVault()
         {
             InitializeComponent();
+        }
+
+        //Code behind because PasswordBox doesnt have proper bindings
+        private void PasswordBox_PasswordChanged(object sender, RoutedEventArgs e)
+        {
+            if (DataContext is CreateVaultViewModel vm)
+            {
+                vm.RecievePasswordString(((PasswordBox)sender).Password);
+            }
         }
     }
 }
