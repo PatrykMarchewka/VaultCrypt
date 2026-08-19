@@ -3,8 +3,10 @@ using System.Data;
 using System.Windows;
 using VaultCrypt.ViewModels;
 using VaultCrypt.Services;
+using VaultCrypt.WPF;
+using VaultCrypt.WPF.Services;
 
-namespace VaultCrypt
+namespace VaultCrypt.WPF
 {
     /// <summary>
     /// Interaction logic for App.xaml
@@ -14,7 +16,7 @@ namespace VaultCrypt
         protected override void OnStartup(StartupEventArgs e)
         {
             base.OnStartup(e);
-            ViewModelState.OnStartup(e.Args);
+            ViewModelState.OnStartup(e.Args, new DialogService(), new FileDialogService());
 
             var window = new MainWindow
             {
