@@ -26,11 +26,13 @@ namespace VaultCrypt.WPF.Views
             InitializeComponent();
         }
 
-        private void PasswordBox_PasswordChanged(object sender, RoutedEventArgs e)
+        //Code behind because PasswordBox doesnt have proper bindings
+        private void ButtonBase_OnClick(object sender, RoutedEventArgs e)
         {
             if (DataContext is PasswordInputViewModel vm)
             {
-                vm.RecievePasswordString(((PasswordBox)sender).Password);
+                vm.PasswordString = PasswordBox.Password;
+                PasswordBox.Password = string.Empty;
             }
         }
     }

@@ -36,6 +36,19 @@ namespace VaultCrypt.ViewModels
                 OnPropertyChanged(nameof(VaultName));
             }
         }
+        
+        private string _passwordString = null!;
+        public string PasswordString
+        {
+            get => _passwordString;
+            set
+            {
+                if(_passwordString == value) return;
+                _passwordString = value;
+                OnPropertyChanged(nameof(PasswordString));
+            }
+        }
+
         private ISecureBuffer? _passwordBuffer;
 
 
@@ -73,9 +86,15 @@ namespace VaultCrypt.ViewModels
             this._vaultService = vaultService;
             SelectedPreset = IterationPresets[0];
             VaultFolder = AppContext.BaseDirectory;
-            GoBackCommand = new RelayCommand(_ => NavigationRequested?.Invoke(new NavigateToMainRequest()));
+            GoBackCommand = new RelayCommand(_ => GoBack());
             SelectFolderCommand = new RelayCommand(_ => SelectFolder());
             CreateVaultCommand = new RelayCommand(_ => CreateVault());
+        }
+
+        public void GoBack()
+        {
+            _passwordBuffer?.Dispose();
+            NavigationRequested?.Invoke(new NavigateToMainRequest());
         }
 
         public async Task SelectFolder()
@@ -92,28 +111,36 @@ namespace VaultCrypt.ViewModels
         {
             ValidationHelper.NotEmptyString(VaultFolder, "Vault folder");
             ValidationHelper.NotEmptyString(VaultName, "Vault name");
-            ValidationHelper.NotEmptySecureBuffer(_passwordBuffer, "Vault password");
+            ValidationHelper.NotEmptyString(PasswordString, "Vault password");
 
             NormalizedPath folderPath = NormalizedPath.From(VaultFolder);
             NormalizedPath vaultPath = NormalizedPath.From($"{folderPath}\\{VaultName}.vlt");
+            RecievePasswordString(PasswordString);
 
             _vaultService.CreateVault(folderPath, VaultName, _passwordBuffer!.AsSpan, SelectedPreset.Iterations);
             NavigationRequested?.Invoke(new NavigateToPasswordInputRequest(vaultPath));
         }
+        
+        //Clears PasswordString and forces garbage collection to clear the data
+        private void ClearPasswordString()
+        {
+            PasswordString = string.Empty;
+            
+            GC.Collect(generation: 2, GCCollectionMode.Forced, blocking: true, compacting: true);
+            GC.WaitForPendingFinalizers();
+        }
 
-        /// <summary>
-        /// Disposes previous password buffer and creates new one from provided <paramref name="password"/>
-        /// </summary>
-        /// <param name="password">Password to use</param>
-        /// <exception cref="ArgumentNullException">Thrown when <paramref name="password"/> is set to null</exception>
-        /// <exception cref="ArgumentException">Thrown when <paramref name="password"/> is set to empty or whitespace only characters</exception>
-        public void RecievePasswordString(string password)
+        //Disposes previous password buffer and creates new one holding password
+        private void RecievePasswordString(string password)
         {
             ArgumentNullException.ThrowIfNullOrWhiteSpace(password);
 
             _passwordBuffer?.Dispose();
             _passwordBuffer = SecureBuffer.StringToSecureBuffer(password);
+            ClearPasswordString();
         }
+
+        
 
 
         private void OnPropertyChanged(string name) { PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(name)); }
