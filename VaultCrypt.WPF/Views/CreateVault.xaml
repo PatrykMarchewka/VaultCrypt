@@ -40,7 +40,7 @@
 
 
         <TextBlock Grid.Row="4" Grid.Column="0" Text="Password" TextAlignment="Right"/>
-        <PasswordBox Grid.Row="4" Grid.Column="1" PasswordChar="#" PasswordChanged="PasswordBox_PasswordChanged"/>
+        <PasswordBox x:Name="PasswordBox" Grid.Row="4" Grid.Column="1" PasswordChar="#"/>
         <StackPanel Grid.Row="4" Grid.Column="2" Orientation="Horizontal" HorizontalAlignment="Left">
             <TextBlock Text="Iterations"/>
             <ComboBox ItemsSource="{Binding IterationPresets}" SelectedItem="{Binding SelectedPreset}" MinWidth="150">
@@ -53,6 +53,6 @@
         </StackPanel>
 
 
-        <Button Grid.Row="5" Grid.Column="1" Content=" Create vault " HorizontalAlignment="Center" Command="{Binding CreateVaultCommand}"/>
+        <Button Grid.Row="5" Grid.Column="1" Content=" Create vault " HorizontalAlignment="Center" Command="{Binding CreateVaultCommand}" Click="ButtonBase_OnClick"/>
     </Grid>
 </UserControl>

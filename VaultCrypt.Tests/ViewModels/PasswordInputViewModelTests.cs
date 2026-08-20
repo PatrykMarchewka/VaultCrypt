@@ -3,38 +3,66 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
-using VaultCrypt.Exceptions;
+using VaultCrypt.ViewModels;
 
 namespace VaultCrypt.Tests.ViewModels
 {
     public class PasswordInputViewModelTests
     {
-        private readonly VaultCrypt.ViewModels.PasswordInputViewModel _viewModel;
+        private readonly VaultCrypt.ViewModels.PasswordInputViewModel _viewModel = new PasswordInputViewModel();
 
-        public PasswordInputViewModelTests()
+        private ISecureBuffer? GetPasswordBuffer()
         {
-            this._viewModel = new VaultCrypt.ViewModels.PasswordInputViewModel();
+            return (ISecureBuffer?)_viewModel.GetType().GetField("_passwordBuffer", System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance)!.GetValue(_viewModel);
         }
 
-        private ISecureBuffer SetPasswordBuffer(ISecureBuffer buffer)
+        [Fact]
+        internal void PasswordStringRaisesPropertyChanged()
         {
-            _viewModel.GetType().GetField("_passwordBuffer", System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance)!.SetValue(_viewModel, buffer);
-            return buffer;
+            string? changedProperty = null;
+            _viewModel.PropertyChanged += (sender, args) => { changedProperty = args.PropertyName; };
+
+            _viewModel.PasswordString = "RaisedProperty";
+
+            Assert.Equal(nameof(_viewModel.PasswordString), changedProperty);
         }
 
-        private ISecureBuffer SetPasswordBuffer()
+        [Fact]
+        internal void PasswordStringDoesNotRaisePropertyChanged()
         {
-            ISecureBuffer keyBuffer = SecureBuffer.Create(1);
-            return SetPasswordBuffer(keyBuffer);
+            string value = "DoesntRaiseProperty";
+            _viewModel.PasswordString = value;
+            int eventRaisedCount = 0;
+            _viewModel.PropertyChanged += (sender, args) => { eventRaisedCount++; };
+            _viewModel.PasswordString = value;
+
+            Assert.Equal(0, eventRaisedCount);
+        }
+
+        [Fact]
+        internal void PasswordStringChangesValue()
+        {
+            string expected = "ChangedValue";
+            _viewModel.PasswordString = expected;
+
+            Assert.Equal(expected, _viewModel.PasswordString);
+        }
+
+        [Fact]
+        internal void GoBackRaisesNavigationRequest()
+        {
+            int eventRaisedCount = 0;
+            _viewModel.NavigationRequested += request => eventRaisedCount++;
+            _viewModel.GoBack();
+            Assert.Equal(1, eventRaisedCount);
         }
 
         [Fact]
         internal void OpenVaultRaisesNavigationRequest()
         {
-            ISecureBuffer buffer = null!;
+            _viewModel.PasswordString = "Testing";
             try
             {
-                buffer = SetPasswordBuffer();
                 int eventRaisedCount = 0;
                 _viewModel.NavigationRequested += (request) => { eventRaisedCount++; };
                 _viewModel.OpenVault();
@@ -42,17 +70,60 @@ namespace VaultCrypt.Tests.ViewModels
             }
             finally
             {
-                buffer.Dispose();
+                GetPasswordBuffer()?.Dispose();
             }
         }
-
+        
         [Fact]
         internal void OpenVaultDoesNotRaiseNavigationRequestAndThrows()
         {
             int eventRaisedCount = 0;
             _viewModel.NavigationRequested += (request) => { eventRaisedCount++; };
-            Assert.Throws<VaultUIException>(() => _viewModel.OpenVault());
+            Assert.Throws<VaultCrypt.Exceptions.VaultUIException>(() => _viewModel.OpenVault());
             Assert.Equal(0, eventRaisedCount);
+        }
+        
+        [Fact]
+        internal void OpenVaultSetsBufferCorrectly()
+        {
+            _viewModel.PasswordString = "newPassword";
+            byte[] predeterminedStringValue = new byte[] { 110, 0, 101, 0, 119, 0, 80, 0, 97, 0, 115, 0, 115, 0, 119, 0, 111, 0, 114, 0, 100, 0 }; //newPassword
+            _viewModel.NavigationRequested += request => { }; //Required to avoid failure due to lack of bindings
+            
+            try
+            {
+                _viewModel.OpenVault(); //Always fails due to lack of bindings for navigation
+                var buffer = GetPasswordBuffer();
+                Assert.True(buffer!.AsSpan.SequenceEqual(predeterminedStringValue));
+            }
+            finally
+            {
+                GetPasswordBuffer()?.Dispose();   
+            }
+        }
+
+        [Fact]
+        internal void OpenVaultClearsPasswordString()
+        {
+            _viewModel.PasswordString = "newPassword";
+            _viewModel.NavigationRequested += request => { }; //Required to avoid failure due to lack of bindings
+            try
+            {
+                _viewModel.OpenVault();
+                Assert.Empty(_viewModel.PasswordString);
+            }
+            finally
+            {
+                GetPasswordBuffer()?.Dispose();
+            }
+        }
+        
+        [Theory]
+        [MemberData(nameof(TestsHelper.InvalidStrings), MemberType = typeof(TestsHelper))]
+        internal void OpenVaultThrowsForInvalidPasswordString(string password, Type _)
+        {
+            _viewModel.PasswordString = password;
+            Assert.Throws<VaultCrypt.Exceptions.VaultUIException>(() => _viewModel.OpenVault());
         }
 
         [Fact]
@@ -83,25 +154,7 @@ namespace VaultCrypt.Tests.ViewModels
         {
             Assert.Throws(expectedException, () => _viewModel.OnNavigatedTo(parameters!));
         }
-
-        [Fact]
-        internal void RecievePasswordStringSetsBufferCorrectly()
-        {
-            byte[] predeterminedStringValue = new byte[] { 110, 0, 101, 0, 119, 0, 80, 0, 97, 0, 115, 0, 115, 0, 119, 0, 111, 0, 114, 0, 100, 0 }; //newPassword
-            _viewModel.RecievePasswordString("newPassword");
-            var newBuffer = (ISecureBuffer)_viewModel.GetType().GetField("_passwordBuffer", System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance)!.GetValue(_viewModel)!;
-
-            Assert.True(newBuffer.AsSpan.SequenceEqual(predeterminedStringValue));
-        }
-
-        [Theory]
-        [MemberData(nameof(TestsHelper.InvalidStrings), MemberType = typeof(TestsHelper))]
-        internal void RecievePasswordStringThrowsForInvalidString(string password, Type expectedException)
-        {
-            Assert.Throws(expectedException, () => _viewModel.RecievePasswordString(password));
-        }
-
-
+        
         [Fact]
         internal void NavigationRequestedRaised()
         {

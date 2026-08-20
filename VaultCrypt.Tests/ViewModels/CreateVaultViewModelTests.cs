@@ -23,16 +23,9 @@ namespace VaultCrypt.Tests.ViewModels
             this._viewModel = new VaultCrypt.ViewModels.CreateVaultViewModel(fake, fakeVaultService);
         }
 
-        private ISecureBuffer SetPasswordBuffer(ISecureBuffer buffer)
+        private ISecureBuffer? GetPasswordBuffer()
         {
-            _viewModel.GetType().GetField("_passwordBuffer", System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance)!.SetValue(_viewModel, buffer);
-            return buffer;
-        }
-
-        private ISecureBuffer SetPasswordBuffer()
-        {
-            ISecureBuffer keyBuffer = SecureBuffer.Create(1);
-            return SetPasswordBuffer(keyBuffer);
+            return (ISecureBuffer?)_viewModel.GetType().GetField("_passwordBuffer", System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance)!.GetValue(_viewModel);
         }
 
 
@@ -112,6 +105,38 @@ namespace VaultCrypt.Tests.ViewModels
 
             Assert.Equal(expected, _viewModel.VaultName);
         }
+        
+        [Fact]
+        internal void PasswordStringRaisesPropertyChanged()
+        {
+            string? changedProperty = null;
+            _viewModel.PropertyChanged += (sender, args) => { changedProperty = args.PropertyName; };
+
+            _viewModel.PasswordString = "RaisedProperty";
+
+            Assert.Equal(nameof(_viewModel.PasswordString), changedProperty);
+        }
+
+        [Fact]
+        internal void PasswordStringDoesNotRaisePropertyChanged()
+        {
+            string value = "DoesntRaiseProperty";
+            _viewModel.PasswordString = value;
+            int eventRaisedCount = 0;
+            _viewModel.PropertyChanged += (sender, args) => { eventRaisedCount++; };
+            _viewModel.PasswordString = value;
+
+            Assert.Equal(0, eventRaisedCount);
+        }
+
+        [Fact]
+        internal void PasswordStringChangesValue()
+        {
+            string expected = "ChangedValue";
+            _viewModel.PasswordString = expected;
+
+            Assert.Equal(expected, _viewModel.PasswordString);
+        }
 
         private static readonly (int position, string name, int iterations)[] IterationPresets =
         {
@@ -186,6 +211,15 @@ namespace VaultCrypt.Tests.ViewModels
 
             Assert.Equal(0, eventRaisedCount);
         }
+        
+        [Fact]
+        internal void GoBackRaisesNavigationRequest()
+        {
+            int eventRaisedCount = 0;
+            _viewModel.NavigationRequested += request => eventRaisedCount++;
+            _viewModel.GoBack();
+            Assert.Equal(1, eventRaisedCount);
+        }
 
         [Fact]
         internal void SelectFolderSetsVaultFolder()
@@ -211,16 +245,15 @@ namespace VaultCrypt.Tests.ViewModels
         {
             _viewModel.VaultFolder = "folder";
             _viewModel.VaultName = "name";
-            ISecureBuffer password = null!;
+            _viewModel.PasswordString = "password";
             try
             {
-                password = SetPasswordBuffer();
                 _viewModel.CreateVault();
                 Assert.True(fakeVaultService.CreateVaultWasCalled);
             }
             finally
             {
-                password.Dispose();
+                GetPasswordBuffer()?.Dispose();
             }
         }
 
@@ -229,11 +262,9 @@ namespace VaultCrypt.Tests.ViewModels
         {
             _viewModel.VaultFolder = "folder";
             _viewModel.VaultName = "name";
-            ISecureBuffer password = null!;
+            _viewModel.PasswordString = "password";
             try
             {
-                password = SetPasswordBuffer();
-
                 int eventRaisedCount = 0;
                 _viewModel.NavigationRequested += (request) => { eventRaisedCount++; };
                 _viewModel.CreateVault();
@@ -241,58 +272,71 @@ namespace VaultCrypt.Tests.ViewModels
             }
             finally
             {
-                password.Dispose();
+                GetPasswordBuffer()?.Dispose();
             }
 
         }
 
-        public static TheoryData<string?, string?, FakeSecureBuffer?> InvalidCreateVaultParameters = new TheoryData<string?, string?, FakeSecureBuffer?>()
+        public static TheoryData<string?, string?, string?> InvalidCreateVaultParameters = new TheoryData<string?, string?, string?>()
         {
-            {string.Empty, "Name", new FakeSecureBuffer(empty: false)},
-            {"  ", "Name", new FakeSecureBuffer(empty: false)},
-            {null, "Name", new FakeSecureBuffer(empty: false)},
-            {"Folder", string.Empty, new FakeSecureBuffer(empty: false)},
-            {"Folder", "    ", new FakeSecureBuffer(empty: false)},
-            {"Folder", null, new FakeSecureBuffer(empty: false)},
-            {"Folder", "Name", new FakeSecureBuffer(empty: true)},
+            {string.Empty, "Name", "Password"},
+            {"  ", "Name", "Password"},
+            {null, "Name", "Password"},
+            {"Folder", string.Empty, "Password"},
+            {"Folder", "    ", "Password"},
+            {"Folder", null, "Password"},
+            {"Folder", "Name", string.Empty},
+            {"Folder", "Name", "    "},
             {"Folder", "Name", null}
         };
 
         [Theory]
         [MemberData(nameof(InvalidCreateVaultParameters))]
-        internal void CreateVaultThrowsForInvalidParameters(string folder, string name, FakeSecureBuffer secureBuffer)
+        internal void CreateVaultThrowsForInvalidParameters(string folder, string name, string password)
         {
             _viewModel.VaultFolder = folder;
             _viewModel.VaultName = name;
-            SetPasswordBuffer(secureBuffer);
+            _viewModel.PasswordString = password;
 
             Assert.Throws<VaultCrypt.Exceptions.VaultUIException>(() => _viewModel.CreateVault());
         }
 
         [Fact]
-        internal void RecievePasswordStringSetsBufferCorrectly()
+        internal void CreateVaultSetsBufferCorrectly()
         {
+            _viewModel.VaultFolder = "___";
+            _viewModel.VaultName = "___";
+            _viewModel.PasswordString = "newPassword";
             byte[] predeterminedStringValue = new byte[] { 110, 0, 101, 0, 119, 0, 80, 0, 97, 0, 115, 0, 115, 0, 119, 0, 111, 0, 114, 0, 100, 0 }; //newPassword
-            _viewModel.RecievePasswordString("newPassword");
-            var newBuffer = (ISecureBuffer)_viewModel.GetType().GetField("_passwordBuffer", System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance)!.GetValue(_viewModel)!;
+            try
+            {
+                _viewModel.CreateVault();
 
-            Assert.True(newBuffer.AsSpan.SequenceEqual(predeterminedStringValue));
+                var buffer = GetPasswordBuffer();
+                Assert.True(buffer!.AsSpan.SequenceEqual(predeterminedStringValue));
+            }
+            finally
+            {
+                GetPasswordBuffer()?.Dispose();
+            }
         }
-
-        [Theory]
-        [MemberData(nameof(TestsHelper.InvalidStrings), MemberType = typeof(TestsHelper))]
-        internal void RecievePasswordStringThrowsForInvalidString(string password, Type expectedException)
-        {
-            Assert.Throws(expectedException, () => _viewModel.RecievePasswordString(password));
-        }
-
+        
         [Fact]
-        internal void NavigationRequestedRaised()
+        internal void CreateVaultClearsPasswordString()
         {
-            int eventRaisedCount = 0;
-            _viewModel.NavigationRequested += (request) => { eventRaisedCount++; };
-            _viewModel.GoBackCommand.Execute(null);
-            Assert.Equal(1, eventRaisedCount);
+            _viewModel.VaultFolder = "___";
+            _viewModel.VaultName = "___";
+            _viewModel.PasswordString = "___";
+
+            try
+            {
+                _viewModel.CreateVault();
+                Assert.Empty(_viewModel.PasswordString);
+            }
+            finally
+            {
+                GetPasswordBuffer()?.Dispose();
+            }
         }
     }
 }
