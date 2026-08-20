@@ -1,0 +1,90 @@
+<Application xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:vm="using:VaultCrypt.ViewModels"
+             xmlns:views="using:VaultCrypt.Avalonia.Views"
+             xmlns:avalonia="using:VaultCrypt.Avalonia"
+             x:Class="VaultCrypt.Avalonia.App"
+             RequestedThemeVariant="Dark">
+             <!-- "Default" ThemeVariant follows system theme variant. "Dark" or "Light" are other available options. -->
+
+    <Application.Styles>
+        <FluentTheme />
+        
+        <Style Selector="Button">
+            <Setter Property="HorizontalAlignment" Value="Stretch"/>
+            <Setter Property="VerticalAlignment" Value="Stretch"/>
+            
+            <Setter Property="HorizontalContentAlignment" Value="Center"/>
+            <Setter Property="VerticalContentAlignment" Value="Center"/>
+        </Style>
+        
+        <!-- Taken from WPF version -->
+        <Style Selector="Grid">
+            <Setter Property="Background" Value="#161E2E"/>
+        </Style>
+
+        <Style Selector="TextBlock">
+            <Setter Property="Foreground" Value="#E6EAF0"/>
+            <Setter Property="Margin" Value="5,0,5,0"/>
+            <Setter Property="VerticalAlignment" Value="Center"/>
+        </Style>
+        
+        <Style Selector="TextBlock.BlackTextStyle">
+            <Setter Property="Foreground" Value="Black"/>
+        </Style>
+        
+        <Style Selector="TextBox">
+            <Setter Property="Margin" Value="5"/>
+        </Style>
+
+        <Style Selector="Button">
+            <Setter Property="Background" Value="#88BDF2"/>
+            <Setter Property="Margin" Value="5"/>
+        </Style>
+
+        <Style Selector="ComboBox">
+            <Setter Property="Margin" Value="5,0,5,0" />
+            <!-- <Setter Property="ItemTemplate"> -->
+            <!--     ~1~ Setting datatype to object ensuring  @1@ -->
+            <!--     <DataTemplate x:DataType="x:Object"> -->
+            <!--         <TextBlock Classes="BlackTextStyle" Text="{Binding .}" /> -->
+            <!--     </DataTemplate> -->
+            <!-- </Setter> -->
+        </Style>
+        
+        
+        
+        
+    </Application.Styles>
+             
+             <Application.DataTemplates>
+                 <DataTemplate x:DataType="vm:MainViewViewModel">
+                     <views:MainView DataContext="{Binding}"/>
+                 </DataTemplate>
+
+                 <DataTemplate DataType="vm:CreateVaultViewModel">
+                     <views:CreateVault/>
+                 </DataTemplate>
+
+                 <DataTemplate DataType="vm:OpenVaultViewModel">
+                     <views:OpenVault/>
+                 </DataTemplate>
+
+                 <DataTemplate DataType="vm:PasswordInputViewModel">
+                     <views:PasswordInput/>
+                 </DataTemplate>
+
+                 <DataTemplate DataType="vm:EncryptFileViewModel">
+                     <views:EncryptFile/>
+                 </DataTemplate>
+
+                 <DataTemplate DataType="vm:ProgressViewModel">
+                     <views:Progress/>
+                 </DataTemplate>
+
+                 <DataTemplate DataType="vm:ExceptionThrownViewModel">
+                     <views:ExceptionThrown/>
+                 </DataTemplate>
+             </Application.DataTemplates>
+             
+</Application>
