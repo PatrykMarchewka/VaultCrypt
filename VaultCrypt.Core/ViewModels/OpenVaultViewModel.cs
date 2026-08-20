@@ -1,0 +1,179 @@
+using System;
+using System.Collections.Generic;
+using System.ComponentModel;
+using System.IO;
+using System.Linq;
+using System.Text;
+using System.Threading.Tasks;
+using System.Windows.Input;
+using VaultCrypt.Services;
+
+namespace VaultCrypt.ViewModels
+{
+    public class OpenVaultViewModel : INotifyPropertyChanged, INavigatedViewModel, INavigatingViewModel
+    {
+        private readonly IFileDialogService _fileDialogService;
+        private readonly IVaultService _vaultService;
+        private readonly IDecryptionService _decryptionService;
+        private readonly IVaultSession _session;
+
+        private ISecureBuffer _passwordBuffer = null!;
+        private NormalizedPath _vaultPath = null!;
+
+        public CollectionManager<KeyValuePair<long, EncryptedFileInfo>> EncryptedFilesCollectionView { get; private init; }
+
+        public string VaultName { get; private set; } = null!;
+
+        private string _filteredText = null!;
+        public string FilteredText
+        {
+            get => _filteredText;
+            set
+            {
+                if (_filteredText == value) return;
+                _filteredText = value;
+                OnPropertyChanged(nameof(FilteredText));
+                Filter(value);
+            }
+        }
+
+        private KeyValuePair<long, EncryptedFileInfo>? _selectedFile;
+        public KeyValuePair<long, EncryptedFileInfo>? SelectedFile
+        {
+            get => _selectedFile;
+            set
+            {
+                if (_selectedFile.Equals(value)) return;
+                _selectedFile = value;
+                OnPropertyChanged(nameof(SelectedFile));
+
+                (DecryptFileCommand as RelayCommand)!.RaiseCanExecuteChanged();
+                (ValidateFileCommand as RelayCommand)!.RaiseCanExecuteChanged();
+                (DeleteFileCommand as RelayCommand)!.RaiseCanExecuteChanged();
+            }
+        }
+
+        public ICommand GoBackCommand { get; }
+        public ICommand AddNewFileCommand { get; }
+        public ICommand DecryptFileCommand { get; }
+        public ICommand ValidateFileCommand { get; }
+        public ICommand DeleteFileCommand { get; }
+        public ICommand TrimCommand { get; }
+
+
+        public OpenVaultViewModel(IFileDialogService fileDialogService, IVaultService vaultService, IDecryptionService decryptionService, IVaultSession session)
+        {
+            ArgumentNullException.ThrowIfNull(fileDialogService);
+            ArgumentNullException.ThrowIfNull(vaultService);
+            ArgumentNullException.ThrowIfNull(decryptionService);
+            ArgumentNullException.ThrowIfNull(session);
+
+            this._fileDialogService = fileDialogService;
+            this._vaultService = vaultService;
+            this._decryptionService = decryptionService;
+            this._session = session;
+            EncryptedFilesCollectionView = new CollectionManager<KeyValuePair<long, EncryptedFileInfo>>(_session.ENCRYPTED_FILES);
+            GoBackCommand = new RelayCommand(_ => GoBack());
+            AddNewFileCommand = new RelayCommand(_ => AddNewFile());
+            DecryptFileCommand = new RelayCommand(async _ => await DecryptFile(), _ => SelectedFile != null);
+            ValidateFileCommand = new RelayCommand(async _ => await ValidateFile(), _ => SelectedFile != null);
+            DeleteFileCommand = new RelayCommand(async _ => await DeleteFile(), _ => SelectedFile != null);
+            TrimCommand = new RelayCommand(async _ => await Trim());
+
+            _session.EncryptedFilesListUpdated += () => EncryptedFilesCollectionView.Refresh();
+        }
+
+        public void CreateSession()
+        {
+            _vaultService.CreateSessionFromFile(_passwordBuffer.AsSpan, _vaultPath);
+            this.VaultName = Path.GetFileName(_vaultPath);
+        }
+
+        public void RefreshCollection()
+        {
+            using var vaultFS = new FileStream(_session.VAULTPATH, FileMode.Open, FileAccess.Read, FileShare.ReadWrite);
+            _vaultService.RefreshEncryptedFilesList(vaultFS);
+        }
+
+        public void GoBack()
+        {
+            Dispose();
+            NavigationRequested?.Invoke(new NavigateToMainRequest());
+        }
+
+        public async Task AddNewFile()
+        {
+            var dialog = await _fileDialogService.OpenFile("Select file to encrypt", true);
+
+            if (dialog != null)
+            {
+                NavigationRequested?.Invoke(new NavigateToEncryptFileRequest(NormalizedPath.From(dialog)));
+            }
+        }
+
+        public async Task DecryptFile()
+        {
+            var file = await _fileDialogService.SaveFile(SelectedFile!.Value.Value.FileName);
+            if (file != null)
+            {
+                var context = new ProgressionContext();
+                NavigationRequested?.Invoke(new NavigateToProgressRequest(context));
+                await _decryptionService.Decrypt(SelectedFile!.Value.Key, NormalizedPath.From(file), context);
+            }
+        }
+
+        public async Task ValidateFile()
+        {
+            var context = new ProgressionContext();
+            NavigationRequested?.Invoke(new NavigateToProgressRequest(context));
+            await _decryptionService.Validate(SelectedFile!.Value.Key, context);
+        }
+
+        public async Task DeleteFile()
+        {
+            var context = new ProgressionContext();
+            NavigationRequested?.Invoke(new NavigateToProgressRequest(context));
+            await _vaultService.DeleteFileFromVault(SelectedFile!.Value.Key, context);
+        }
+
+        public async Task Trim()
+        {
+            var context = new ProgressionContext();
+            NavigationRequested?.Invoke(new NavigateToProgressRequest(context));
+            await _vaultService.TrimVault(context);
+        }
+
+        public void Filter(string text)
+        {
+            ArgumentNullException.ThrowIfNull(text);
+
+            EncryptedFilesCollectionView.Filter = file => { var kvp = (KeyValuePair<long, EncryptedFileInfo>)file; return kvp.Value.FileName.Contains(text, StringComparison.OrdinalIgnoreCase); };
+            EncryptedFilesCollectionView.Refresh();
+        }
+
+        public void OnNavigatedTo(object parameters)
+        {
+            ArgumentNullException.ThrowIfNull(parameters);
+            if (parameters is not (ISecureBuffer, NormalizedPath)) throw new ArgumentException("Couldnt cast from object to (ISecureBuffer, NormalizedPath)");
+            (ISecureBuffer, NormalizedPath)data = ((ISecureBuffer, NormalizedPath))parameters;
+            ArgumentNullException.ThrowIfNull(data.Item1);
+            if (data.Item1.AsSpan.IsEmpty) throw new ArgumentException("Provided empty password");
+            ArgumentException.ThrowIfNullOrWhiteSpace(data.Item2);
+
+            this._passwordBuffer = data.Item1;
+            this._vaultPath = data.Item2;
+            CreateSession();
+        }
+
+        public void Dispose()
+        {
+            this._passwordBuffer.Dispose();
+            this._vaultPath = null!;
+            this.SelectedFile = null;
+        }
+
+        private void OnPropertyChanged(string name) { PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(name)); }
+        public event PropertyChangedEventHandler? PropertyChanged;
+        public event Action<NavigationRequest> NavigationRequested = null!;
+    }
+}

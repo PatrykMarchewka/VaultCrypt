@@ -4,6 +4,7 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 using VaultCrypt.Services;
+using VaultCrypt.ViewModels;
 
 namespace VaultCrypt.Tests.Services
 {
@@ -20,6 +21,8 @@ namespace VaultCrypt.Tests.Services
         [Fact]
         internal void NavigateToMainDisposesProperly()
         {
+            TestsHelper.StartServicesAndCreateViewModels();
+            
             //Setting current sesion to ensure fields are not default
             VaultSession.CurrentSession = TestsHelper.CreateFilledSessionInstance();
             Assert.NotEqual(string.Empty, VaultSession.CurrentSession.VAULTPATH);

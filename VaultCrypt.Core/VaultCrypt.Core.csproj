@@ -1,0 +1,23 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFramework>net8.0</TargetFramework>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+	<AssemblyName>VaultCrypt</AssemblyName>
+	<RootNamespace>VaultCrypt</RootNamespace>
+	<Version>1.4.0</Version>
+	<FileVersion>1.4.0</FileVersion>
+	<AssemblyVersion>1.4.0</AssemblyVersion>
+	  <!--For UI-->
+	  <InformationalVersion>v1.4.0</InformationalVersion>
+	  
+	<Product>VaultCrypt</Product>
+	<Description>VaultCrypt is a desktop application allowing you to encrypt and store multiple files inside a single portable vault.</Description>
+	<AllowUnsafeBlocks>true</AllowUnsafeBlocks>
+  </PropertyGroup>
+  <ItemGroup>
+    <PackageReference Include="BouncyCastle.Cryptography" Version="2.6.2" />
+  </ItemGroup>
+
+</Project>
