@@ -1,0 +1,31 @@
+﻿<UserControl
+    xmlns="https://github.com/avaloniaui"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+    xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+    mc:Ignorable="d"
+    d:DesignWidth="400"
+    d:DesignHeight="100"
+    x:Class="VaultCrypt.Avalonia.Views.MainView"
+    xmlns:vm="clr-namespace:VaultCrypt.ViewModels;assembly=VaultCrypt"
+    x:DataType="vm:MainViewViewModel"
+    MinWidth="400" MinHeight="100">
+    <Grid>
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto"></RowDefinition>
+            <RowDefinition Height="Auto"></RowDefinition>
+            <RowDefinition Height="*"></RowDefinition>
+        </Grid.RowDefinitions>
+        
+        <Grid.ColumnDefinitions>
+            <ColumnDefinition></ColumnDefinition>
+            <ColumnDefinition></ColumnDefinition>
+        </Grid.ColumnDefinitions>
+        
+        <TextBlock Grid.Row="0" Grid.Column="0" Text="Choose action" HorizontalAlignment="Center" Grid.ColumnSpan="2"></TextBlock>
+        <Button Grid.Row="1" Grid.Column="0" Content="Create new vault" Command="{Binding CreateVaultCommand}"></Button>
+        <Button Grid.Row="1" Grid.Column="1" Content="Open existing vault" Command="{Binding OpenVaultCommand}"></Button>
+        <Label Grid.Row="2" Grid.Column="0" Grid.ColumnSpan="2" Content="{Binding ApplicationVersion, FallbackValue=v0.0.0+1234567890123456789012345678901234567890}" HorizontalAlignment="Left" VerticalAlignment="Bottom"></Label>
+        
+    </Grid>
+</UserControl>

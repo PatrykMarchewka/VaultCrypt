@@ -1,0 +1,54 @@
+<UserControl
+    xmlns="https://github.com/avaloniaui"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+    xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+    mc:Ignorable="d"
+    d:DesignWidth="800"
+    d:DesignHeight="450"
+    x:Class="VaultCrypt.Avalonia.Views.OpenVault"
+    xmlns:vm="clr-namespace:VaultCrypt.ViewModels;assembly=VaultCrypt"
+    x:DataType="vm:OpenVaultViewModel">
+    <Grid>
+        <Grid.ColumnDefinitions>
+            <ColumnDefinition Width="Auto"/>
+            <ColumnDefinition Width="Auto"/>
+            <ColumnDefinition Width="Auto"/>
+        </Grid.ColumnDefinitions>
+
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="Auto"/>
+        </Grid.RowDefinitions>
+
+        <Button Grid.Row="0" Grid.Column="0" Content=" Go back " HorizontalAlignment="Left" Command="{Binding GoBackCommand}"/>
+        <TextBlock Grid.Column="1" Grid.Row="0" Text="Search" VerticalAlignment="Bottom" HorizontalAlignment="Center"/>
+        <TextBlock Grid.Column="2" Grid.Row="0" Text="{Binding VaultName, FallbackValue=VaultName.vlt}" HorizontalAlignment="Right"/>
+
+        <TextBox Grid.Column="1" Grid.Row="1" Text="{Binding FilteredText, UpdateSourceTrigger=PropertyChanged}"/>
+
+        <TableView Grid.Column="0" Grid.Row="2" Grid.ColumnSpan="3" ItemsSource="{Binding EncryptedFilesCollectionView.Items}" SelectedItem="{Binding SelectedFile, Mode=OneWayToSource}" MaxHeight="800" CanUserResizeColumns="True" SelectionMode="Single">
+            <TableView.Columns>
+                <TableViewColumn Header="File" Binding="{Binding Value.FileName}"/>
+                <TableViewColumn Header="Size" Binding="{Binding Value.FileSize}" Width="100"/>
+                <TableViewColumn Header="Algorithm" Binding="{Binding Value.EncryptionAlgorithm}" Width="125"/>
+            </TableView.Columns>
+        </TableView>
+
+        
+
+        <StackPanel Grid.Column="0" Grid.Row="3" Grid.ColumnSpan="3" Orientation="Horizontal">
+            <Button Content="Add new file" Command="{Binding AddNewFileCommand}"/>
+            <Button Content="Decrypt file" Command="{Binding DecryptFileCommand}"/>
+            <Button Content="Validate file" Command="{Binding ValidateFileCommand}"/>
+            <Button Content="Delete file from vault" Command="{Binding DeleteFileCommand}"/>
+            <Button Content="Trim unused space" Command="{Binding TrimCommand}"/>
+        </StackPanel>
+        
+        
+        
+
+    </Grid>
+</UserControl>
