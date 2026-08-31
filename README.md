@@ -1,4 +1,4 @@
-# <img src="Properties/VaultCryptLogo.ico" style="height: 1em;"> VaultCrypt
+# <img src="VaultCrypt.Core/Properties/VaultCryptLogo.ico" style="height: 1em;"> VaultCrypt
 VaultCrypt is a desktop application allowing you to encrypt and store multiple files inside a single portable vault.
 
 ## Table of contents
